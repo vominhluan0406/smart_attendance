@@ -11,7 +11,7 @@ Hệ thống chấm công thông minh (Smart Attendance) cho doanh nghiệp quy 
 - **Framework**: Chi router (lightweight, idiomatic Go)
 - **Database**: SQLite (file-based, zero config, embedded)
 - **Cache**: In-process cache (`github.com/patrickmn/go-cache` hoặc sync.Map)
-- **ORM**: GORM (với SQLite driver)
+- **ORM**: GORM (với `glebarez/sqlite` — pure-Go driver, no CGO required)
 - **Auth**: JWT + Refresh Token (`golang-jwt/jwt`)
 - **API**: RESTful, pagination + filtering on all list endpoints
 
@@ -77,14 +77,22 @@ smart_attendance/
 ## Core Features
 
 ### 1. Check-in / Check-out
-- Xác định vị trí qua WiFi SSID/BSSID hoặc GPS geofencing
-- Chống gian lận: detect fake GPS, VPN, mock location
+- **3 phương thức xác thực song song** (multi-factor):
+  - **QR Code (TOTP)**: Mã QR hiển thị tại chi nhánh, chứa TOTP code reset mỗi 15 giây. Nhân viên quét QR để check-in. Chống chụp ảnh/share QR vì code hết hạn nhanh
+  - **IP Whitelist**: Mỗi chi nhánh cấu hình danh sách IP được phép (mạng nội bộ công ty). Request check-in phải từ IP trong whitelist
+  - **Location Whitelist**: Mỗi chi nhánh cấu hình tọa độ (lat, lng) + bán kính. GPS của nhân viên phải nằm trong vùng cho phép (haversine distance)
+- Chống gian lận: TOTP expire 15s, IP verify, GPS geofencing, detect mock location
 - Mỗi nhân viên chỉ check-in được tại chi nhánh được gán
+- Hỗ trợ check-in bằng 1 hoặc kết hợp nhiều phương thức (configurable per branch)
 
 ### 2. Branch Management (Quản lý chi nhánh)
-- CRUD chi nhánh với cấu hình WiFi/GPS riêng cho từng địa điểm
+- CRUD chi nhánh với cấu hình check-in riêng cho từng địa điểm
 - Gán nhân viên vào chi nhánh
-- Mỗi chi nhánh có tọa độ GPS + bán kính geofence + danh sách WiFi SSID/BSSID
+- Mỗi chi nhánh cấu hình:
+  - **QR/TOTP**: secret key riêng, interval 15s, hiển thị QR trên màn hình tại chi nhánh
+  - **IP Whitelist**: danh sách IP/CIDR được phép check-in (e.g., `192.168.1.0/24`)
+  - **Location Whitelist**: tọa độ trung tâm (lat, lng) + bán kính cho phép (meters)
+  - **Allowed methods**: cấu hình phương thức nào bắt buộc (QR / IP / Location / kết hợp)
 
 ### 3. History & Reports (Lịch sử & Báo cáo)
 - Xem theo ngày/tuần/tháng
@@ -144,6 +152,14 @@ smart_attendance/
 - Naming: Go conventions — camelCase unexported, PascalCase exported
 - File naming: snake_case (e.g., `check_in.go`, `branch_handler.go`)
 - Proper error handling: luôn check và return error, không panic
+- **Logging rõ ràng để trace bug**:
+  - Mỗi log phải có context: `[layer][module][action]` — ví dụ: `[handler][auth] login failed: invalid credentials, email=user@example.com`
+  - Log level: `log.Printf` cho info, `log.Printf("ERROR: ...")` cho errors
+  - Handler layer: log request errors (400/500) kèm request method, path, error message
+  - Service layer: log business logic errors kèm input parameters liên quan
+  - Repository layer: GORM đã tự log SQL queries (development mode)
+  - Middleware: log mỗi request (method, path, status, duration) — đã có Logger middleware
+  - Không log sensitive data: password, JWT token, password_hash
 
 ### Backend (Go)
 - **Handler → Service → Repository** pattern (3-layer)

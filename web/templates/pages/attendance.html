@@ -1,0 +1,92 @@
+{{define "title"}}Check-in — Smart Attendance{{end}}
+
+{{define "body"}}
+<div class="min-h-full">
+    {{template "nav" .}}
+    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">Attendance Check-in</h1>
+
+        <div id="checkin-result" class="mb-6"></div>
+
+        {{if .Today}}
+        <!-- Already checked in -->
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6 max-w-lg">
+            <div class="flex items-center mb-4">
+                <div class="h-3 w-3 rounded-full bg-green-500 mr-2"></div>
+                <span class="text-sm font-medium text-green-700">Checked in today</span>
+            </div>
+            <div class="space-y-2 text-sm text-gray-600">
+                <p>Check-in: <span class="font-medium text-gray-900">{{.Today.CheckInAt.Format "15:04:05"}}</span></p>
+                <p>Status: <span class="font-medium text-gray-900">{{.Today.Status}}</span></p>
+                <p>Method: <span class="font-medium text-gray-900">{{.Today.Method}}</span></p>
+                {{if .Today.CheckOutAt}}
+                <p>Check-out: <span class="font-medium text-gray-900">{{.Today.CheckOutAt.Format "15:04:05"}}</span></p>
+                {{else}}
+                <div class="pt-4">
+                    <button hx-post="/attendance/check-out" hx-target="#checkin-result" hx-swap="innerHTML"
+                            class="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500">
+                        Check Out
+                    </button>
+                </div>
+                {{end}}
+            </div>
+        </div>
+        {{else}}
+        <!-- Check-in form -->
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6 max-w-lg">
+            <form hx-post="/attendance/check-in" hx-target="#checkin-result" hx-swap="innerHTML" class="space-y-6">
+                <!-- TOTP Code (from QR scan) -->
+                <div>
+                    <label for="totp_code" class="block text-sm font-medium text-gray-700">QR Code / TOTP</label>
+                    <p class="text-xs text-gray-500 mb-2">Scan the QR code displayed at your branch, or enter the 6-digit code</p>
+                    <input type="text" name="totp_code" id="totp_code" maxlength="6" pattern="[0-9]{6}" placeholder="000000"
+                           class="block w-full rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500 text-center text-2xl tracking-widest font-mono">
+                </div>
+
+                <!-- Hidden GPS fields (populated by JavaScript) -->
+                <input type="hidden" name="lat" id="lat">
+                <input type="hidden" name="lng" id="lng">
+
+                <div id="location-status" class="text-sm text-gray-500">
+                    <span class="htmx-indicator">
+                        <svg class="animate-spin h-4 w-4 inline mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </span>
+                    Getting your location...
+                </div>
+
+                <button type="submit" id="checkin-btn"
+                        class="w-full rounded-md bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                    Check In
+                </button>
+            </form>
+        </div>
+        {{end}}
+    </main>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+// Get GPS location on page load
+if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+        function(pos) {
+            document.getElementById('lat').value = pos.coords.latitude;
+            document.getElementById('lng').value = pos.coords.longitude;
+            document.getElementById('location-status').innerHTML =
+                '<span class="text-green-600">Location: ' +
+                pos.coords.latitude.toFixed(6) + ', ' +
+                pos.coords.longitude.toFixed(6) + '</span>';
+        },
+        function(err) {
+            document.getElementById('location-status').innerHTML =
+                '<span class="text-yellow-600">Location unavailable: ' + err.message + '</span>';
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+    );
+}
+</script>
+{{end}}

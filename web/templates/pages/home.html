@@ -1,0 +1,25 @@
+{{define "title"}}Smart Attendance — Home{{end}}
+
+{{define "body"}}
+<div class="min-h-full">
+    {{template "nav" .}}
+    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div class="text-center py-12">
+            <h1 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+                Smart Attendance
+            </h1>
+            <p class="mt-4 text-lg leading-8 text-gray-600">
+                Hệ thống chấm công thông minh — 100 chi nhánh, 5.000 nhân viên
+            </p>
+            <div class="mt-8 flex items-center justify-center gap-x-6">
+                <a href="/attendance" class="rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                    Check-in ngay
+                </a>
+                <a href="/dashboard" class="text-sm font-semibold leading-6 text-gray-900">
+                    Xem Dashboard &rarr;
+                </a>
+            </div>
+        </div>
+    </main>
+</div>
+{{end}}

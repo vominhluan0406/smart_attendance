@@ -1,0 +1,10 @@
+data/
+.env
+.git/
+*.exe
+smart-attendance
+README.md
+CLAUDE.md
+TASKS.md
+PROMPT_LOG.md
+de-bai-smart-attendance-v2.docx
