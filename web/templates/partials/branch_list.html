@@ -1,0 +1,59 @@
+{{define "branch_table"}}
+<div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Methods</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {{range .Branches}}
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{.Name}}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{.Address}}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{.AllowedMethods}}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {{if .IsActive}}
+                    <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Active</span>
+                    {{else}}
+                    <span class="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">Disabled</span>
+                    {{end}}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <a href="/branches/{{.ID}}/edit" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
+                    <button hx-delete="/branches/{{.ID}}" hx-confirm="Delete this branch?"
+                            hx-target="closest tr" hx-swap="outerHTML swap:0.5s"
+                            class="text-red-600 hover:text-red-900">Delete</button>
+                </td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="5" class="px-6 py-12 text-center text-sm text-gray-500">No branches found</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+
+    {{if .HasNextPage}}
+    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+        <div class="text-sm text-gray-700">
+            Page <span class="font-medium">{{.Page}}</span> — <span class="font-medium">{{.Total}}</span> total
+        </div>
+        <div class="flex space-x-2">
+            {{if .HasPrevPage}}
+            <a hx-get="/branches?page={{.PrevPage}}" hx-target="#branch-table" hx-swap="innerHTML"
+               class="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Previous</a>
+            {{end}}
+            <a hx-get="/branches?page={{.NextPage}}" hx-target="#branch-table" hx-swap="innerHTML"
+               class="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Next</a>
+        </div>
+    </div>
+    {{end}}
+</div>
+{{end}}

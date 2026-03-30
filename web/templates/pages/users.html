@@ -1,0 +1,48 @@
+{{define "title"}}Users — Smart Attendance{{end}}
+
+{{define "body"}}
+<div class="min-h-full">
+    {{template "nav" .}}
+    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div class="sm:flex sm:items-center sm:justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">User Management</h1>
+                <p class="mt-1 text-sm text-gray-500">Manage employees, managers and admins</p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <a href="/users/create" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                    + Add User
+                </a>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+            <form hx-get="/users" hx-target="#user-table" hx-swap="innerHTML" hx-push-url="true" class="flex flex-wrap gap-4 items-end">
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                    <input type="text" name="search" value="{{.Search}}" placeholder="Name or email..."
+                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                </div>
+                <div class="w-40">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                    <select name="role" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                        <option value="">All roles</option>
+                        <option value="admin" {{if eq .Role "admin"}}selected{{end}}>Admin</option>
+                        <option value="manager" {{if eq .Role "manager"}}selected{{end}}>Manager</option>
+                        <option value="employee" {{if eq .Role "employee"}}selected{{end}}>Employee</option>
+                    </select>
+                </div>
+                <button type="submit" class="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+                    Filter
+                </button>
+            </form>
+        </div>
+
+        <!-- User Table -->
+        <div id="user-table">
+            {{template "user_table" .}}
+        </div>
+    </main>
+</div>
+{{end}}

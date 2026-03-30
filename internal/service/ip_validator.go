@@ -1,0 +1,47 @@
+package service
+
+import (
+	"log"
+	"net"
+
+	"github.com/smart-attendance/smart-attendance/internal/models"
+)
+
+type IPValidator struct{}
+
+func NewIPValidator() *IPValidator {
+	return &IPValidator{}
+}
+
+// Validate checks if the given IP address matches any of the branch's IP whitelist entries.
+func (v *IPValidator) Validate(ipStr string, whitelist []models.BranchIPWhitelist) bool {
+	if len(whitelist) == 0 {
+		return true // No whitelist configured = allow all
+	}
+
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		log.Printf("[service][ip-validator] invalid IP: %s", ipStr)
+		return false
+	}
+
+	for _, entry := range whitelist {
+		// Try as CIDR
+		_, network, err := net.ParseCIDR(entry.IPCIDR)
+		if err == nil {
+			if network.Contains(ip) {
+				return true
+			}
+			continue
+		}
+
+		// Try as single IP
+		entryIP := net.ParseIP(entry.IPCIDR)
+		if entryIP != nil && entryIP.Equal(ip) {
+			return true
+		}
+	}
+
+	log.Printf("[service][ip-validator] IP %s not in whitelist (%d entries)", ipStr, len(whitelist))
+	return false
+}

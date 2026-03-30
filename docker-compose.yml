@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT:-8080}:8080"
+    volumes:
+      - app-data:/app/data
+    env_file:
+      - .env
+    environment:
+      - ENV=production
+      - DB_PATH=data/smart_attendance.db
+    restart: unless-stopped
+
+volumes:
+  app-data:
