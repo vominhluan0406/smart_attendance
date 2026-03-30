@@ -19,6 +19,12 @@ var funcMap = template.FuncMap{
 		}
 		return false
 	},
+	"add": func(a, b int) int {
+		return a + b
+	},
+	"subtract": func(a, b int) int {
+		return a - b
+	},
 }
 
 type Renderer struct {

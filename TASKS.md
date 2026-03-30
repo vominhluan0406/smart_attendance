@@ -46,28 +46,28 @@
 
 | # | Task | Branch | Size | Depends | Status |
 |---|------|--------|------|---------|--------|
-| 3.1 | Models: Attendance (id, user_id, branch_id, check_in_at, check_out_at, status, method, ip_address, lat, lng, totp_verified, location_data JSON) | `feature/attendance` | S | 0.4 | TODO |
-| 3.2 | Repository: AttendanceRepository (Create, Update, FindTodayByUser, ListByDateRange) | `feature/attendance` | M | 3.1 | TODO |
-| 3.3 | Service: QRTOTPService — generate TOTP secret per branch, produce QR code image, validate TOTP code (15s interval) | `feature/attendance` | L | 2.6 | TODO |
-| 3.4 | Service: IPValidator — check request IP against branch IP whitelist (support CIDR notation) | `feature/attendance` | M | 2.6 | TODO |
-| 3.5 | Service: LocationValidator — verify GPS coords against branch location whitelist (haversine distance) | `feature/attendance` | M | 2.6 | TODO |
-| 3.6 | Service: AttendanceService (CheckIn, CheckOut — orchestrate multi-method validation per branch config) | `feature/attendance` | L | 3.2, 3.3, 3.4, 3.5 | TODO |
-| 3.7 | Handler: POST /api/v1/attendance/check-in, /check-out + GET /api/v1/attendance/qr/:branch_id (QR image) | `feature/attendance` | M | 3.6, 1.4 | TODO |
-| 3.8 | Rate limiting middleware trên check-in endpoint | `feature/attendance` | S | 3.7 | TODO |
-| 3.9 | Templates: check-in page (QR scanner via camera + geolocation API + HTMX submit + real-time TOTP display for managers) | `feature/attendance` | L | 3.7, 0.5 | TODO |
-| 3.10 | Auto status calculation: đúng giờ / trễ / vắng (dựa trên cấu hình giờ làm) | `feature/attendance` | M | 3.6 | TODO |
-| 3.11 | Manager QR display page: show live QR code (auto-refresh 15s) for branch check-in | `feature/attendance` | M | 3.3 | TODO |
+| 3.1 | Models: Attendance (id, user_id, branch_id, check_in_at, check_out_at, status, method, ip_address, lat, lng, totp_verified, location_data JSON) | `feature/attendance` | S | 0.4 | DONE |
+| 3.2 | Repository: AttendanceRepository (Create, Update, FindTodayByUser, ListByDateRange) | `feature/attendance` | M | 3.1 | DONE |
+| 3.3 | Service: QRTOTPService — generate TOTP secret per branch, produce QR code image, validate TOTP code (15s interval) | `feature/attendance` | L | 2.6 | DONE |
+| 3.4 | Service: IPValidator — check request IP against branch IP whitelist (support CIDR notation) | `feature/attendance` | M | 2.6 | DONE |
+| 3.5 | Service: LocationValidator — verify GPS coords against branch location whitelist (haversine distance) | `feature/attendance` | M | 2.6 | DONE |
+| 3.6 | Service: AttendanceService (CheckIn, CheckOut — orchestrate multi-method validation per branch config) | `feature/attendance` | L | 3.2, 3.3, 3.4, 3.5 | DONE |
+| 3.7 | Handler: POST /api/v1/attendance/check-in, /check-out + GET /api/v1/attendance/qr/:branch_id (QR image) | `feature/attendance` | M | 3.6, 1.4 | DONE |
+| 3.8 | Rate limiting middleware trên check-in endpoint | `feature/attendance` | S | 3.7 | DONE |
+| 3.9 | Templates: check-in page (QR scanner via camera + geolocation API + HTMX submit + real-time TOTP display for managers) | `feature/attendance` | L | 3.7, 0.5 | DONE |
+| 3.10 | Auto status calculation: đúng giờ / trễ / vắng (dựa trên cấu hình giờ làm) | `feature/attendance` | M | 3.6 | DONE |
+| 3.11 | Manager QR display page: show live QR code (auto-refresh 15s) for branch check-in | `feature/attendance` | M | 3.3 | DONE |
 
 ## Phase 4 — History & Reports
 
 | # | Task | Branch | Size | Depends | Status |
 |---|------|--------|------|---------|--------|
-| 4.1 | Repository: queries cho attendance history (by user, branch, date range, status) | `feature/reports` | M | 3.1 | TODO |
-| 4.2 | Service: ReportService (GetUserHistory, GetBranchReport, GetSummary, CalcOvertime) | `feature/reports` | L | 4.1 | TODO |
-| 4.3 | Handler: GET /api/v1/reports/user/:id, GET /api/v1/reports/branch/:id | `feature/reports` | M | 4.2, 1.5 | TODO |
-| 4.4 | Templates: attendance history page (filter ngày/tuần/tháng, HTMX partial reload) | `feature/reports` | L | 4.3 | TODO |
-| 4.5 | Export CSV/Excel (go library: excelize) | `feature/reports` | M | 4.2 | TODO |
-| 4.6 | Cache: cache report aggregation, invalidate khi có check-in mới | `feature/reports` | S | 4.2 | TODO |
+| 4.1 | Repository: queries cho attendance history (by user, branch, date range, status) | `feature/reports` | M | 3.1 | DONE |
+| 4.2 | Service: ReportService (GetUserHistory, GetBranchReport, GetSummary, CalcOvertime) | `feature/reports` | L | 4.1 | DONE |
+| 4.3 | Handler: GET /api/v1/reports/user/:id, GET /api/v1/reports/branch/:id | `feature/reports` | M | 4.2, 1.5 | DONE |
+| 4.4 | Templates: attendance history page (filter ngày/tuần/tháng, HTMX partial reload) | `feature/reports` | L | 4.3 | DONE |
+| 4.5 | Export CSV/Excel (go library: excelize) | `feature/reports` | M | 4.2 | DONE |
+| 4.6 | Cache: cache report aggregation, invalidate khi có check-in mới | `feature/reports` | S | 4.2 | DONE |
 
 ## Phase 5 — Dashboard
 

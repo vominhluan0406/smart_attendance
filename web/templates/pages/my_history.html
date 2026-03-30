@@ -1,0 +1,84 @@
+{{ define "title" }}My Attendance History - Smart Attendance{{ end }}
+
+{{ define "content" }}
+<div class="px-4 py-8 max-w-7xl mx-auto">
+    <div class="mb-8 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">My Attendance History</h1>
+            <p class="text-sm text-gray-500 mt-1">View your check-in and check-out records.</p>
+        </div>
+        <a href="/reports/my-history/export?date_from={{ .DateFrom }}&date_to={{ .DateTo }}&status={{ .Status }}"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+            Export to Excel
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white p-4 rounded-lg shadow mb-6">
+        <form id="filter-form" class="flex flex-wrap gap-4 items-end" hx-get="/reports/my-history/partial"
+            hx-target="#history-list" hx-push-url="false" hx-trigger="change, submit">
+
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">From Date</label>
+                <input type="date" name="date_from" value="{{ .DateFrom }}"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">To Date</label>
+                <input type="date" name="date_to" value="{{ .DateTo }}"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                <select name="status"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <option value="">All Status</option>
+                    <option value="on_time" {{ if eq .Status "on_time" }}selected{{ end }}>On Time</option>
+                    <option value="late" {{ if eq .Status "late" }}selected{{ end }}>Late</option>
+                    <option value="absent" {{ if eq .Status "absent" }}selected{{ end }}>Absent</option>
+                </select>
+            </div>
+
+            <div>
+                <button type="submit"
+                    class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700">
+                    Filter
+                </button>
+                <a href="/reports/my-history"
+                    class="ml-2 inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Clear
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Error message -->
+    {{ if .Error }}
+    <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+        <div class="flex">
+            <div class="ml-3">
+                <p class="text-sm text-red-700">{{ .Error }}</p>
+            </div>
+        </div>
+    </div>
+    {{ end }}
+
+    <!-- Table content (HTMX target) -->
+    <div id="history-list" class="relative">
+        <div
+            class="htmx-indicator absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center z-10 hidden">
+            <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+            </svg>
+        </div>
+
+        {{ template "history_list.html" . }}
+    </div>
+</div>
+{{ end }}
