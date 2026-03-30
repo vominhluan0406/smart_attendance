@@ -18,6 +18,7 @@ type Deps struct {
 	BranchService     *service.BranchService
 	AttendanceService *service.AttendanceService
 	TOTPService       *service.TOTPService
+	ReportService     *service.ReportService
 	RateLimitPerMin   int
 }
 
@@ -39,7 +40,8 @@ func New(deps Deps) http.Handler {
 	auth := handler.NewAuthHandler(deps.AuthService, deps.Render)
 	users := handler.NewUserHandler(deps.UserService, deps.AuthService, deps.Render)
 	branches := handler.NewBranchHandler(deps.BranchService, deps.Render)
-	attendance := handler.NewAttendanceHandler(deps.AttendanceService, deps.BranchService, deps.TOTPService, deps.Render)
+	attendance := handler.NewAttendanceHandler(deps.AttendanceService, deps.BranchService, deps.TOTPService, deps.UserService, deps.Render)
+	reports := handler.NewReportHandler(deps.ReportService, deps.BranchService, deps.Render)
 
 	// Public pages
 	r.Get("/", home.Index)
@@ -58,7 +60,21 @@ func New(deps Deps) http.Handler {
 		pr.Use(middleware.JWTAuth(deps.AuthService))
 
 		pr.Get("/dashboard", home.Index)
-		pr.Get("/reports", home.Index) // Placeholder until reports is built
+		
+		// Reports (User specific)
+		pr.Route("/reports", func(rr chi.Router) {
+			rr.Get("/my-history", reports.UserHistoryPage)
+			rr.Get("/my-history/partial", reports.UserHistoryPartial)
+			rr.Get("/my-history/export", reports.ExportUserHistory)
+
+			// Reports (Manager/Admin specific)
+			rr.Group(func(adminRr chi.Router) {
+				adminRr.Use(middleware.ManagerOrAdmin)
+				adminRr.Get("/branch/{branchID}", reports.BranchReportPage)
+				adminRr.Get("/branch/{branchID}/partial", reports.BranchReportPartial)
+				adminRr.Get("/branch/{branchID}/export", reports.ExportBranchReport)
+			})
+		})
 
 		// Attendance check-in/out
 		pr.Route("/attendance", func(ar chi.Router) {
@@ -66,6 +82,9 @@ func New(deps Deps) http.Handler {
 			ar.Get("/", attendance.CheckInPage)
 			ar.Post("/check-in", attendance.CheckInForm)
 			ar.Post("/check-out", attendance.CheckOutForm)
+
+			// Manager redirect
+			ar.Get("/qr-manager", attendance.ManagerQRRedirect)
 
 			// QR display (Manager/Admin) — shows live QR for branch
 			ar.Get("/qr/{branchID}", attendance.QRDisplayPage)

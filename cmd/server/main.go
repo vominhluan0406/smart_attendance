@@ -65,6 +65,7 @@ func main() {
 	ipValidator := service.NewIPValidator()
 	locValidator := service.NewLocationValidator()
 	attendanceService := service.NewAttendanceService(attendanceRepo, branchService, userService, totpService, ipValidator, locValidator)
+	reportService := service.NewReportService(attendanceRepo)
 
 	// Setup router
 	handler := router.New(router.Deps{
@@ -74,6 +75,7 @@ func main() {
 		BranchService:     branchService,
 		AttendanceService: attendanceService,
 		TOTPService:       totpService,
+		ReportService:     reportService,
 		RateLimitPerMin:   cfg.RateLimitPerMin,
 	})
 

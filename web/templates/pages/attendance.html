@@ -1,92 +1,210 @@
-{{define "title"}}Check-in — Smart Attendance{{end}}
+{{define "head_extra"}}
+<script src="https://unpkg.com/html5-qrcode"></script>
+{{end}}
 
 {{define "body"}}
 <div class="min-h-full">
     {{template "nav" .}}
     <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <h1 class="text-2xl font-bold text-gray-900 mb-6">Attendance Check-in</h1>
+        <div class="max-w-md mx-auto">
+            <h1 class="text-2xl font-bold text-gray-900 mb-6 text-center">Attendance Check-in</h1>
 
-        <div id="checkin-result" class="mb-6"></div>
+            <div id="checkin-result" class="mb-6"></div>
 
-        {{if .Today}}
-        <!-- Already checked in -->
-        <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6 max-w-lg">
-            <div class="flex items-center mb-4">
-                <div class="h-3 w-3 rounded-full bg-green-500 mr-2"></div>
-                <span class="text-sm font-medium text-green-700">Checked in today</span>
-            </div>
-            <div class="space-y-2 text-sm text-gray-600">
-                <p>Check-in: <span class="font-medium text-gray-900">{{.Today.CheckInAt.Format "15:04:05"}}</span></p>
-                <p>Status: <span class="font-medium text-gray-900">{{.Today.Status}}</span></p>
-                <p>Method: <span class="font-medium text-gray-900">{{.Today.Method}}</span></p>
+            {{if .Today}}
+            <!-- Already checked in -->
+            <div
+                class="bg-white shadow-lg rounded-2xl border border-gray-100 p-8 text-center transition-all hover:shadow-xl">
+                <div class="inline-flex items-center justify-center p-3 bg-green-100 rounded-full mb-4">
+                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Đã điểm danh hôm nay</h3>
+
+                <div class="grid grid-cols-2 gap-4 mt-6 text-left border-t border-gray-100 pt-6">
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold">Thời gian</p>
+                        <p class="text-lg font-mono font-bold text-indigo-600">{{.Today.CheckInAt.Format "15:04:05"}}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold">Trạng thái</p>
+                        <p class="text-lg font-bold text-gray-900">{{.Today.Status}}</p>
+                    </div>
+                </div>
+
                 {{if .Today.CheckOutAt}}
-                <p>Check-out: <span class="font-medium text-gray-900">{{.Today.CheckOutAt.Format "15:04:05"}}</span></p>
+                <div class="mt-4 p-3 bg-gray-50 rounded-xl">
+                    <p class="text-xs text-gray-500 uppercase font-bold">Check-out</p>
+                    <p class="text-lg font-mono font-bold text-gray-700">{{.Today.CheckOutAt.Format "15:04:05"}}</p>
+                </div>
                 {{else}}
-                <div class="pt-4">
+                <div class="mt-8">
                     <button hx-post="/attendance/check-out" hx-target="#checkin-result" hx-swap="innerHTML"
-                            class="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500">
+                        class="w-full rounded-xl bg-red-500 py-3 text-sm font-bold text-white shadow-lg hover:bg-red-600 active:scale-95 transition-all">
                         Check Out
                     </button>
                 </div>
                 {{end}}
             </div>
-        </div>
-        {{else}}
-        <!-- Check-in form -->
-        <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6 max-w-lg">
-            <form hx-post="/attendance/check-in" hx-target="#checkin-result" hx-swap="innerHTML" class="space-y-6">
-                <!-- TOTP Code (from QR scan) -->
-                <div>
-                    <label for="totp_code" class="block text-sm font-medium text-gray-700">QR Code / TOTP</label>
-                    <p class="text-xs text-gray-500 mb-2">Scan the QR code displayed at your branch, or enter the 6-digit code</p>
-                    <input type="text" name="totp_code" id="totp_code" maxlength="6" pattern="[0-9]{6}" placeholder="000000"
-                           class="block w-full rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500 text-center text-2xl tracking-widest font-mono">
+            {{else}}
+            <!-- Scanner View -->
+            <div class="bg-white shadow-xl rounded-2xl border border-gray-100 overflow-hidden">
+                <div class="p-6">
+                    <div id="reader-container" class="relative">
+                        <div id="reader"
+                            class="rounded-xl overflow-hidden border-2 border-dashed border-gray-200 aspect-square flex items-center justify-center bg-gray-50">
+                            <!-- Scanner will be mounted here -->
+                            <div class="text-center p-6" id="reader-placeholder">
+                                <svg class="w-12 h-12 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z">
+                                    </path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <p class="text-sm text-gray-400">Đang khởi tạo camera...</p>
+                            </div>
+                        </div>
+                        <div id="scanner-line"
+                            class="absolute top-0 left-0 w-full h-1 bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)] opacity-0 pointer-events-none transition-opacity">
+                        </div>
+                    </div>
+
+                    <div class="mt-6">
+                        <div id="location-status"
+                            class="flex items-center justify-center text-xs font-bold text-gray-400 mb-4 px-3 py-1 bg-gray-50 rounded-full w-max mx-auto">
+                            <span class="relative flex h-2 w-2 mr-2">
+                                <span id="loc-ping"
+                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                                <span id="loc-dot"
+                                    class="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                            </span>
+                            Đang xác định vị trí...
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Hidden GPS fields (populated by JavaScript) -->
-                <input type="hidden" name="lat" id="lat">
-                <input type="hidden" name="lng" id="lng">
-
-                <div id="location-status" class="text-sm text-gray-500">
-                    <span class="htmx-indicator">
-                        <svg class="animate-spin h-4 w-4 inline mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                        </svg>
-                    </span>
-                    Getting your location...
+                <div class="hidden">
+                    <form id="checkin-form" hx-post="/attendance/check-in" hx-target="#checkin-result"
+                        hx-swap="innerHTML">
+                        <input type="text" name="totp_code" id="totp_code">
+                        <input type="hidden" name="lat" id="lat">
+                        <input type="hidden" name="lng" id="lng">
+                        <button type="submit" id="submit-btn"></button>
+                    </form>
                 </div>
+            </div>
 
-                <button type="submit" id="checkin-btn"
-                        class="w-full rounded-md bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
-                    Check In
-                </button>
-            </form>
+            <p class="mt-4 text-center text-sm text-gray-500">Quét mã QR tại chi nhánh để điểm danh</p>
+            {{end}}
         </div>
-        {{end}}
     </main>
 </div>
 {{end}}
 
 {{define "scripts"}}
 <script>
-// Get GPS location on page load
-if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-        function(pos) {
-            document.getElementById('lat').value = pos.coords.latitude;
-            document.getElementById('lng').value = pos.coords.longitude;
-            document.getElementById('location-status').innerHTML =
-                '<span class="text-green-600">Location: ' +
-                pos.coords.latitude.toFixed(6) + ', ' +
-                pos.coords.longitude.toFixed(6) + '</span>';
-        },
-        function(err) {
-            document.getElementById('location-status').innerHTML =
-                '<span class="text-yellow-600">Location unavailable: ' + err.message + '</span>';
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-    );
-}
+    // Geolocation logic
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+            function (pos) {
+                document.getElementById('lat').value = pos.coords.latitude;
+                document.getElementById('lng').value = pos.coords.longitude;
+
+                const locStatus = document.getElementById('location-status');
+                if (locStatus) {
+                    locStatus.innerHTML = `<span class="relative flex h-2 w-2 mr-2"><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span> GPS: ${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
+                    locStatus.classList.remove('text-gray-400');
+                    locStatus.classList.add('text-green-600');
+                }
+            },
+            function (err) {
+                const locStatus = document.getElementById('location-status');
+                if (locStatus) {
+                    locStatus.innerText = "Lỗi GPS: " + err.message;
+                    locStatus.classList.add('text-red-500');
+                }
+            },
+            { enableHighAccuracy: true, timeout: 20000 }
+        );
+    }
+
+    // QR Scanner logic
+    const scannerElement = document.getElementById('reader');
+    if (scannerElement) {
+        const html5QrCode = new Html5Qrcode("reader");
+        const scanConfig = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+        const onScanSuccess = (decodedText, decodedResult) => {
+            // Success!
+            console.log(`Code matched = ${decodedText}`, decodedResult);
+
+            // QR content format is branchID:TOTPCode
+            const parts = decodedText.split(":");
+            if (parts.length === 2) {
+                // Stop scanner to avoid multiple hits
+                html5QrCode.stop().then(() => {
+                    document.getElementById('scanner-line').classList.add('opacity-0');
+                    document.getElementById('totp_code').value = parts[1];
+
+                    // Show success feedback in UI before submitting
+                    document.getElementById('reader').innerHTML = `
+                    <div class="text-center p-6">
+                        <div class="inline-flex items-center justify-center p-3 bg-indigo-100 rounded-full mb-4">
+                            <svg class="w-12 h-12 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                        <p class="text-lg font-bold text-gray-900">Đã quét thành công!</p>
+                        <p class="text-sm text-gray-500 mt-1">Đang thực hiện điểm danh...</p>
+                    </div>
+                `;
+
+                    // Submit form via HTMX
+                    document.getElementById('submit-btn').click();
+                }).catch(err => {
+                    console.error("Stop failed", err);
+                });
+            }
+        };
+
+        const qrCodeErrorCallback = (message) => {
+            // ignore errors
+        };
+
+        html5QrCode.start({ faceMode: "environment" }, scanConfig, onScanSuccess, qrCodeErrorCallback)
+            .then(() => {
+                document.getElementById('scanner-line').classList.remove('opacity-0');
+                document.getElementById('scanner-line').classList.add('animate-scan');
+            })
+            .catch(err => {
+                console.error("Scanner start error", err);
+                document.getElementById('reader-placeholder').innerHTML = `
+                <div class="text-center p-6">
+                    <p class="text-red-500 font-bold">Không thể mở camera</p>
+                    <p class="text-xs text-gray-500 mt-2">${err}</p>
+                </div>
+            `;
+            });
+    }
+
+    // Add animation style
+    const style = document.createElement('style');
+    style.textContent = `
+    @keyframes scan {
+        0% { top: 0%; opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        100% { top: 100%; opacity: 0; }
+    }
+    .animate-scan {
+        animation: scan 2s linear infinite;
+    }
+`;
+    document.head.appendChild(style);
+
 </script>
 {{end}}

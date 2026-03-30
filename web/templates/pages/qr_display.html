@@ -7,17 +7,16 @@
         <div class="mb-6">
             <a href="/branches" class="text-sm text-indigo-600 hover:text-indigo-500">&larr; Back to Branches</a>
             <h1 class="mt-2 text-2xl font-bold text-gray-900">QR Check-in: {{.Branch.Name}}</h1>
-            <p class="mt-1 text-sm text-gray-500">Display this QR code for employees to scan. Code refreshes every 15 seconds.</p>
+            <p class="mt-1 text-sm text-gray-500">Display this QR code for employees to scan. Code refreshes every 15
+                seconds.</p>
         </div>
 
         <div class="flex justify-center">
             <div class="bg-white shadow-lg rounded-xl border border-gray-200 p-8 text-center max-w-md w-full">
                 <!-- Auto-refreshing QR section -->
-                <div id="qr-container"
-                     hx-get="/attendance/qr/{{.Branch.ID}}/partial"
-                     hx-trigger="every 5s"
-                     hx-swap="innerHTML">
-                    {{template "qr_code_inner" .}}
+                <div id="qr-container" hx-get="/attendance/qr/{{.Branch.ID}}/partial" hx-trigger="refresh-qr from:body"
+                    hx-swap="innerHTML">
+                    {{template "qr_code.html" .}}
                 </div>
             </div>
         </div>

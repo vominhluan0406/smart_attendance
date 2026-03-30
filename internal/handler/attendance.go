@@ -19,6 +19,7 @@ type AttendanceHandler struct {
 	attendanceService *service.AttendanceService
 	branchService     *service.BranchService
 	totpService       *service.TOTPService
+	userService       *service.UserService
 	render            *renderer.Renderer
 }
 
@@ -26,14 +27,34 @@ func NewAttendanceHandler(
 	attendanceService *service.AttendanceService,
 	branchService *service.BranchService,
 	totpService *service.TOTPService,
+	userService *service.UserService,
 	render *renderer.Renderer,
 ) *AttendanceHandler {
 	return &AttendanceHandler{
 		attendanceService: attendanceService,
 		branchService:     branchService,
 		totpService:       totpService,
+		userService:       userService,
 		render:            render,
 	}
+}
+
+// ManagerQRRedirect redirects the manager to their branch's QR code page.
+func (h *AttendanceHandler) ManagerQRRedirect(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetUserRole(r)
+	if role != "manager" && role != "admin" {
+		http.Error(w, "Forbidden: Only Manager/Admin can view this page.", http.StatusForbidden)
+		return
+	}
+
+	userID := middleware.GetUserID(r)
+	user, err := h.userService.GetByID(userID)
+	if err != nil || user == nil || user.BranchID == nil {
+		http.Error(w, "User or Branch not found", http.StatusNotFound)
+		return
+	}
+
+	http.Redirect(w, r, "/attendance/qr/"+*user.BranchID, http.StatusFound)
 }
 
 // --- HTMX Pages ---
@@ -67,6 +88,7 @@ func (h *AttendanceHandler) QRDisplayPage(w http.ResponseWriter, r *http.Request
 
 	h.render.Render(w, "qr_display.html", map[string]interface{}{
 		"Branch":    branch,
+		"BranchID":  branch.ID,
 		"TOTPCode":  code,
 		"Remaining": remaining,
 	})

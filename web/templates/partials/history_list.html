@@ -1,0 +1,80 @@
+{{ if .Result.Records }}
+<div class="overflow-x-auto bg-white rounded-lg shadow">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Branch</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check In</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check Out</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {{ range .Result.Records }}
+            <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {{ if .CheckInAt }}{{ .CheckInAt.Format "Jan 02, 2006" }}{{ end }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {{ if .User }}{{ .User.FullName }}{{ else }}{{ .UserID }}{{ end }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{ if .Branch }}{{ .Branch.Name }}{{ else }}{{ .BranchID }}{{ end }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{ if .CheckInAt }}{{ .CheckInAt.Format "15:04:05" }}{{ else }}-{{ end }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{ if .CheckOutAt }}{{ .CheckOutAt.Format "15:04:05" }}{{ else }}-{{ end }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    {{ if eq .Status "on_time" }}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">On Time</span>
+                    {{ else if eq .Status "late" }}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Late</span>
+                    {{ else if eq .Status "absent" }}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Absent</span>
+                    {{ else }}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">{{ .Status }}</span>
+                    {{ end }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{ .Method }}
+                </td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination controls (simple version) -->
+<div class="mt-4 flex justify-between items-center text-sm text-gray-600">
+    <div>
+        Total: {{ .Result.Total }} records (Page {{ .Result.Page }})
+    </div>
+    <div class="flex space-x-2">
+        {{ if gt .Result.Page 1 }}
+        <button class="px-3 py-1 border rounded bg-white hover:bg-gray-50" 
+                hx-get="?page={{ subtract .Result.Page 1 }}&limit={{ .Result.Limit }}" 
+                hx-include="#filter-form"
+                hx-target="#history-list">
+            Previous
+        </button>
+        {{ end }}
+        
+        <button class="px-3 py-1 border rounded bg-white hover:bg-gray-50"
+                hx-get="?page={{ add .Result.Page 1 }}&limit={{ .Result.Limit }}" 
+                hx-include="#filter-form"
+                hx-target="#history-list">
+            Next
+        </button>
+    </div>
+</div>
+{{ else }}
+<div class="text-center py-8 bg-white rounded-lg shadow text-gray-500">
+    No attendance records found for the selected criteria.
+</div>
+{{ end }}

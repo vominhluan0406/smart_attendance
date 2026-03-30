@@ -28,9 +28,10 @@ type TokenPair struct {
 }
 
 type Claims struct {
-	UserID string      `json:"user_id"`
-	Email  string      `json:"email"`
-	Role   models.Role `json:"role"`
+	UserID   string      `json:"user_id"`
+	Email    string      `json:"email"`
+	Role     models.Role `json:"role"`
+	BranchID *string     `json:"branch_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -152,9 +153,10 @@ func (s *AuthService) generateTokenPair(user *models.User) (*TokenPair, error) {
 
 	// Access token
 	accessClaims := &Claims{
-		UserID: user.ID,
-		Email:  user.Email,
-		Role:   user.Role,
+		UserID:   user.ID,
+		Email:    user.Email,
+		Role:     user.Role,
+		BranchID: user.BranchID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(s.cfg.JWTExpireMinutes) * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -165,12 +167,13 @@ func (s *AuthService) generateTokenPair(user *models.User) (*TokenPair, error) {
 	if err != nil {
 		return nil, fmt.Errorf("sign access token: %w", err)
 	}
-
+ 
 	// Refresh token
 	refreshClaims := &Claims{
-		UserID: user.ID,
-		Email:  user.Email,
-		Role:   user.Role,
+		UserID:   user.ID,
+		Email:    user.Email,
+		Role:     user.Role,
+		BranchID: user.BranchID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(s.cfg.JWTRefreshHours) * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(now),
