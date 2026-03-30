@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/smart-attendance/smart-attendance/internal/middleware"
 	"github.com/smart-attendance/smart-attendance/internal/models"
 	"github.com/smart-attendance/smart-attendance/internal/renderer"
 	"github.com/smart-attendance/smart-attendance/internal/repository"
@@ -48,6 +49,9 @@ func (h *BranchHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 		"PrevPage":    result.Page - 1,
 	}
 
+	data["UserRole"] = middleware.GetUserRole(r)
+	data["UserBranch"] = middleware.GetBranchID(r)
+
 	if r.Header.Get("HX-Request") == "true" {
 		h.render.RenderPartial(w, "branch_list.html", data)
 		return
@@ -56,7 +60,9 @@ func (h *BranchHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BranchHandler) CreatePage(w http.ResponseWriter, r *http.Request) {
-	h.render.Render(w, "branch_create.html", nil)
+	h.render.Render(w, "branch_create.html", map[string]interface{}{
+		"UserRole": middleware.GetUserRole(r),
+	})
 }
 
 func (h *BranchHandler) EditPage(w http.ResponseWriter, r *http.Request) {
@@ -73,6 +79,7 @@ func (h *BranchHandler) EditPage(w http.ResponseWriter, r *http.Request) {
 	h.render.Render(w, "branch_edit.html", map[string]interface{}{
 		"Branch":        branch,
 		"EmployeeCount": empCount,
+		"UserRole":      middleware.GetUserRole(r),
 	})
 }
 

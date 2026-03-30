@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi" class="h-full bg-gray-50">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,16 +12,76 @@
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 
-    {{block "head_extra" .}}{{end}}
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/index.css">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        .htmx-indicator { display: none; }
-        .htmx-request .htmx-indicator { display: inline-block; }
-        .htmx-request.htmx-indicator { display: inline-block; }
+        .htmx-indicator {
+            display: none;
+        }
+
+        .htmx-request .htmx-indicator {
+            display: inline-block;
+        }
+
+        .htmx-request.htmx-indicator {
+            display: inline-block;
+        }
     </style>
 </head>
-<body class="h-full" hx-boost="true">
+
+<body class="h-full pb-16 sm:pb-0 font-sans" hx-boost="true">
+    {{template "toast" .}}
     {{block "body" .}}{{end}}
+
+    <script>
+        lucide.createIcons();
+
+        // Global HTMX error handling — show toast on any failed request
+        document.body.addEventListener('htmx:responseError', function(event) {
+            var xhr = event.detail.xhr;
+            var msg = 'Thao tác thất bại';
+
+            // Try to extract text from response
+            if (xhr && xhr.responseText) {
+                var text = xhr.responseText.replace(/<[^>]*>/g, '').trim();
+                if (text.length > 0 && text.length < 200) {
+                    msg = text;
+                }
+            }
+
+            // Add status code context for common errors
+            if (xhr) {
+                if (xhr.status === 401) msg = 'Phiên đăng nhập hết hạn';
+                else if (xhr.status === 403) msg = 'Bạn không có quyền thực hiện thao tác này';
+                else if (xhr.status === 404) msg = 'Không tìm thấy dữ liệu';
+                else if (xhr.status >= 500) msg = 'Lỗi hệ thống, vui lòng thử lại';
+            }
+
+            if (window.showToast) showToast(msg, 'error');
+        });
+
+        // Network failure (no response at all)
+        document.body.addEventListener('htmx:sendError', function() {
+            if (window.showToast) showToast('Mất kết nối mạng', 'error');
+        });
+
+        // Timeout
+        document.body.addEventListener('htmx:timeout', function() {
+            if (window.showToast) showToast('Yêu cầu quá thời gian chờ', 'error');
+        });
+
+        // Custom toast trigger via HX-Trigger header from server
+        document.body.addEventListener('showToast', function(event) {
+            if (window.showToast && event.detail) {
+                showToast(event.detail.message || 'Thông báo', event.detail.type || 'info');
+            }
+        });
+    </script>
     {{block "scripts" .}}{{end}}
 </body>
+
 </html>

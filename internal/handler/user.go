@@ -50,6 +50,9 @@ func (h *UserHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 		"PrevPage":    result.Page - 1,
 	}
 
+	data["UserRole"] = middleware.GetUserRole(r)
+	data["UserBranch"] = middleware.GetBranchID(r)
+
 	if r.Header.Get("HX-Request") == "true" {
 		h.render.RenderPartial(w, "user_list.html", data)
 		return
@@ -58,7 +61,9 @@ func (h *UserHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) CreatePage(w http.ResponseWriter, r *http.Request) {
-	h.render.Render(w, "user_create.html", nil)
+	h.render.Render(w, "user_create.html", map[string]interface{}{
+		"UserRole": middleware.GetUserRole(r),
+	})
 }
 
 func (h *UserHandler) EditPage(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +73,10 @@ func (h *UserHandler) EditPage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
-	h.render.Render(w, "user_edit.html", map[string]interface{}{"User": user})
+	h.render.Render(w, "user_edit.html", map[string]interface{}{
+		"User":     user,
+		"UserRole": middleware.GetUserRole(r),
+	})
 }
 
 // --- HTMX Form Handlers ---

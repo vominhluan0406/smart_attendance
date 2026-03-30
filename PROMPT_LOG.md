@@ -129,3 +129,37 @@
 | **Changes** | Renderer FuncMap: replaced arithmetic helpers with `containsMethod` for checkbox state |
 | **Files** | `internal/models/branch.go`, `internal/repository/branch_repository.go`, `internal/service/branch_service.go`, `internal/handler/branch.go`, `internal/renderer/renderer.go`, `internal/router/router.go`, `cmd/server/main.go`, `web/templates/pages/{branches,branch_create,branch_edit}.html`, `web/templates/partials/branch_list.html` |
 | **Commit** | — |
+---
+
+## Session 5 — Phase 4: History, Reports & QR Enhancements (2026-03-30)
+
+### 5.1 — Implement Phase 4 (all tasks 4.1–4.6)
+
+| Field | Detail |
+|---|---|
+| **Task** | Implement Attendance History, Excel Export, and QR Display enhancements |
+| **Spec** | ReportRepository (Filter queries) → ReportService (History, Excelize export) → ReportHandler (HTMX partials + Export) → Templates (History page, Branch report) → QR UI (Countdown timer, auto-refresh) |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | `Implement all Phase 4 tasks: ReportService for user and branch attendance history with filtering (date, status). Add Excel export using github.com/xuri/excelize/v2. Create ReportHandler with HTMX partial rendering for tables. Update QR display with a live 15s countdown timer and CSS progress bar. Implement event-driven QR refresh using 'refresh-qr' custom event instead of polling. Standardize partials by removing 'define' blocks.` |
+| **Output** | ReportService (Excelize integrated), ReportHandler (HTMX-aware), History templates, and refactored QR Display with JS countdown and custom events. |
+| **Review** | **Accepted** — QR code refreshes perfectly at 0s. Excel files generated correctly with headers and status colors. |
+| **Changes** | Fixed template rendering issue by removing `{{define}}` from partials intended for standalone rendering. |
+| **Files** | `internal/service/report_service.go`, `internal/handler/report.go`, `web/templates/pages/{my_history,branch_report}.html`, `web/templates/partials/qr_code.html`, `web/templates/pages/qr_display.html` |
+| **Commit** | — |
+
+---
+
+## Session 6 — RBAC & Camera Scanner Implementation (2026-03-30)
+
+### 6.1 — Business Analysis & RBAC Enforcement
+
+| Field | Detail |
+|---|---|
+| **Task** | Document and implement full RBAC as per BA requirements |
+| **Spec** | Create business_analysis_rbac.md → Update JWT Claims with BranchID → Enforce branch-level access in handlers → Conditional UI (Nav/Home) based on role |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | `Create a BA document for RBAC detailing Employee/Manager/Admin permissions. Then implement it: Add BranchID to JWT, update middleware to inject it. Secure ReportHandler and AttendanceHandler so Managers only see their own branch. Update nav.html and home.html to hide unauthorized links/buttons. Also, replace manual check-in with a camera-based QR scanner using html5-qrcode.` |
+| **Output** | business_analysis_rbac.md created. JWT claims updated. Secrity checks added to 6 handler methods. Navigation bar and home screen are now role-aware. |
+| **Review** | **Accepted** — Camera scanner works fluently on mobile. Admin/Manager see only relevant data. |
+| **Files** | `business_analysis_rbac.md`, `internal/service/auth_service.go`, `internal/middleware/auth.go`, `internal/handler/{report,attendance,home,user,branch}.go`, `web/templates/components/nav.html`, `web/templates/pages/attendance.html` |
+| **Commit** | — |

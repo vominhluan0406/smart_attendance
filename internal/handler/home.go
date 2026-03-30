@@ -3,7 +3,8 @@ package handler
 import (
 	"log"
 	"net/http"
-
+ 
+	"github.com/smart-attendance/smart-attendance/internal/middleware"
 	"github.com/smart-attendance/smart-attendance/internal/renderer"
 )
 
@@ -16,7 +17,11 @@ func NewHomeHandler(render *renderer.Renderer) *HomeHandler {
 }
 
 func (h *HomeHandler) Index(w http.ResponseWriter, r *http.Request) {
-	if err := h.render.Render(w, "home.html", nil); err != nil {
+	data := map[string]interface{}{
+		"UserRole":   middleware.GetUserRole(r),
+		"UserBranch": middleware.GetBranchID(r),
+	}
+	if err := h.render.Render(w, "home.html", data); err != nil {
 		log.Printf("[handler][home] render error: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

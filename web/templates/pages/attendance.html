@@ -7,7 +7,12 @@
     {{template "nav" .}}
     <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div class="max-w-md mx-auto">
-            <h1 class="text-2xl font-bold text-gray-900 mb-6 text-center">Attendance Check-in</h1>
+            <div class="flex items-center justify-center gap-3 mb-8">
+                <div class="p-2 bg-indigo-100 rounded-xl">
+                    <i data-lucide="camera" class="w-6 h-6 text-indigo-600"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900">Điểm danh</h1>
+            </div>
 
             <div id="checkin-result" class="mb-6"></div>
 
@@ -15,12 +20,10 @@
             <!-- Already checked in -->
             <div
                 class="bg-white shadow-lg rounded-2xl border border-gray-100 p-8 text-center transition-all hover:shadow-xl">
-                <div class="inline-flex items-center justify-center p-3 bg-green-100 rounded-full mb-4">
-                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
+                <div class="inline-flex items-center justify-center p-4 bg-green-100 rounded-full mb-6">
+                    <i data-lucide="check-circle" class="w-10 h-10 text-green-600"></i>
                 </div>
-                <h3 class="text-xl font-bold text-gray-900 mb-2">Đã điểm danh hôm nay</h3>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Đã điểm danh</h3>
 
                 <div class="grid grid-cols-2 gap-4 mt-6 text-left border-t border-gray-100 pt-6">
                     <div>
@@ -35,15 +38,18 @@
                 </div>
 
                 {{if .Today.CheckOutAt}}
-                <div class="mt-4 p-3 bg-gray-50 rounded-xl">
-                    <p class="text-xs text-gray-500 uppercase font-bold">Check-out</p>
-                    <p class="text-lg font-mono font-bold text-gray-700">{{.Today.CheckOutAt.Format "15:04:05"}}</p>
+                <div class="mt-6 p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold">Check-out</p>
+                        <p class="text-lg font-mono font-bold text-gray-700">{{.Today.CheckOutAt.Format "15:04:05"}}</p>
+                    </div>
+                    <i data-lucide="log-out" class="w-6 h-6 text-gray-400"></i>
                 </div>
                 {{else}}
                 <div class="mt-8">
                     <button hx-post="/attendance/check-out" hx-target="#checkin-result" hx-swap="innerHTML"
-                        class="w-full rounded-xl bg-red-500 py-3 text-sm font-bold text-white shadow-lg hover:bg-red-600 active:scale-95 transition-all">
-                        Check Out
+                        class="w-full rounded-2xl bg-red-500 py-4 text-base font-bold text-white shadow-lg hover:bg-red-600 active:scale-95 transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="log-out" class="w-5 h-5"></i> Check Out
                     </button>
                 </div>
                 {{end}}
@@ -54,17 +60,10 @@
                 <div class="p-6">
                     <div id="reader-container" class="relative">
                         <div id="reader"
-                            class="rounded-xl overflow-hidden border-2 border-dashed border-gray-200 aspect-square flex items-center justify-center bg-gray-50">
+                            class="rounded-xl overflow-hidden border-2 border-dashed border-gray-200 aspect-square flex items-center justify-center bg-gray-900">
                             <!-- Scanner will be mounted here -->
                             <div class="text-center p-6" id="reader-placeholder">
-                                <svg class="w-12 h-12 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z">
-                                    </path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                </svg>
+                                <i data-lucide="camera" class="w-12 h-12 text-gray-600 mx-auto mb-4 animate-pulse"></i>
                                 <p class="text-sm text-gray-400">Đang khởi tạo camera...</p>
                             </div>
                         </div>
@@ -152,16 +151,15 @@
 
                     // Show success feedback in UI before submitting
                     document.getElementById('reader').innerHTML = `
-                    <div class="text-center p-6">
-                        <div class="inline-flex items-center justify-center p-3 bg-indigo-100 rounded-full mb-4">
-                            <svg class="w-12 h-12 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
+                    <div class="text-center p-12 bg-white h-full flex flex-col items-center justify-center">
+                        <div class="inline-flex items-center justify-center p-4 bg-indigo-100 rounded-full mb-6 animate-bounce">
+                            <i data-lucide="check" class="w-12 h-12 text-indigo-600"></i>
                         </div>
-                        <p class="text-lg font-bold text-gray-900">Đã quét thành công!</p>
-                        <p class="text-sm text-gray-500 mt-1">Đang thực hiện điểm danh...</p>
+                        <p class="text-xl font-bold text-gray-900">Quét thành công!</p>
+                        <p class="text-sm text-gray-500 mt-2">Đang xử lý điểm danh...</p>
                     </div>
                 `;
+                    lucide.createIcons();
 
                     // Submit form via HTMX
                     document.getElementById('submit-btn').click();
