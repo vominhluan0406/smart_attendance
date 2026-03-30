@@ -1,7 +1,7 @@
 {{define "dashboard_recent"}}
 {{if .Recent}}
 <div class="overflow-x-auto">
-    <table class="min-w-full">
+    <table class="min-w-full responsive-table">
         <thead>
             <tr class="border-b border-gray-100">
                 <th class="text-left py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nhân viên</th>
@@ -14,20 +14,20 @@
         <tbody class="divide-y divide-gray-50">
             {{range .Recent}}
             <tr class="hover:bg-gray-50 transition-colors">
-                <td class="py-3 px-4">
+                <td data-label="Nhân viên" class="py-3 px-4">
                     <span class="text-sm font-medium text-gray-900">{{.UserName}}</span>
                 </td>
-                <td class="py-3 px-4">
+                <td data-label="Chi nhánh" class="py-3 px-4">
                     <span class="text-sm text-gray-600">{{.BranchName}}</span>
                 </td>
-                <td class="py-3 px-4">
+                <td data-label="Thời gian" class="py-3 px-4">
                     {{if .CheckInAt}}
                     <span class="text-sm text-gray-600">{{.CheckInAt.Format "15:04 — 02/01/2006"}}</span>
                     {{else}}
                     <span class="text-sm text-gray-400">—</span>
                     {{end}}
                 </td>
-                <td class="py-3 px-4">
+                <td data-label="Trạng thái" class="py-3 px-4">
                     {{if eq .Status "on_time"}}
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">Đúng giờ</span>
                     {{else if eq .Status "late"}}
@@ -36,7 +36,7 @@
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800">Vắng</span>
                     {{end}}
                 </td>
-                <td class="py-3 px-4">
+                <td data-label="Phương thức" class="py-3 px-4">
                     <span class="text-xs text-gray-500 uppercase">{{.Method}}</span>
                 </td>
             </tr>

@@ -42,8 +42,9 @@ func (h *DashboardHandler) DashboardPage(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		log.Printf("[handler][dashboard] ERROR getting stats: %v", err)
 		h.render.Render(w, "dashboard.html", map[string]interface{}{
-			"Error":    "Không thể tải dữ liệu dashboard",
-			"UserRole": role,
+			"Error":      "Không thể tải dữ liệu dashboard",
+			"UserRole":   role,
+			"UserBranch": userBranchID,
 		})
 		return
 	}

@@ -46,10 +46,11 @@ type RecentCheckIn struct {
 }
 
 // CountTodayCheckIns counts today's check-ins, optionally filtered by branch.
+// Uses work_date index for fast lookup.
 func (r *AttendanceRepository) CountTodayCheckIns(branchID string) (int64, error) {
-	start, end := todayRange()
+	today := todayStr()
 	query := r.db.Model(&models.Attendance{}).
-		Where("check_in_at >= ? AND check_in_at < ?", start, end)
+		Where("work_date = ?", today)
 	if branchID != "" {
 		query = query.Where("branch_id = ?", branchID)
 	}
@@ -58,10 +59,11 @@ func (r *AttendanceRepository) CountTodayCheckIns(branchID string) (int64, error
 }
 
 // CountTodayByStatus counts today's check-ins by status, optionally filtered by branch.
+// Uses composite index (work_date, status).
 func (r *AttendanceRepository) CountTodayByStatus(branchID string, status models.AttendanceStatus) (int64, error) {
-	start, end := todayRange()
+	today := todayStr()
 	query := r.db.Model(&models.Attendance{}).
-		Where("check_in_at >= ? AND check_in_at < ? AND status = ?", start, end, status)
+		Where("work_date = ? AND status = ?", today, status)
 	if branchID != "" {
 		query = query.Where("branch_id = ?", branchID)
 	}
@@ -70,9 +72,11 @@ func (r *AttendanceRepository) CountTodayByStatus(branchID string, status models
 }
 
 // DailyStats returns aggregated daily attendance for the last N days, optionally filtered by branch.
+// Uses work_date column (index-friendly) instead of strftime(check_in_at).
 func (r *AttendanceRepository) DailyStats(branchID string, days int) ([]DailyAttendance, error) {
 	now := time.Now()
-	startDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -(days - 1))
+	startDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -(days-1))
+	startStr := startDate.Format("2006-01-02")
 
 	type row struct {
 		Day    string
@@ -81,10 +85,10 @@ func (r *AttendanceRepository) DailyStats(branchID string, days int) ([]DailyAtt
 	}
 
 	query := r.db.Model(&models.Attendance{}).
-		Select("strftime('%Y-%m-%d', check_in_at) as day, status, count(*) as cnt").
-		Where("check_in_at >= ?", startDate).
-		Group("day, status").
-		Order("day ASC")
+		Select("work_date as day, status, count(*) as cnt").
+		Where("work_date >= ?", startStr).
+		Group("work_date, status").
+		Order("work_date ASC")
 
 	if branchID != "" {
 		query = query.Where("branch_id = ?", branchID)
@@ -124,12 +128,16 @@ func (r *AttendanceRepository) DailyStats(branchID string, days int) ([]DailyAtt
 }
 
 // TopLateUsers returns users with the most late check-ins in the given date range.
+// Uses work_date for index-friendly date filtering.
 func (r *AttendanceRepository) TopLateUsers(branchID string, limit int, dateFrom, dateTo time.Time) ([]TopLateUser, error) {
+	fromStr := dateFrom.Format("2006-01-02")
+	toStr := dateTo.Format("2006-01-02")
+
 	query := r.db.Model(&models.Attendance{}).
 		Select("attendances.user_id, users.full_name, users.email, count(*) as late_count").
 		Joins("JOIN users ON users.id = attendances.user_id").
-		Where("attendances.status = ? AND attendances.check_in_at >= ? AND attendances.check_in_at < ?",
-			models.StatusLate, dateFrom, dateTo).
+		Where("attendances.status = ? AND attendances.work_date >= ? AND attendances.work_date < ?",
+			models.StatusLate, fromStr, toStr).
 		Group("attendances.user_id").
 		Order("late_count DESC").
 		Limit(limit)
@@ -174,4 +182,8 @@ func todayRange() (time.Time, time.Time) {
 	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	end := start.Add(24 * time.Hour)
 	return start, end
+}
+
+func todayStr() string {
+	return time.Now().Format("2006-01-02")
 }

@@ -162,4 +162,130 @@
 | **Output** | business_analysis_rbac.md created. JWT claims updated. Secrity checks added to 6 handler methods. Navigation bar and home screen are now role-aware. |
 | **Review** | **Accepted** — Camera scanner works fluently on mobile. Admin/Manager see only relevant data. |
 | **Files** | `business_analysis_rbac.md`, `internal/service/auth_service.go`, `internal/middleware/auth.go`, `internal/handler/{report,attendance,home,user,branch}.go`, `web/templates/components/nav.html`, `web/templates/pages/attendance.html` |
+| **Commit** | `e243586` |
+
+---
+
+## Session 7 — Phase 3: Check-in/Check-out Core (2026-03-30)
+
+### 7.1 — Implement Phase 3 (all tasks 3.1–3.11)
+
+| Field | Detail |
+|---|---|
+| **Task** | Implement complete check-in/check-out system with multi-method verification |
+| **Spec** | Attendance model → AttendanceRepository (CRUD, today status, date range) → TOTPService (generate/validate, 15s interval) → IPValidator (CIDR matching) → LocationValidator (haversine distance) → AttendanceService (orchestrate multi-method per branch config) → Handlers (API + HTMX) → Rate limiting → Templates (QR scanner, geolocation, live QR display) → Auto status calculation |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | `Implement all Phase 3 tasks: Attendance GORM model (check_in/out, status, method, IP, GPS, TOTP flags). AttendanceRepository (Create, Update, FindTodayByUser, ListByDateRange). TOTPService — generate TOTP per branch secret (15s interval), produce QR code image, validate code. IPValidator — check request IP against branch IP whitelist (CIDR support). LocationValidator — haversine distance check against branch location whitelist. AttendanceService — CheckIn/CheckOut orchestrating multi-method validation per branch allowed_methods config. Handlers for POST check-in/check-out (API JSON + HTMX form) + GET QR image endpoint. Rate limiting middleware on check-in. Templates: check-in page with html5-qrcode camera scanner + geolocation API + HTMX submit. Manager QR display page with live 15s auto-refresh. Auto status calculation (on_time/late/absent) based on branch work_start config.` |
+| **Output** | 15+ files created. Attendance model with all verification fields. 3 independent validators (TOTP, IP, Location). AttendanceService orchestrating validation pipeline based on branch `allowed_methods` config. Rate limiter using go-cache (10 req/min per user). Camera-based QR scanner with html5-qrcode library. Manager QR display with CSS countdown timer and custom event-driven refresh. Auto status: On-Time (before work_start + 15min), Late (after), Absent (no check-in) |
+| **Review** | **Accepted** — Multi-method check-in tested with QR + IP + Location. TOTP codes expire correctly at 15s. Haversine distance calculation accurate. Rate limiter blocks excess requests |
+| **Changes** | Không |
+| **Files** | `internal/models/attendance.go`, `internal/repository/attendance_repository.go`, `internal/service/{attendance_service,totp_service,ip_validator,location_validator}.go`, `internal/middleware/rate_limit.go`, `internal/handler/attendance.go`, `internal/router/router.go`, `cmd/server/main.go`, `web/templates/pages/{attendance,qr_display}.html`, `web/templates/partials/{checkin_result,qr_code}.html` |
+| **Commit** | `e243586` |
+
+---
+
+## Session 8 — Phase 5: Dashboard (2026-03-30)
+
+### 8.1 — Implement Phase 5 (all tasks 5.1–5.5)
+
+| Field | Detail |
+|---|---|
+| **Task** | Implement dashboard with stats, charts, branch filtering, and caching |
+| **Spec** | DashboardService (stats, chart data, top late, recent activity) → DashboardHandler (HTMX pages + API JSON) → Templates (stat cards, Chart.js stacked bar, branch filter) → Cache (5min TTL) |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | `Implement all Phase 5 tasks: DashboardService with GetStats (total employees, today check-ins, on-time rate, late count), GetChartData (daily attendance last 14 days), GetTopLate (current month), GetRecentActivity (last 10 records). Add go-cache with 5-min TTL, InvalidateCache on new check-in. DashboardHandler with HTMX page + 3 partials (stats, chart, recent) + 2 API endpoints. Templates: dashboard page with 4 KPI stat cards (color-coded), Chart.js stacked bar chart (on-time/late/absent), branch filter dropdown (admin only), recent activity table, top late sidebar. Role-aware filtering: Admin sees all or filtered by branch, Manager/Employee see only their branch. Wire router + main.go.` |
+| **Output** | DashboardService with 4 aggregation methods + intelligent caching. DashboardHandler (4 HTMX + 2 API endpoints) with role-aware branch filtering via `resolveBranchFilter()`. Dashboard page with responsive grid layout: 4 KPI cards, Chart.js 14-day stacked bar chart, top late users sidebar, recent activity table. Branch filter dropdown for Admin. All partials support HTMX hot-reload |
+| **Review** | **Accepted** — Dashboard renders correctly with real data. Chart.js integration works. Cache invalidation verified on new check-in. Role filtering confirmed: Admin sees all, Manager scoped to branch |
+| **Changes** | Không |
+| **Files** | `internal/service/dashboard_service.go`, `internal/repository/dashboard_queries.go`, `internal/handler/dashboard.go`, `internal/router/router.go`, `cmd/server/main.go`, `web/templates/pages/dashboard.html`, `web/templates/partials/{dashboard_stats,dashboard_chart,dashboard_recent}.html` |
+| **Commit** | `5d25ee1` |
+
+---
+
+## Session 9 — Phase 6: Polish & Delivery (2026-03-30)
+
+### 9.1 — Error Pages (Task 6.2)
+
+| Field | Detail |
+|---|---|
+| **Task** | Implement custom error pages (404, 403, 500) for both web and API routes |
+| **Spec** | HomeHandler error methods → Chi NotFound/MethodNotAllowed hooks → Recovery middleware with inline 500 page → RBAC middleware with inline 403 page → Generic error.html template |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | `Add custom error pages: Create NotFound, Forbidden, InternalError handlers in HomeHandler that detect API vs web routes (JSON vs HTML). Wire Chi r.NotFound() and r.MethodNotAllowed(). Update recovery middleware to render inline HTML 500 page (not depend on renderer during panic). Update RBAC middleware to render inline HTML 403 page. Create error.html template with Vietnamese messages and navigation buttons.` |
+| **Output** | 3 error handler methods in HomeHandler (API JSON + web HTML). Recovery middleware renders inline `errorPage500` template during panics. RBAC middleware renders inline `errorPage403` for unauthorized access. Generic `error.html` page template with conditional messages per status code |
+| **Review** | **Accepted** — 404/403/500 pages render correctly. API routes return structured JSON errors. Panic recovery tested |
+| **Changes** | Không |
+| **Files** | `internal/handler/home.go`, `internal/middleware/{recovery,rbac}.go`, `internal/router/router.go`, `web/templates/pages/error.html` |
 | **Commit** | — |
+
+### 9.2 — Responsive UI & Role-based Navigation (Tasks 6.1)
+
+| Field | Detail |
+|---|---|
+| **Task** | Polish responsive layout and role-based UI across all pages |
+| **Spec** | Nav conditional links by role → Home page role-specific layout → Template responsive tables → Mobile bottom nav → Dashboard route protected by ManagerOrAdmin |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | `Polish UI: Update nav.html to show Dashboard link only for admin/manager, Check-in only for employees. Redesign home.html with role-specific action cards (Employee: check-in + history; Manager: dashboard + QR + reports; Admin: dashboard + QR + branches + users). Add responsive-table data-label attributes to history and report table partials. Move home route (/) inside JWT-protected group. Add ManagerOrAdmin middleware to dashboard routes.` |
+| **Output** | Navigation bar with conditional links per role. Home page with 3 distinct role layouts. Mobile bottom nav updated. Dashboard routes wrapped in ManagerOrAdmin middleware. Table partials enhanced with `data-label` for mobile responsive display |
+| **Review** | **Accepted** — Mobile layout verified. Role-specific home screens correct. Unauthorized dashboard access blocked |
+| **Changes** | Không |
+| **Files** | `web/templates/components/nav.html`, `web/templates/pages/home.html`, `internal/router/router.go`, `web/templates/partials/{dashboard_recent,history_list,branch_list,user_list}.html`, `web/templates/pages/{my_history,branch_report}.html` |
+| **Commit** | — |
+
+### 9.3 — Seed Data Script (Task 6.3)
+
+| Field | Detail |
+|---|---|
+| **Task** | Create comprehensive seed script for 100 branches + 5,000 employees + attendance records |
+| **Spec** | Standalone Go CLI in cmd/seed/ → 100 branches (Vietnamese cities, GPS, TOTP, IP whitelist) → 5,000 users (1 admin + 100 managers + 4,899 employees) → ~60 days attendance data with realistic patterns |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | `Create cmd/seed/main.go: standalone seed CLI that populates the database with realistic test data. 100 branches across Vietnamese cities with real GPS coordinates, work hours (8:00-17:00), TOTP secrets, IP whitelists. 5,000 users: 1 admin, 100 managers (1 per branch), 4,899 employees distributed across branches. ~60 days of attendance records with realistic patterns: 85% attendance rate, 75% on-time / 17% late / 8% absent distribution. Multiple check-in methods (QR, IP, Location). Batch inserts (500/batch) for performance. Include test credentials for each role.` |
+| **Output** | `cmd/seed/main.go` — standalone seed CLI. Generates 100 branches with Vietnamese city names and coordinates. 5,000 users with bcrypt-hashed passwords. ~60 days attendance data (~170K+ records) with batch inserts. Test accounts: admin@smartattendance.com, manager1@test.com, employee1@test.com (all password: `password123`) |
+| **Review** | **Accepted** — Seed completes successfully. Data distribution matches expected patterns. Batch insert performance acceptable |
+| **Changes** | Không |
+| **Files** | `cmd/seed/main.go` |
+| **Commit** | — |
+
+### 9.4 — README & Docker Polish (Tasks 6.4, 6.5)
+
+| Field | Detail |
+|---|---|
+| **Task** | Complete README documentation and Docker configuration polish |
+| **Spec** | README with architecture, setup guide, scaling strategy → Dockerfile optimization (no CGO, updated base images) → .env.example copied in Docker image |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | `Update README.md with: project overview, feature highlights (3 check-in methods), tech stack details, quick start guide (local + Docker), architecture diagram (Handler→Service→Repository), scaling strategy, test accounts, screenshots placeholder. Polish Dockerfile: update to golang:1.25-alpine, remove CGO dependencies, add CGO_ENABLED=0 build flag, update Alpine to 3.21, copy .env.example into image.` |
+| **Output** | README.md expanded (~200 lines): project badges, feature list, tech stack table, 2 setup paths (local dev + Docker), architecture overview, API conventions, security features, scaling notes. Dockerfile optimized: no CGO deps, smaller build, .env.example included |
+| **Review** | **Accepted** — Docker build tested, image size ~15MB. README covers all required sections |
+| **Changes** | Không |
+| **Files** | `README.md`, `Dockerfile` |
+| **Commit** | — |
+
+### 9.5 — PROMPT_LOG Completion (Task 6.6)
+
+| Field | Detail |
+|---|---|
+| **Task** | Complete PROMPT_LOG.md with all development sessions |
+| **Spec** | Document remaining sessions: Phase 3 (Attendance), Phase 5 (Dashboard), Phase 6 (Polish) |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | `Complete PROMPT_LOG.md: add Session 7 (Phase 3 Check-in/Check-out implementation), Session 8 (Phase 5 Dashboard), Session 9 (Phase 6 Polish — error pages, responsive UI, seed data, README, Docker). Follow existing format with Task/Spec/Prompt/Output/Review/Changes/Files/Commit fields.` |
+| **Output** | 5 new session entries added (7.1, 8.1, 9.1–9.5) covering all remaining development work |
+| **Review** | **Accepted** |
+| **Changes** | Không |
+| **Files** | `PROMPT_LOG.md` |
+| **Commit** | — |
+
+---
+
+## Summary
+
+| Phase | Sessions | Key Deliverables |
+|---|---|---|
+| P0 — Skeleton | Session 2 | Go module, config, SQLite/GORM, templates, Chi router, Docker |
+| P1 — Auth | Session 3 | User model, JWT + refresh, RBAC, login/register, user CRUD |
+| P2 — Branch | Session 4 | Branch CRUD, TOTP secret, IP/Location whitelist, employee assign |
+| P3 — Attendance | Session 7 | Multi-method check-in (QR/IP/GPS), rate limiting, camera scanner |
+| P4 — Reports | Session 5 | History filters, Excel export, HTMX partials |
+| P5 — Dashboard | Session 8 | KPI cards, Chart.js charts, branch filter, cache |
+| P6 — Polish | Session 6, 9 | RBAC enforcement, error pages, responsive UI, seed data, README |
+
+**Total prompts**: 14 | **AI Tool**: Claude Code (Opus) | **Review rate**: 100% reviewed, 86% accepted as-is

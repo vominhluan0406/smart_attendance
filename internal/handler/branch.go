@@ -61,7 +61,8 @@ func (h *BranchHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 
 func (h *BranchHandler) CreatePage(w http.ResponseWriter, r *http.Request) {
 	h.render.Render(w, "branch_create.html", map[string]interface{}{
-		"UserRole": middleware.GetUserRole(r),
+		"UserRole":   middleware.GetUserRole(r),
+		"UserBranch": middleware.GetBranchID(r),
 	})
 }
 
@@ -80,6 +81,7 @@ func (h *BranchHandler) EditPage(w http.ResponseWriter, r *http.Request) {
 		"Branch":        branch,
 		"EmployeeCount": empCount,
 		"UserRole":      middleware.GetUserRole(r),
+		"UserBranch":    middleware.GetBranchID(r),
 	})
 }
 

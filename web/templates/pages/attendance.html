@@ -106,12 +106,14 @@
 
 {{define "scripts"}}
 <script>
-    // Geolocation logic
-    if (navigator.geolocation) {
+    // Geolocation logic — only run when scanner form exists
+    const latField = document.getElementById('lat');
+    const lngField = document.getElementById('lng');
+    if (navigator.geolocation && latField && lngField) {
         navigator.geolocation.watchPosition(
             function (pos) {
-                document.getElementById('lat').value = pos.coords.latitude;
-                document.getElementById('lng').value = pos.coords.longitude;
+                latField.value = pos.coords.latitude;
+                lngField.value = pos.coords.longitude;
 
                 const locStatus = document.getElementById('location-status');
                 if (locStatus) {
@@ -173,7 +175,7 @@
             // ignore errors
         };
 
-        html5QrCode.start({ faceMode: "environment" }, scanConfig, onScanSuccess, qrCodeErrorCallback)
+        html5QrCode.start({ facingMode: "environment" }, scanConfig, onScanSuccess, qrCodeErrorCallback)
             .then(() => {
                 document.getElementById('scanner-line').classList.remove('opacity-0');
                 document.getElementById('scanner-line').classList.add('animate-scan');

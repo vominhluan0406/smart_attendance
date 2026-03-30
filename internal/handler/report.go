@@ -38,7 +38,11 @@ func (h *ReportHandler) UserHistoryPage(w http.ResponseWriter, r *http.Request) 
 
 	result, err := h.reportService.GetUserHistory(userID, page, limit, dateFrom, dateTo, status)
 	if err != nil {
-		h.render.Render(w, "my_history.html", map[string]interface{}{"Error": err.Error()})
+		h.render.Render(w, "my_history.html", map[string]interface{}{
+			"Error":      err.Error(),
+			"UserRole":   middleware.GetUserRole(r),
+			"UserBranch": middleware.GetBranchID(r),
+		})
 		return
 	}
 
@@ -92,7 +96,12 @@ func (h *ReportHandler) BranchReportPage(w http.ResponseWriter, r *http.Request)
 
 	result, err := h.reportService.GetBranchReport(branchID, page, limit, dateFrom, dateTo, status)
 	if err != nil {
-		h.render.Render(w, "branch_report.html", map[string]interface{}{"Error": err.Error(), "Branch": branch})
+		h.render.Render(w, "branch_report.html", map[string]interface{}{
+			"Error":      err.Error(),
+			"Branch":     branch,
+			"UserRole":   middleware.GetUserRole(r),
+			"UserBranch": middleware.GetBranchID(r),
+		})
 		return
 	}
 

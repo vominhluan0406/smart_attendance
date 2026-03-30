@@ -43,18 +43,20 @@
         </tbody>
     </table>
 
-    {{if .HasNextPage}}
+    {{if or .HasNextPage .HasPrevPage}}
     <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
         <div class="text-sm text-gray-700">
-            Page <span class="font-medium">{{.Page}}</span> — <span class="font-medium">{{.Total}}</span> total
+            Trang <span class="font-medium">{{.Page}}</span> — <span class="font-medium">{{.Total}}</span> chi nhánh
         </div>
         <div class="flex space-x-2">
             {{if .HasPrevPage}}
             <a hx-get="/branches?page={{.PrevPage}}" hx-target="#branch-table" hx-swap="innerHTML"
                 class="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Previous</a>
             {{end}}
+            {{if .HasNextPage}}
             <a hx-get="/branches?page={{.NextPage}}" hx-target="#branch-table" hx-swap="innerHTML"
                 class="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Next</a>
+            {{end}}
         </div>
     </div>
     {{end}}

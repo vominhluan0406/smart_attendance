@@ -62,7 +62,8 @@ func (h *UserHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 
 func (h *UserHandler) CreatePage(w http.ResponseWriter, r *http.Request) {
 	h.render.Render(w, "user_create.html", map[string]interface{}{
-		"UserRole": middleware.GetUserRole(r),
+		"UserRole":   middleware.GetUserRole(r),
+		"UserBranch": middleware.GetBranchID(r),
 	})
 }
 
@@ -74,8 +75,9 @@ func (h *UserHandler) EditPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.render.Render(w, "user_edit.html", map[string]interface{}{
-		"User":     user,
-		"UserRole": middleware.GetUserRole(r),
+		"User":       user,
+		"UserRole":   middleware.GetUserRole(r),
+		"UserBranch": middleware.GetBranchID(r),
 	})
 }
 

@@ -98,10 +98,12 @@ func (h *AttendanceHandler) QRDisplayPage(w http.ResponseWriter, r *http.Request
 	}
 
 	h.render.Render(w, "qr_display.html", map[string]interface{}{
-		"Branch":    branch,
-		"BranchID":  branch.ID,
-		"TOTPCode":  code,
-		"Remaining": remaining,
+		"Branch":     branch,
+		"BranchID":   branch.ID,
+		"TOTPCode":   code,
+		"Remaining":  remaining,
+		"UserRole":   middleware.GetUserRole(r),
+		"UserBranch": middleware.GetBranchID(r),
 	})
 }
 

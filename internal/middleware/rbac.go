@@ -19,16 +19,32 @@ func RequireRoles(roles ...models.Role) func(http.Handler) http.Handler {
 			role := GetUserRole(r)
 			if !allowed[role] {
 				if strings.HasPrefix(r.URL.Path, "/api/") {
-					http.Error(w, `{"success":false,"error":{"code":"FORBIDDEN","message":"insufficient permissions"}}`, http.StatusForbidden)
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusForbidden)
+					w.Write([]byte(`{"success":false,"error":{"code":"FORBIDDEN","message":"insufficient permissions"}}`))
 					return
 				}
-				http.Error(w, "Forbidden", http.StatusForbidden)
+				w.WriteHeader(http.StatusForbidden)
+				w.Write([]byte(errorPage403))
 				return
 			}
 			next.ServeHTTP(w, r)
 		})
 	}
 }
+
+const errorPage403 = `<!DOCTYPE html>
+<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>403 — Smart Attendance</title>
+<script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+<div class="text-center"><p class="text-7xl font-extrabold text-red-500">403</p>
+<h2 class="mt-4 text-xl font-bold text-gray-900">Không có quyền truy cập</h2>
+<p class="mt-2 text-sm text-gray-500">Bạn không có quyền truy cập trang này.</p>
+<div class="mt-8 flex justify-center gap-3">
+<a href="/" class="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white hover:bg-indigo-700">Trang chủ</a>
+<button onclick="history.back()" class="rounded-xl bg-white border border-gray-200 px-5 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50">Quay lại</button>
+</div></div></body></html>`
 
 // Convenience middleware
 func AdminOnly(next http.Handler) http.Handler {

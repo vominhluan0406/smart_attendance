@@ -48,8 +48,9 @@ func New(deps Deps) http.Handler {
 	reports := handler.NewReportHandler(deps.ReportService, deps.BranchService, deps.Render)
 	dashboard := handler.NewDashboardHandler(deps.DashboardService, deps.BranchService, deps.Render)
 
-	// Public pages
-	r.Get("/", home.Index)
+	// Custom error pages
+	r.NotFound(home.NotFound)
+	r.MethodNotAllowed(home.NotFound)
 
 	// Auth pages (no JWT required)
 	r.Route("/auth", func(ar chi.Router) {
@@ -68,10 +69,16 @@ func New(deps Deps) http.Handler {
 	r.Group(func(pr chi.Router) {
 		pr.Use(middleware.JWTAuth(deps.AuthService))
 
-		pr.Get("/dashboard", dashboard.DashboardPage)
-		pr.Get("/dashboard/stats", dashboard.StatsPartial)
-		pr.Get("/dashboard/chart", dashboard.ChartPartial)
-		pr.Get("/dashboard/recent", dashboard.RecentPartial)
+		pr.Get("/", home.Index)
+
+		// Dashboard (Manager/Admin only)
+		pr.Route("/dashboard", func(dr chi.Router) {
+			dr.Use(middleware.ManagerOrAdmin)
+			dr.Get("/", dashboard.DashboardPage)
+			dr.Get("/stats", dashboard.StatsPartial)
+			dr.Get("/chart", dashboard.ChartPartial)
+			dr.Get("/recent", dashboard.RecentPartial)
+		})
 		
 		// Reports (User specific)
 		pr.Route("/reports", func(rr chi.Router) {
@@ -140,9 +147,12 @@ func New(deps Deps) http.Handler {
 		api.Group(func(pa chi.Router) {
 			pa.Use(middleware.JWTAuth(deps.AuthService))
 
-			// Dashboard API
-			pa.Get("/dashboard/stats", dashboard.APIStats)
-			pa.Get("/dashboard/charts", dashboard.APICharts)
+			// Dashboard API (Manager/Admin only)
+			pa.Route("/dashboard", func(da chi.Router) {
+				da.Use(middleware.ManagerOrAdmin)
+				da.Get("/stats", dashboard.APIStats)
+				da.Get("/charts", dashboard.APICharts)
+			})
 
 			// Attendance API
 			pa.Route("/attendance", func(aa chi.Router) {

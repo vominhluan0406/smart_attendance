@@ -16,25 +16,59 @@
             </p>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-sm px-4">
+                {{if eq .UserRole "employee"}}
                 <a href="/attendance"
                     class="flex items-center justify-center gap-3 rounded-2xl bg-indigo-600 px-6 py-4 text-base font-bold text-white shadow-xl hover:bg-indigo-700 active:scale-95 transition-all">
                     <i data-lucide="camera" class="w-5 h-5"></i>
                     Check-in ngay
                 </a>
+                <a href="/reports/my-history"
+                    class="flex items-center justify-center gap-3 rounded-2xl bg-white border-2 border-gray-100 px-6 py-4 text-base font-bold text-gray-900 hover:bg-gray-50 active:scale-95 transition-all">
+                    <i data-lucide="history" class="w-5 h-5"></i>
+                    Lịch sử
+                </a>
+                {{end}}
 
-                {{if or (eq .UserRole "admin") (eq .UserRole "manager")}}
+                {{if eq .UserRole "manager"}}
+                <a href="/dashboard"
+                    class="flex items-center justify-center gap-3 rounded-2xl bg-indigo-600 px-6 py-4 text-base font-bold text-white shadow-xl hover:bg-indigo-700 active:scale-95 transition-all">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                    Dashboard
+                </a>
                 <a href="/attendance/qr-manager"
                     class="flex items-center justify-center gap-3 rounded-2xl bg-green-600 px-6 py-4 text-base font-bold text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all">
                     <i data-lucide="qr-code" class="w-5 h-5"></i>
                     Mã QR
                 </a>
+                <a href="/reports/branch/{{.UserBranch}}"
+                    class="col-span-1 sm:col-span-2 flex items-center justify-center gap-2 rounded-2xl bg-white border-2 border-gray-100 px-6 py-4 text-base font-bold text-gray-900 hover:bg-gray-50 active:scale-95 transition-all">
+                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                    Báo cáo chi nhánh
+                </a>
                 {{end}}
 
+                {{if eq .UserRole "admin"}}
                 <a href="/dashboard"
-                    class="col-span-1 sm:col-span-2 flex items-center justify-center gap-2 rounded-2xl bg-white border-2 border-gray-100 px-6 py-4 text-base font-bold text-gray-900 hover:bg-gray-50 active:scale-95 transition-all mt-2">
+                    class="flex items-center justify-center gap-3 rounded-2xl bg-indigo-600 px-6 py-4 text-base font-bold text-white shadow-xl hover:bg-indigo-700 active:scale-95 transition-all">
                     <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-                    Xem Dashboard
+                    Dashboard
                 </a>
+                <a href="/attendance/qr-manager"
+                    class="flex items-center justify-center gap-3 rounded-2xl bg-green-600 px-6 py-4 text-base font-bold text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all">
+                    <i data-lucide="qr-code" class="w-5 h-5"></i>
+                    Mã QR
+                </a>
+                <a href="/branches"
+                    class="flex items-center justify-center gap-2 rounded-2xl bg-white border-2 border-gray-100 px-6 py-4 text-base font-bold text-gray-900 hover:bg-gray-50 active:scale-95 transition-all">
+                    <i data-lucide="map-pin" class="w-5 h-5"></i>
+                    Chi nhánh
+                </a>
+                <a href="/users"
+                    class="flex items-center justify-center gap-2 rounded-2xl bg-white border-2 border-gray-100 px-6 py-4 text-base font-bold text-gray-900 hover:bg-gray-50 active:scale-95 transition-all">
+                    <i data-lucide="users" class="w-5 h-5"></i>
+                    Nhân viên
+                </a>
+                {{end}}
             </div>
 
             <div class="mt-16 grid grid-cols-3 gap-8 text-center border-t border-gray-100 pt-12 w-full max-w-lg px-4">

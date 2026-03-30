@@ -85,12 +85,12 @@
 
 | # | Task | Branch | Size | Depends | Status |
 |---|------|--------|------|---------|--------|
-| 6.1 | Responsive UI: test & fix mobile layout cho tất cả pages | `feature/ui-polish` | M | P1–P5 | TODO |
-| 6.2 | Error pages: 404, 403, 500 (template) | `feature/ui-polish` | S | 0.5 | TODO |
-| 6.3 | Seed data: script tạo 100 branches + 5.000 employees + attendance records | `feature/seed-data` | M | P1–P3 | TODO |
-| 6.4 | README.md: setup guide, architecture diagram, scaling strategy, screenshots | `docs/readme` | L | P0–P5 | TODO |
-| 6.5 | Docker: test docker-compose up from scratch, verify 1-click deploy | `feature/docker-setup` | M | 0.7, P1–P5 | TODO |
-| 6.6 | PROMPT_LOG.md: hoàn thiện log tất cả sessions | `docs/prompt-log` | S | — | TODO |
+| 6.1 | Responsive UI: test & fix mobile layout cho tất cả pages | `feature/ui-polish` | M | P1–P5 | DONE |
+| 6.2 | Error pages: 404, 403, 500 (template) | `feature/ui-polish` | S | 0.5 | DONE |
+| 6.3 | Seed data: script tạo 100 branches + 5.000 employees + attendance records | `feature/seed-data` | M | P1–P3 | DONE |
+| 6.4 | README.md: setup guide, architecture diagram, scaling strategy, screenshots | `docs/readme` | L | P0–P5 | DONE |
+| 6.5 | Docker: test docker-compose up from scratch, verify 1-click deploy | `feature/docker-setup` | M | 0.7, P1–P5 | DONE |
+| 6.6 | PROMPT_LOG.md: hoàn thiện log tất cả sessions | `docs/prompt-log` | S | — | DONE |
 
 ---
 

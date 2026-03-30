@@ -32,13 +32,12 @@ func (r *AttendanceRepository) FindByID(id string) (*models.Attendance, error) {
 }
 
 // FindTodayByUser returns today's attendance record for a user (if any).
+// Uses composite index (user_id, work_date) for fast lookup.
 func (r *AttendanceRepository) FindTodayByUser(userID string) (*models.Attendance, error) {
-	now := time.Now()
-	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	endOfDay := startOfDay.Add(24 * time.Hour)
+	today := time.Now().Format("2006-01-02")
 
 	var att models.Attendance
-	err := r.db.Where("user_id = ? AND check_in_at >= ? AND check_in_at < ?", userID, startOfDay, endOfDay).
+	err := r.db.Where("user_id = ? AND work_date = ?", userID, today).
 		First(&att).Error
 	if err != nil {
 		return nil, err
@@ -83,10 +82,10 @@ func (r *AttendanceRepository) List(params AttendanceListParams) (*AttendanceLis
 		query = query.Where("status = ?", params.Status)
 	}
 	if params.DateFrom != nil {
-		query = query.Where("check_in_at >= ?", *params.DateFrom)
+		query = query.Where("work_date >= ?", params.DateFrom.Format("2006-01-02"))
 	}
 	if params.DateTo != nil {
-		query = query.Where("check_in_at < ?", *params.DateTo)
+		query = query.Where("work_date <= ?", params.DateTo.Format("2006-01-02"))
 	}
 
 	var total int64
