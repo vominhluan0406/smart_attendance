@@ -12,18 +12,16 @@ import (
 )
 
 var (
-	ErrAlreadyCheckedIn  = errors.New("already checked in today")
-	ErrNotCheckedIn      = errors.New("not checked in today")
-	ErrAlreadyCheckedOut = errors.New("already checked out")
-	ErrTOTPInvalid       = errors.New("invalid QR/TOTP code")
-	ErrIPNotAllowed      = errors.New("IP address not in whitelist")
-	ErrLocationOutside   = errors.New("location outside allowed area")
-	ErrNoBranch          = errors.New("user not assigned to any branch")
-	ErrMethodRequired    = errors.New("at least one verification method must pass")
+	ErrTOTPInvalid    = errors.New("invalid QR/TOTP code")
+	ErrIPNotAllowed   = errors.New("IP address not in whitelist")
+	ErrLocationOutside = errors.New("location outside allowed area")
+	ErrNoBranch       = errors.New("user not assigned to any branch")
+	ErrMethodRequired = errors.New("at least one verification method must pass")
 )
 
 type AttendanceService struct {
 	attendanceRepo *repository.AttendanceRepository
+	logRepo        *repository.AttendanceLogRepository
 	shiftRepo      *repository.ShiftRepository
 	branchService  *BranchService
 	userService    *UserService
@@ -34,6 +32,7 @@ type AttendanceService struct {
 
 func NewAttendanceService(
 	attendanceRepo *repository.AttendanceRepository,
+	logRepo *repository.AttendanceLogRepository,
 	shiftRepo *repository.ShiftRepository,
 	branchService *BranchService,
 	userService *UserService,
@@ -43,6 +42,7 @@ func NewAttendanceService(
 ) *AttendanceService {
 	return &AttendanceService{
 		attendanceRepo: attendanceRepo,
+		logRepo:        logRepo,
 		shiftRepo:      shiftRepo,
 		branchService:  branchService,
 		userService:    userService,
@@ -52,7 +52,8 @@ func NewAttendanceService(
 	}
 }
 
-type CheckInInput struct {
+// LogTimeInput is the input for each QR scan / time log.
+type LogTimeInput struct {
 	UserID   string   `json:"user_id"`
 	TOTPCode string   `json:"totp_code"`
 	IP       string   `json:"ip"`
@@ -60,14 +61,19 @@ type CheckInInput struct {
 	Lng      *float64 `json:"lng"`
 }
 
-type CheckInResult struct {
-	Attendance   *models.Attendance `json:"attendance"`
-	TOTPVerified bool               `json:"totp_verified"`
-	IPVerified   bool               `json:"ip_verified"`
-	LocVerified  bool               `json:"loc_verified"`
+// LogTimeResult is returned after a successful time log.
+type LogTimeResult struct {
+	Log          *models.AttendanceLog `json:"log"`
+	Attendance   *models.Attendance    `json:"attendance"`
+	TOTPVerified bool                  `json:"totp_verified"`
+	IPVerified   bool                  `json:"ip_verified"`
+	LocVerified  bool                  `json:"loc_verified"`
+	LogCount     int                   `json:"log_count"` // total logs today
 }
 
-func (s *AttendanceService) CheckIn(input CheckInInput) (*CheckInResult, error) {
+// LogTime records a time scan (replaces separate CheckIn/CheckOut).
+// Each scan creates an AttendanceLog and updates the daily Attendance summary.
+func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) {
 	// 1. Get user and branch
 	user, err := s.userService.GetByID(input.UserID)
 	if err != nil {
@@ -82,20 +88,10 @@ func (s *AttendanceService) CheckIn(input CheckInInput) (*CheckInResult, error) 
 		return nil, ErrBranchNotFound
 	}
 
-	// 2. Check if already checked in today
-	existing, err := s.attendanceRepo.FindTodayByUser(input.UserID)
-	if err == nil && existing != nil {
-		if existing.CheckOutAt != nil {
-			return nil, ErrAlreadyCheckedOut
-		}
-		return nil, ErrAlreadyCheckedIn
-	}
-
-	// 3. Validate each method the branch requires
-	result := &CheckInResult{}
+	// 2. Validate methods (same as before)
+	result := &LogTimeResult{}
 	var validationErrors []string
 
-	// QR/TOTP validation
 	if s.branchService.HasMethod(branch, models.MethodQRTOTP) {
 		if input.TOTPCode == "" {
 			validationErrors = append(validationErrors, "QR/TOTP code required")
@@ -112,7 +108,6 @@ func (s *AttendanceService) CheckIn(input CheckInInput) (*CheckInResult, error) 
 		}
 	}
 
-	// IP validation
 	if s.branchService.HasMethod(branch, models.MethodIP) {
 		if s.ipValidator.Validate(input.IP, branch.IPWhitelist) {
 			result.IPVerified = true
@@ -121,7 +116,6 @@ func (s *AttendanceService) CheckIn(input CheckInInput) (*CheckInResult, error) 
 		}
 	}
 
-	// Location validation
 	if s.branchService.HasMethod(branch, models.MethodLocation) {
 		if input.Lat != nil && input.Lng != nil {
 			if s.locValidator.Validate(*input.Lat, *input.Lng, branch.Locations) {
@@ -134,23 +128,21 @@ func (s *AttendanceService) CheckIn(input CheckInInput) (*CheckInResult, error) 
 		}
 	}
 
-	// At least one method must pass
 	if !result.TOTPVerified && !result.IPVerified && !result.LocVerified {
-		log.Printf("[service][attendance] check-in denied for user %s: %v", input.UserID, validationErrors)
+		log.Printf("[service][attendance] log denied for user %s: %v", input.UserID, validationErrors)
 		if len(validationErrors) > 0 {
 			return nil, fmt.Errorf("%s", validationErrors[0])
 		}
 		return nil, ErrMethodRequired
 	}
 
-	// 4. Resolve shift and create attendance record
+	// 3. Resolve shift
 	now := time.Now()
 	workDate := now.Format("2006-01-02")
-	method := buildMethodString(result)
+	method := buildMethodStr(result)
 
-	// Resolve the user's work shift for today
 	var shiftID *string
-	gracePeriod := 15 // default
+	gracePeriod := 15
 	workStartTime := branch.WorkStartTime
 
 	shift, err := s.shiftRepo.FindUserShift(input.UserID, *user.BranchID, workDate)
@@ -160,13 +152,13 @@ func (s *AttendanceService) CheckIn(input CheckInInput) (*CheckInResult, error) 
 		workStartTime = shift.StartTime
 	}
 
-	att := &models.Attendance{
+	// 4. Create AttendanceLog
+	attLog := &models.AttendanceLog{
 		UserID:       input.UserID,
 		BranchID:     *user.BranchID,
 		ShiftID:      shiftID,
 		WorkDate:     workDate,
-		CheckInAt:    &now,
-		Status:       calculateStatusWithGrace(now, workStartTime, gracePeriod),
+		LoggedAt:     now,
 		Method:       method,
 		IPAddress:    input.IP,
 		Lat:          input.Lat,
@@ -175,49 +167,79 @@ func (s *AttendanceService) CheckIn(input CheckInInput) (*CheckInResult, error) 
 		IPVerified:   result.IPVerified,
 		LocVerified:  result.LocVerified,
 	}
+	if err := s.logRepo.Create(attLog); err != nil {
+		return nil, fmt.Errorf("create attendance log: %w", err)
+	}
+	result.Log = attLog
 
-	if err := s.attendanceRepo.Create(att); err != nil {
-		return nil, fmt.Errorf("create attendance: %w", err)
+	// 5. Find or create daily Attendance summary
+	att, err := s.attendanceRepo.FindTodayByUser(input.UserID)
+	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+		// First log of the day → create attendance
+		att = &models.Attendance{
+			UserID:       input.UserID,
+			BranchID:     *user.BranchID,
+			ShiftID:      shiftID,
+			WorkDate:     workDate,
+			CheckInAt:    &now,
+			Status:       calculateStatusWithGrace(now, workStartTime, gracePeriod),
+			Method:       method,
+			IPAddress:    input.IP,
+			Lat:          input.Lat,
+			Lng:          input.Lng,
+			TOTPVerified: result.TOTPVerified,
+			IPVerified:   result.IPVerified,
+			LocVerified:  result.LocVerified,
+		}
+		if err := s.attendanceRepo.Create(att); err != nil {
+			return nil, fmt.Errorf("create attendance: %w", err)
+		}
+	} else if err == nil {
+		// Subsequent log → update attendance summary
+		// CheckInAt = earliest, CheckOutAt = latest
+		if att.CheckInAt != nil && now.Before(*att.CheckInAt) {
+			att.CheckInAt = &now
+			att.Status = calculateStatusWithGrace(now, workStartTime, gracePeriod)
+		}
+		if att.CheckOutAt == nil || now.After(*att.CheckOutAt) {
+			att.CheckOutAt = &now
+		}
+		// If only 1 previous log and this is the 2nd, set CheckOutAt
+		if att.CheckOutAt == nil {
+			att.CheckOutAt = &now
+		}
+		if err := s.attendanceRepo.Update(att); err != nil {
+			return nil, fmt.Errorf("update attendance: %w", err)
+		}
+	} else {
+		return nil, fmt.Errorf("find attendance: %w", err)
 	}
 
+	// 6. Count today's logs
+	count, _ := s.logRepo.CountTodayLogs(input.UserID, workDate)
 	result.Attendance = att
-	log.Printf("[service][attendance] check-in: user=%s branch=%s method=%s status=%s", input.UserID, branch.Name, method, att.Status)
+	result.LogCount = int(count)
+
+	log.Printf("[service][attendance] log-time: user=%s branch=%s method=%s log#%d", input.UserID, branch.Name, method, count)
 	return result, nil
 }
 
-func (s *AttendanceService) CheckOut(userID string) (*models.Attendance, error) {
-	att, err := s.attendanceRepo.FindTodayByUser(userID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrNotCheckedIn
-		}
-		return nil, err
-	}
-
-	if att.CheckOutAt != nil {
-		return nil, ErrAlreadyCheckedOut
-	}
-
-	now := time.Now()
-	att.CheckOutAt = &now
-
-	if err := s.attendanceRepo.Update(att); err != nil {
-		return nil, fmt.Errorf("update attendance: %w", err)
-	}
-
-	log.Printf("[service][attendance] check-out: user=%s at=%s", userID, now.Format("15:04:05"))
-	return att, nil
-}
-
+// GetTodayStatus returns today's attendance summary for a user.
 func (s *AttendanceService) GetTodayStatus(userID string) (*models.Attendance, error) {
 	att, err := s.attendanceRepo.FindTodayByUser(userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil // Not checked in yet
+			return nil, nil
 		}
 		return nil, err
 	}
 	return att, nil
+}
+
+// GetTodayLogs returns all time logs for a user today.
+func (s *AttendanceService) GetTodayLogs(userID string) ([]models.AttendanceLog, error) {
+	workDate := time.Now().Format("2006-01-02")
+	return s.logRepo.FindTodayLogs(userID, workDate)
 }
 
 func (s *AttendanceService) List(params repository.AttendanceListParams) (*repository.AttendanceListResult, error) {
@@ -246,23 +268,22 @@ func calculateStatusWithGrace(checkInTime time.Time, workStartTime string, grace
 	return models.StatusLate
 }
 
-func buildMethodString(result *CheckInResult) string {
-	var methods []string
+func buildMethodStr(result *LogTimeResult) string {
+	s := ""
 	if result.TOTPVerified {
-		methods = append(methods, "qr_totp")
+		s += "qr_totp"
 	}
 	if result.IPVerified {
-		methods = append(methods, "ip")
-	}
-	if result.LocVerified {
-		methods = append(methods, "location")
-	}
-	s := ""
-	for i, m := range methods {
-		if i > 0 {
+		if s != "" {
 			s += ","
 		}
-		s += m
+		s += "ip"
+	}
+	if result.LocVerified {
+		if s != "" {
+			s += ","
+		}
+		s += "location"
 	}
 	return s
 }

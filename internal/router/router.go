@@ -107,15 +107,14 @@ func New(deps Deps) http.Handler {
 			})
 		})
 
-		// Attendance check-in/out (requires attendance.check_in)
+		// Attendance — time log (replaces separate check-in/check-out)
 		pr.Route("/attendance", func(ar chi.Router) {
 			ar.Use(middleware.RateLimit(deps.RateLimitPerMin))
 
 			ar.Group(func(ciRouter chi.Router) {
 				ciRouter.Use(requirePerm(models.PermAttendanceCheckIn))
-				ciRouter.Get("/", attendance.CheckInPage)
-				ciRouter.Post("/check-in", attendance.CheckInForm)
-				ciRouter.Post("/check-out", attendance.CheckOutForm)
+				ciRouter.Get("/", attendance.AttendancePage)
+				ciRouter.Post("/log", attendance.LogTimeForm)
 			})
 
 			// Manager redirect
@@ -174,8 +173,7 @@ func New(deps Deps) http.Handler {
 			pa.Route("/attendance", func(aa chi.Router) {
 				aa.Use(middleware.RateLimit(deps.RateLimitPerMin))
 				aa.Use(requirePerm(models.PermAttendanceCheckIn))
-				aa.Post("/check-in", attendance.APICheckIn)
-				aa.Post("/check-out", attendance.APICheckOut)
+				aa.Post("/log", attendance.APILogTime)
 				aa.Get("/status", attendance.APIStatus)
 			})
 

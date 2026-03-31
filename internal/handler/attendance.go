@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -60,12 +59,15 @@ func (h *AttendanceHandler) ManagerQRRedirect(w http.ResponseWriter, r *http.Req
 
 // --- HTMX Pages ---
 
-func (h *AttendanceHandler) CheckInPage(w http.ResponseWriter, r *http.Request) {
+// AttendancePage shows the scanner (always available) + today's log history.
+func (h *AttendanceHandler) AttendancePage(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	today, _ := h.attendanceService.GetTodayStatus(userID)
+	logs, _ := h.attendanceService.GetTodayLogs(userID)
 
 	h.render.Render(w, "attendance.html", map[string]interface{}{
 		"Today":      today,
+		"Logs":       logs,
 		"UserRole":   middleware.GetUserRole(r),
 		"UserBranch": middleware.GetBranchID(r),
 	})
@@ -75,7 +77,6 @@ func (h *AttendanceHandler) CheckInPage(w http.ResponseWriter, r *http.Request) 
 func (h *AttendanceHandler) QRDisplayPage(w http.ResponseWriter, r *http.Request) {
 	branchID := chi.URLParam(r, "branchID")
 
-	// RBAC: Manager check
 	if middleware.GetUserRole(r) == models.RoleManager {
 		if middleware.GetBranchID(r) != branchID {
 			http.Error(w, "Forbidden: You can only view QR for your own branch.", http.StatusForbidden)
@@ -111,7 +112,6 @@ func (h *AttendanceHandler) QRDisplayPage(w http.ResponseWriter, r *http.Request
 func (h *AttendanceHandler) QRCodePartial(w http.ResponseWriter, r *http.Request) {
 	branchID := chi.URLParam(r, "branchID")
 
-	// RBAC: Manager check
 	if middleware.GetUserRole(r) == models.RoleManager {
 		if middleware.GetBranchID(r) != branchID {
 			http.Error(w, "Forbidden", http.StatusForbidden)
@@ -142,7 +142,6 @@ func (h *AttendanceHandler) QRCodePartial(w http.ResponseWriter, r *http.Request
 func (h *AttendanceHandler) QRImage(w http.ResponseWriter, r *http.Request) {
 	branchID := chi.URLParam(r, "branchID")
 
-	// RBAC: Manager check (Optional for image but good to have)
 	if middleware.GetUserRole(r) == models.RoleManager {
 		if middleware.GetBranchID(r) != branchID {
 			http.Error(w, "Forbidden", http.StatusForbidden)
@@ -162,9 +161,7 @@ func (h *AttendanceHandler) QRImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// QR content: branch_id:totp_code
 	qrContent := branchID + ":" + code
-
 	png, err := qrcode.Encode(qrContent, qrcode.Medium, 256)
 	if err != nil {
 		log.Printf("[handler][attendance] QR encode error: %v", err)
@@ -177,9 +174,10 @@ func (h *AttendanceHandler) QRImage(w http.ResponseWriter, r *http.Request) {
 	w.Write(png)
 }
 
-// --- HTMX Form Handlers ---
+// --- HTMX Form Handler ---
 
-func (h *AttendanceHandler) CheckInForm(w http.ResponseWriter, r *http.Request) {
+// LogTimeForm handles QR scan → log time (replaces separate check-in/check-out).
+func (h *AttendanceHandler) LogTimeForm(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		h.render.RenderPartial(w, "auth_error.html", "Invalid form data")
@@ -189,7 +187,7 @@ func (h *AttendanceHandler) CheckInForm(w http.ResponseWriter, r *http.Request) 
 	userID := middleware.GetUserID(r)
 	lat, lng := parseLatLng(r.FormValue("lat"), r.FormValue("lng"))
 
-	input := service.CheckInInput{
+	input := service.LogTimeInput{
 		UserID:   userID,
 		TOTPCode: r.FormValue("totp_code"),
 		IP:       getClientIP(r),
@@ -197,9 +195,9 @@ func (h *AttendanceHandler) CheckInForm(w http.ResponseWriter, r *http.Request) 
 		Lng:      lng,
 	}
 
-	result, err := h.attendanceService.CheckIn(input)
+	result, err := h.attendanceService.LogTime(input)
 	if err != nil {
-		log.Printf("[handler][attendance] check-in failed for user %s: %v", userID, err)
+		log.Printf("[handler][attendance] log-time failed for user %s: %v", userID, err)
 		w.WriteHeader(http.StatusBadRequest)
 		h.render.RenderPartial(w, "checkin_result.html", map[string]interface{}{
 			"Success": false,
@@ -211,37 +209,18 @@ func (h *AttendanceHandler) CheckInForm(w http.ResponseWriter, r *http.Request) 
 	h.render.RenderPartial(w, "checkin_result.html", map[string]interface{}{
 		"Success":    true,
 		"Attendance": result.Attendance,
+		"LogCount":   result.LogCount,
 		"TOTP":       result.TOTPVerified,
 		"IP":         result.IPVerified,
 		"Location":   result.LocVerified,
 	})
 }
 
-func (h *AttendanceHandler) CheckOutForm(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
-
-	att, err := h.attendanceService.CheckOut(userID)
-	if err != nil {
-		log.Printf("[handler][attendance] check-out failed for user %s: %v", userID, err)
-		w.WriteHeader(http.StatusBadRequest)
-		h.render.RenderPartial(w, "checkin_result.html", map[string]interface{}{
-			"Success": false,
-			"Error":   err.Error(),
-		})
-		return
-	}
-
-	h.render.RenderPartial(w, "checkin_result.html", map[string]interface{}{
-		"Success":    true,
-		"Attendance": att,
-		"CheckedOut": true,
-	})
-}
-
 // --- API JSON Handlers ---
 
-func (h *AttendanceHandler) APICheckIn(w http.ResponseWriter, r *http.Request) {
-	var input service.CheckInInput
+// APILogTime handles POST /api/v1/attendance/log
+func (h *AttendanceHandler) APILogTime(w http.ResponseWriter, r *http.Request) {
+	var input service.LogTimeInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
 			"success": false,
@@ -252,16 +231,11 @@ func (h *AttendanceHandler) APICheckIn(w http.ResponseWriter, r *http.Request) {
 	input.UserID = middleware.GetUserID(r)
 	input.IP = getClientIP(r)
 
-	result, err := h.attendanceService.CheckIn(input)
+	result, err := h.attendanceService.LogTime(input)
 	if err != nil {
-		code := http.StatusBadRequest
-		errCode := "CHECK_IN_FAILED"
-		if errors.Is(err, service.ErrAlreadyCheckedIn) {
-			errCode = "ALREADY_CHECKED_IN"
-		}
-		writeJSON(w, code, map[string]interface{}{
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
 			"success": false,
-			"error":   map[string]string{"code": errCode, "message": err.Error()},
+			"error":   map[string]string{"code": "LOG_TIME_FAILED", "message": err.Error()},
 		})
 		return
 	}
@@ -269,24 +243,6 @@ func (h *AttendanceHandler) APICheckIn(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"data":    result,
-	})
-}
-
-func (h *AttendanceHandler) APICheckOut(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
-
-	att, err := h.attendanceService.CheckOut(userID)
-	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
-			"success": false,
-			"error":   map[string]string{"code": "CHECK_OUT_FAILED", "message": err.Error()},
-		})
-		return
-	}
-
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"success": true,
-		"data":    att,
 	})
 }
 
@@ -302,10 +258,12 @@ func (h *AttendanceHandler) APIStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logs, _ := h.attendanceService.GetTodayLogs(userID)
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"success":    true,
-		"data":       att,
-		"checked_in": att != nil,
+		"success": true,
+		"data":    att,
+		"logs":    logs,
 	})
 }
 

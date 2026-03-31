@@ -1,27 +1,17 @@
 {{if .Success}}
-<div
-    class="rounded-2xl bg-green-50 p-6 border border-green-100 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+<div class="rounded-2xl bg-green-50 p-6 border border-green-100 shadow-sm">
     <div class="flex flex-col items-center text-center">
         <div class="p-3 bg-green-100 rounded-full mb-4">
-            <i data-lucide="check-circle" class="w-8 h-8 text-green-600"></i>
+            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         </div>
-        <h3 class="text-lg font-bold text-green-900">
-            {{if .CheckedOut}}Check-out thành công!{{else}}Điểm danh thành công!{{end}}
-        </h3>
+        <h3 class="text-lg font-bold text-green-900">Chấm công thành công!</h3>
+        <p class="text-sm text-green-700 mt-1">Lần quét thứ {{.LogCount}} hôm nay</p>
 
-        {{if not .CheckedOut}}
         <div class="mt-4 flex flex-wrap justify-center gap-2">
-            {{if .TOTP}}<span
-                class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-lg uppercase tracking-wider">QR
-                Verified</span>{{end}}
-            {{if .IP}}<span
-                class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-lg uppercase tracking-wider">IP
-                Verified</span>{{end}}
-            {{if .Location}}<span
-                class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-lg uppercase tracking-wider">Location
-                Verified</span>{{end}}
+            {{if .TOTP}}<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-lg">QR</span>{{end}}
+            {{if .IP}}<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-lg">IP</span>{{end}}
+            {{if .Location}}<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-lg">GPS</span>{{end}}
         </div>
-        {{end}}
 
         <div class="mt-6 w-full">
             <a href="/attendance"
@@ -32,17 +22,13 @@
     </div>
 </div>
 <script>
-    if (window.showToast) {
-        showToast("{{if .CheckedOut}}Check-out thành công{{else}}Điểm danh thành công{{end}}", "success");
-    }
-    lucide.createIcons();
+    if (window.showToast) showToast("Chấm công thành công!", "success");
 </script>
 {{else}}
-<div
-    class="rounded-2xl bg-red-50 p-6 border border-red-100 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+<div class="rounded-2xl bg-red-50 p-6 border border-red-100 shadow-sm">
     <div class="flex flex-col items-center text-center">
         <div class="p-3 bg-red-100 rounded-full mb-4">
-            <i data-lucide="alert-circle" class="w-8 h-8 text-red-600"></i>
+            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         </div>
         <h3 class="text-lg font-bold text-red-900">Thất bại</h3>
         <p class="mt-2 text-sm text-red-700 font-medium">{{.Error}}</p>
@@ -56,9 +42,6 @@
     </div>
 </div>
 <script>
-    if (window.showToast) {
-        showToast("Lỗi: {{.Error}}", "error");
-    }
-    lucide.createIcons();
+    if (window.showToast) showToast("Lỗi: {{.Error}}", "error");
 </script>
 {{end}}

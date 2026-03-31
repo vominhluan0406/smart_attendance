@@ -52,6 +52,7 @@ func main() {
 		&models.OvertimeRequest{},
 		&models.Permission{},
 		&models.RolePermission{},
+		&models.AttendanceLog{},
 	); err != nil {
 		log.Fatalf("auto-migrate failed: %v", err)
 	}
@@ -79,6 +80,7 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	branchRepo := repository.NewBranchRepository(db)
 	attendanceRepo := repository.NewAttendanceRepository(db)
+	attendanceLogRepo := repository.NewAttendanceLogRepository(db)
 	shiftRepo := repository.NewShiftRepository(db)
 	permRepo := repository.NewPermissionRepository(db)
 
@@ -89,7 +91,7 @@ func main() {
 	totpService := service.NewTOTPService()
 	ipValidator := service.NewIPValidator()
 	locValidator := service.NewLocationValidator()
-	attendanceService := service.NewAttendanceService(attendanceRepo, shiftRepo, branchService, userService, totpService, ipValidator, locValidator)
+	attendanceService := service.NewAttendanceService(attendanceRepo, attendanceLogRepo, shiftRepo, branchService, userService, totpService, ipValidator, locValidator)
 	reportService := service.NewReportService(attendanceRepo)
 	dashboardService := service.NewDashboardService(attendanceRepo, branchRepo, userRepo, appCache, db)
 	permissionService := service.NewPermissionService(permRepo, appCache)
