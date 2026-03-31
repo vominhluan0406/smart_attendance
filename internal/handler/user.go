@@ -51,8 +51,9 @@ func (h *UserHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 		"PrevPage":    result.Page - 1,
 	}
 
-	data["UserRole"] = middleware.GetUserRole(r)
-	data["UserBranch"] = middleware.GetBranchID(r)
+	for k, v := range userContext(r) {
+		data[k] = v
+	}
 
 	if r.Header.Get("HX-Request") == "true" && r.Header.Get("HX-Boosted") != "true" {
 		h.render.RenderPartial(w, "user_list.html", data)
@@ -63,11 +64,9 @@ func (h *UserHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 
 func (h *UserHandler) CreatePage(w http.ResponseWriter, r *http.Request) {
 	branches, _ := h.branchService.ListAll()
-	h.render.Render(w, "user_create.html", map[string]interface{}{
-		"Branches":   branches,
-		"UserRole":   middleware.GetUserRole(r),
-		"UserBranch": middleware.GetBranchID(r),
-	})
+	data := userContext(r)
+	data["Branches"] = branches
+	h.render.Render(w, "user_create.html", data)
 }
 
 func (h *UserHandler) EditPage(w http.ResponseWriter, r *http.Request) {
@@ -82,13 +81,11 @@ func (h *UserHandler) EditPage(w http.ResponseWriter, r *http.Request) {
 	if user.BranchID != nil {
 		currentBranch = *user.BranchID
 	}
-	h.render.Render(w, "user_edit.html", map[string]interface{}{
-		"User":          user,
-		"Branches":      branches,
-		"CurrentBranch": currentBranch,
-		"UserRole":      middleware.GetUserRole(r),
-		"UserBranch":    middleware.GetBranchID(r),
-	})
+	data := userContext(r)
+	data["User"] = user
+	data["Branches"] = branches
+	data["CurrentBranch"] = currentBranch
+	h.render.Render(w, "user_edit.html", data)
 }
 
 // --- HTMX Form Handlers ---

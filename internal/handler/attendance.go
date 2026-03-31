@@ -66,12 +66,22 @@ func (h *AttendanceHandler) AttendancePage(w http.ResponseWriter, r *http.Reques
 	today, _ := h.attendanceService.GetTodayStatus(userID)
 	logs, _ := h.attendanceService.GetTodayLogs(userID)
 
-	h.render.Render(w, "attendance.html", map[string]interface{}{
-		"Today":      today,
-		"Logs":       logs,
-		"UserRole":   middleware.GetUserRole(r),
-		"UserBranch": middleware.GetBranchID(r),
-	})
+	data := userContext(r)
+	data["Today"] = today
+	data["Logs"] = logs
+
+	// Check which methods are enabled for user's branch
+	branchID := middleware.GetBranchID(r)
+	if branchID != "" {
+		if branch, err := h.branchService.GetByIDCached(branchID); err == nil {
+			data["QREnabled"] = h.branchService.HasMethod(branch, models.MethodQRTOTP)
+			data["IPEnabled"] = h.branchService.HasMethod(branch, models.MethodIP)
+			data["LocationEnabled"] = h.branchService.HasMethod(branch, models.MethodLocation)
+			data["FaceEnabled"] = h.branchService.HasMethod(branch, models.MethodFace)
+		}
+	}
+
+	h.render.Render(w, "attendance.html", data)
 }
 
 // QRDisplayPage shows the live QR code for a specific branch (Manager/Admin only).
@@ -99,14 +109,15 @@ func (h *AttendanceHandler) QRDisplayPage(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	h.render.Render(w, "qr_display.html", map[string]interface{}{
-		"Branch":     branch,
-		"BranchID":   branch.ID,
-		"TOTPCode":   code,
-		"Remaining":  remaining,
-		"UserRole":   middleware.GetUserRole(r),
-		"UserBranch": middleware.GetBranchID(r),
-	})
+	recent, _ := h.attendanceService.GetRecentByBranch(branchID, 5)
+
+	data := userContext(r)
+	data["Branch"] = branch
+	data["BranchID"] = branch.ID
+	data["TOTPCode"] = code
+	data["Remaining"] = remaining
+	data["RecentLogs"] = recent
+	h.render.Render(w, "qr_display.html", data)
 }
 
 // QRCodePartial returns the QR code partial (HTMX auto-refresh target).
@@ -189,17 +200,17 @@ func (h *AttendanceHandler) LogTimeForm(w http.ResponseWriter, r *http.Request) 
 	lat, lng := parseLatLng(r.FormValue("lat"), r.FormValue("lng"))
 
 	input := service.LogTimeInput{
-		UserID:   userID,
-		TOTPCode: r.FormValue("totp_code"),
-		IP:       getClientIP(r),
-		Lat:      lat,
-		Lng:      lng,
+		UserID:       userID,
+		TOTPCode:     r.FormValue("totp_code"),
+		IP:           getClientIP(r),
+		Lat:          lat,
+		Lng:          lng,
+		FaceVerified: r.FormValue("face_verified") == "1",
 	}
 
 	result, err := h.attendanceService.LogTime(input)
 	if err != nil {
 		log.Printf("[handler][attendance] log-time failed for user %s: %v", userID, err)
-		w.WriteHeader(http.StatusBadRequest)
 		h.render.RenderPartial(w, "checkin_result.html", map[string]interface{}{
 			"Success": false,
 			"Error":   translateAttendanceError(err),
@@ -214,6 +225,7 @@ func (h *AttendanceHandler) LogTimeForm(w http.ResponseWriter, r *http.Request) 
 		"TOTP":       result.TOTPVerified,
 		"IP":         result.IPVerified,
 		"Location":   result.LocVerified,
+		"Face":       result.FaceVerified,
 	})
 }
 

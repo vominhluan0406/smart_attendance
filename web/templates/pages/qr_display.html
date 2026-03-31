@@ -20,6 +20,41 @@
                 </div>
             </div>
         </div>
+
+        {{if .RecentLogs}}
+        <!-- Recent check-in logs -->
+        <div class="mt-8 max-w-lg mx-auto">
+            <h3 class="text-sm font-bold text-gray-500 uppercase mb-3">Chấm công gần đây</h3>
+            <div class="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nhân viên</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Thời gian</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {{range .RecentLogs}}
+                        <tr>
+                            <td class="px-4 py-2.5 font-medium text-gray-900">{{.UserName}}</td>
+                            <td class="px-4 py-2.5 font-mono text-gray-600">{{if .CheckInAt}}{{.CheckInAt.Format "15:04:05"}}{{end}}</td>
+                            <td class="px-4 py-2.5">
+                                {{if eq (printf "%s" .Status) "on_time"}}
+                                <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-bold text-green-700">Đúng giờ</span>
+                                {{else if eq (printf "%s" .Status) "late"}}
+                                <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700">Trễ</span>
+                                {{else}}
+                                <span class="inline-flex items-center rounded-full bg-gray-50 px-2 py-0.5 text-xs font-bold text-gray-600">{{.Status}}</span>
+                                {{end}}
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {{end}}
     </main>
 </div>
 {{end}}

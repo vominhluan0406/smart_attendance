@@ -85,7 +85,7 @@ func main() {
 	permRepo := repository.NewPermissionRepository(db)
 
 	// Init services
-	authService := service.NewAuthService(userRepo, cfg)
+	authService := service.NewAuthService(userRepo, branchRepo, cfg)
 	userService := service.NewUserService(userRepo)
 	branchService := service.NewBranchService(branchRepo, userRepo, appCache)
 	totpService := service.NewTOTPService()

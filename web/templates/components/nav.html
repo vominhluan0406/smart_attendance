@@ -17,10 +17,10 @@
                         <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
                     </a>
                     {{end}}
-                    {{if eq .UserRole "employee"}}
+                    {{if or (and (eq .UserRole "employee") .QREnabled) (and (eq .UserRole "manager") .FaceEnabled)}}
                     <a href="/attendance"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
-                        <i data-lucide="camera" class="w-4 h-4"></i> Check-in
+                        <i data-lucide="scan-face" class="w-4 h-4"></i> Chấm công
                     </a>
                     {{end}}
 
@@ -58,7 +58,11 @@
                     {{end}}
                 </div>
             </div>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="hidden sm:block text-right">
+                    <p class="text-sm font-bold text-gray-900 leading-tight">{{.UserName}}</p>
+                    {{if .BranchName}}<p class="text-xs text-gray-400">{{.BranchName}}</p>{{end}}
+                </div>
                 <a href="/auth/logout"
                     class="text-sm font-medium text-gray-500 hover:text-gray-700 flex items-center gap-1">
                     <i data-lucide="log-out" class="w-4 h-4"></i> <span class="hidden sm:inline">Logout</span>
@@ -80,10 +84,10 @@
         <span>Dashboard</span>
     </a>
     {{end}}
-    {{if eq .UserRole "employee"}}
+    {{if or (and (eq .UserRole "employee") .QREnabled) (and (eq .UserRole "manager") .FaceEnabled)}}
     <a href="/attendance" class="bottom-nav-item">
-        <i data-lucide="camera"></i>
-        <span>Check-in</span>
+        <i data-lucide="scan-face"></i>
+        <span>Chấm công</span>
     </a>
     {{end}}
     {{if eq .UserRole "manager"}}

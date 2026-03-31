@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/smart-attendance/smart-attendance/internal/middleware"
 	"github.com/smart-attendance/smart-attendance/internal/models"
 	"github.com/smart-attendance/smart-attendance/internal/renderer"
 	"github.com/smart-attendance/smart-attendance/internal/repository"
@@ -49,8 +48,9 @@ func (h *BranchHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 		"PrevPage":    result.Page - 1,
 	}
 
-	data["UserRole"] = middleware.GetUserRole(r)
-	data["UserBranch"] = middleware.GetBranchID(r)
+	for k, v := range userContext(r) {
+		data[k] = v
+	}
 
 	if r.Header.Get("HX-Request") == "true" && r.Header.Get("HX-Boosted") != "true" {
 		h.render.RenderPartial(w, "branch_list.html", data)
@@ -60,10 +60,7 @@ func (h *BranchHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BranchHandler) CreatePage(w http.ResponseWriter, r *http.Request) {
-	h.render.Render(w, "branch_create.html", map[string]interface{}{
-		"UserRole":   middleware.GetUserRole(r),
-		"UserBranch": middleware.GetBranchID(r),
-	})
+	h.render.Render(w, "branch_create.html", userContext(r))
 }
 
 func (h *BranchHandler) EditPage(w http.ResponseWriter, r *http.Request) {
@@ -77,12 +74,10 @@ func (h *BranchHandler) EditPage(w http.ResponseWriter, r *http.Request) {
 
 	empCount, _ := h.branchService.GetEmployeeCount(id)
 
-	h.render.Render(w, "branch_edit.html", map[string]interface{}{
-		"Branch":        branch,
-		"EmployeeCount": empCount,
-		"UserRole":      middleware.GetUserRole(r),
-		"UserBranch":    middleware.GetBranchID(r),
-	})
+	data := userContext(r)
+	data["Branch"] = branch
+	data["EmployeeCount"] = empCount
+	h.render.Render(w, "branch_edit.html", data)
 }
 
 // --- HTMX Form Handlers ---
@@ -305,18 +300,6 @@ func (h *BranchHandler) parseListParams(r *http.Request) repository.BranchListPa
 		Limit:  limit,
 		Search: r.URL.Query().Get("search"),
 	}
-}
-
-func parseLatLng(latStr, lngStr string) (*float64, *float64) {
-	if latStr == "" || lngStr == "" {
-		return nil, nil
-	}
-	lat, err1 := strconv.ParseFloat(latStr, 64)
-	lng, err2 := strconv.ParseFloat(lngStr, 64)
-	if err1 != nil || err2 != nil {
-		return nil, nil
-	}
-	return &lat, &lng
 }
 
 func parseIPWhitelistForm(r *http.Request) []models.BranchIPWhitelist {

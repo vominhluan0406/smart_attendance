@@ -11,6 +11,7 @@
             {{if .TOTP}}<span class="px-3 py-1 bg-green-100 text-green-700 text-sm font-bold rounded-lg">QR</span>{{end}}
             {{if .IP}}<span class="px-3 py-1 bg-green-100 text-green-700 text-sm font-bold rounded-lg">IP</span>{{end}}
             {{if .Location}}<span class="px-3 py-1 bg-green-100 text-green-700 text-sm font-bold rounded-lg">GPS</span>{{end}}
+            {{if .Face}}<span class="px-3 py-1 bg-violet-100 text-violet-700 text-sm font-bold rounded-lg">Face</span>{{end}}
         </div>
 
         <div class="mt-8 w-full space-y-3">
@@ -53,13 +54,10 @@
     </div>
 </div>
 <script>
-    // Hide scanner area, show error prominently
     var scannerWrap = document.querySelector('.shadow-xl');
     if (scannerWrap) scannerWrap.style.display = 'none';
     var hint = document.querySelector('p.text-gray-500.text-sm.text-center');
     if (hint) hint.style.display = 'none';
-    // Scroll to result
     document.getElementById('checkin-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    if (window.showToast) showToast("{{.Error}}", "error");
 </script>
 {{end}}

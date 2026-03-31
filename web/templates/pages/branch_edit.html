@@ -65,6 +65,11 @@
                                    {{if containsMethod .Branch.AllowedMethods "location"}}checked{{end}}>
                             <span class="ml-2 text-sm text-gray-700">GPS Location</span>
                         </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="allowed_methods" value="face" class="h-4 w-4 rounded border-gray-300 text-violet-600"
+                                   {{if containsMethod .Branch.AllowedMethods "face"}}checked{{end}}>
+                            <span class="ml-2 text-sm text-gray-700">Nhận diện khuôn mặt (Manager)</span>
+                        </label>
                     </div>
                 </fieldset>
 
@@ -93,20 +98,20 @@
                 <!-- IP Whitelist -->
                 <fieldset>
                     <legend class="text-lg font-semibold text-gray-900 mb-4">IP Whitelist</legend>
-                    <div id="ip-list" class="space-y-2">
+                    <div id="ip-list" class="space-y-3">
                         {{range .Branch.IPWhitelist}}
-                        <div class="flex gap-2">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             <input type="text" name="ip_cidr" value="{{.IPCIDR}}" placeholder="192.168.1.0/24"
-                                   class="flex-1 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
+                                   class="sm:col-span-2 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
                             <input type="text" name="ip_label" value="{{.Label}}" placeholder="Label"
-                                   class="w-40 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
                         </div>
                         {{end}}
-                        <div class="flex gap-2">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             <input type="text" name="ip_cidr" placeholder="192.168.1.0/24"
-                                   class="flex-1 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
+                                   class="sm:col-span-2 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
                             <input type="text" name="ip_label" placeholder="Label"
-                                   class="w-40 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
                         </div>
                     </div>
                 </fieldset>
@@ -114,28 +119,28 @@
                 <!-- Location Whitelist -->
                 <fieldset>
                     <legend class="text-lg font-semibold text-gray-900 mb-4">Location Whitelist</legend>
-                    <div id="loc-list" class="space-y-2">
+                    <div id="loc-list" class="space-y-3">
                         {{range .Branch.Locations}}
-                        <div class="flex gap-2">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             <input type="number" step="any" name="loc_lat" value="{{.Lat}}" placeholder="Lat"
-                                   class="w-32 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                             <input type="number" step="any" name="loc_lng" value="{{.Lng}}" placeholder="Lng"
-                                   class="w-32 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                             <input type="number" name="loc_radius" value="{{.RadiusM}}" placeholder="Radius(m)"
-                                   class="w-24 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                             <input type="text" name="loc_label" value="{{.Label}}" placeholder="Label"
-                                   class="flex-1 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                         </div>
                         {{end}}
-                        <div class="flex gap-2">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             <input type="number" step="any" name="loc_lat" placeholder="Lat"
-                                   class="w-32 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                             <input type="number" step="any" name="loc_lng" placeholder="Lng"
-                                   class="w-32 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                             <input type="number" name="loc_radius" placeholder="Radius(m)" value="200"
-                                   class="w-24 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                             <input type="text" name="loc_label" placeholder="Label"
-                                   class="flex-1 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                         </div>
                     </div>
                 </fieldset>

@@ -39,22 +39,18 @@ func (h *ReportHandler) UserHistoryPage(w http.ResponseWriter, r *http.Request) 
 
 	result, err := h.reportService.GetUserHistory(userID, page, limit, dateFrom, dateTo, status)
 	if err != nil {
-		h.render.Render(w, "my_history.html", map[string]interface{}{
-			"Error":      err.Error(),
-			"UserRole":   middleware.GetUserRole(r),
-			"UserBranch": middleware.GetBranchID(r),
-		})
+		data := userContext(r)
+		data["Error"] = err.Error()
+		h.render.Render(w, "my_history.html", data)
 		return
 	}
 
-	h.render.Render(w, "my_history.html", map[string]interface{}{
-		"Result":     result,
-		"DateFrom":   r.URL.Query().Get("date_from"),
-		"DateTo":     r.URL.Query().Get("date_to"),
-		"Status":     status,
-		"UserRole":   middleware.GetUserRole(r),
-		"UserBranch": middleware.GetBranchID(r),
-	})
+	data := userContext(r)
+	data["Result"] = result
+	data["DateFrom"] = r.URL.Query().Get("date_from")
+	data["DateTo"] = r.URL.Query().Get("date_to")
+	data["Status"] = status
+	h.render.Render(w, "my_history.html", data)
 }
 
 // UserHistoryPartial renders just the HTMX partial table
@@ -97,24 +93,20 @@ func (h *ReportHandler) BranchReportPage(w http.ResponseWriter, r *http.Request)
 
 	result, err := h.reportService.GetBranchReport(branchID, page, limit, dateFrom, dateTo, status)
 	if err != nil {
-		h.render.Render(w, "branch_report.html", map[string]interface{}{
-			"Error":      err.Error(),
-			"Branch":     branch,
-			"UserRole":   middleware.GetUserRole(r),
-			"UserBranch": middleware.GetBranchID(r),
-		})
+		data := userContext(r)
+		data["Error"] = err.Error()
+		data["Branch"] = branch
+		h.render.Render(w, "branch_report.html", data)
 		return
 	}
 
-	h.render.Render(w, "branch_report.html", map[string]interface{}{
-		"Branch":     branch,
-		"Result":     result,
-		"DateFrom":   r.URL.Query().Get("date_from"),
-		"DateTo":     r.URL.Query().Get("date_to"),
-		"Status":     status,
-		"UserRole":   middleware.GetUserRole(r),
-		"UserBranch": middleware.GetBranchID(r),
-	})
+	data := userContext(r)
+	data["Branch"] = branch
+	data["Result"] = result
+	data["DateFrom"] = r.URL.Query().Get("date_from")
+	data["DateTo"] = r.URL.Query().Get("date_to")
+	data["Status"] = status
+	h.render.Render(w, "branch_report.html", data)
 }
 
 // BranchReportPartial renders just the HTMX partial table
