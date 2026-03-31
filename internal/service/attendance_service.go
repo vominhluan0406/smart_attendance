@@ -8,6 +8,7 @@ import (
 
 	"github.com/smart-attendance/smart-attendance/internal/models"
 	"github.com/smart-attendance/smart-attendance/internal/repository"
+	"github.com/smart-attendance/smart-attendance/internal/timezone"
 	"gorm.io/gorm"
 )
 
@@ -54,11 +55,12 @@ func NewAttendanceService(
 
 // LogTimeInput is the input for each QR scan / time log.
 type LogTimeInput struct {
-	UserID   string   `json:"user_id"`
-	TOTPCode string   `json:"totp_code"`
-	IP       string   `json:"ip"`
-	Lat      *float64 `json:"lat"`
-	Lng      *float64 `json:"lng"`
+	UserID       string   `json:"user_id"`
+	TOTPCode     string   `json:"totp_code"`
+	IP           string   `json:"ip"`
+	Lat          *float64 `json:"lat"`
+	Lng          *float64 `json:"lng"`
+	FaceVerified bool     `json:"face_verified"`
 }
 
 // LogTimeResult is returned after a successful time log.
@@ -68,7 +70,8 @@ type LogTimeResult struct {
 	TOTPVerified bool                  `json:"totp_verified"`
 	IPVerified   bool                  `json:"ip_verified"`
 	LocVerified  bool                  `json:"loc_verified"`
-	LogCount     int                   `json:"log_count"` // total logs today
+	FaceVerified bool                  `json:"face_verified"`
+	LogCount     int                   `json:"log_count"`
 }
 
 // LogTime records a time scan (replaces separate CheckIn/CheckOut).
@@ -128,7 +131,14 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		}
 	}
 
-	if !result.TOTPVerified && !result.IPVerified && !result.LocVerified {
+	// Face recognition (mock — manager only, always passes if flag is set)
+	if s.branchService.HasMethod(branch, models.MethodFace) && input.FaceVerified {
+		result.FaceVerified = true
+	}
+
+	// At least one method must pass (OR logic)
+	anyPassed := result.TOTPVerified || result.IPVerified || result.LocVerified || result.FaceVerified
+	if !anyPassed {
 		log.Printf("[service][attendance] log denied for user %s: %v", input.UserID, validationErrors)
 		if len(validationErrors) > 0 {
 			return nil, fmt.Errorf("%s", validationErrors[0])
@@ -137,7 +147,7 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 	}
 
 	// 3. Resolve shift
-	now := time.Now()
+	now := timezone.Now()
 	workDate := now.Format("2006-01-02")
 	method := buildMethodStr(result)
 
@@ -236,9 +246,14 @@ func (s *AttendanceService) GetTodayStatus(userID string) (*models.Attendance, e
 	return att, nil
 }
 
+// GetRecentByBranch returns the most recent attendance records for a branch.
+func (s *AttendanceService) GetRecentByBranch(branchID string, limit int) ([]repository.RecentCheckIn, error) {
+	return s.attendanceRepo.RecentCheckIns(branchID, limit)
+}
+
 // GetTodayLogs returns all time logs for a user today.
 func (s *AttendanceService) GetTodayLogs(userID string) ([]models.AttendanceLog, error) {
-	workDate := time.Now().Format("2006-01-02")
+	workDate := timezone.Now().Format("2006-01-02")
 	return s.logRepo.FindTodayLogs(userID, workDate)
 }
 
@@ -284,6 +299,12 @@ func buildMethodStr(result *LogTimeResult) string {
 			s += ","
 		}
 		s += "location"
+	}
+	if result.FaceVerified {
+		if s != "" {
+			s += ","
+		}
+		s += "face"
 	}
 	return s
 }

@@ -12,10 +12,12 @@ import (
 type contextKey string
 
 const (
-	ContextUserID   contextKey = "user_id"
-	ContextEmail    contextKey = "email"
-	ContextRole     contextKey = "role"
-	ContextBranchID contextKey = "branch_id"
+	ContextUserID     contextKey = "user_id"
+	ContextEmail      contextKey = "email"
+	ContextFullName   contextKey = "full_name"
+	ContextRole       contextKey = "role"
+	ContextBranchID   contextKey = "branch_id"
+	ContextBranchName contextKey = "branch_name"
 )
 
 func JWTAuth(authService *service.AuthService) func(http.Handler) http.Handler {
@@ -55,10 +57,12 @@ func JWTAuth(authService *service.AuthService) func(http.Handler) http.Handler {
 
 			ctx := context.WithValue(r.Context(), ContextUserID, claims.UserID)
 			ctx = context.WithValue(ctx, ContextEmail, claims.Email)
+			ctx = context.WithValue(ctx, ContextFullName, claims.FullName)
 			ctx = context.WithValue(ctx, ContextRole, claims.Role)
 			if claims.BranchID != nil {
 				ctx = context.WithValue(ctx, ContextBranchID, *claims.BranchID)
 			}
+			ctx = context.WithValue(ctx, ContextBranchName, claims.BranchName)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -103,6 +107,20 @@ func GetBranchID(r *http.Request) string {
 
 func GetUserEmail(r *http.Request) string {
 	if val, ok := r.Context().Value(ContextEmail).(string); ok {
+		return val
+	}
+	return ""
+}
+
+func GetFullName(r *http.Request) string {
+	if val, ok := r.Context().Value(ContextFullName).(string); ok {
+		return val
+	}
+	return ""
+}
+
+func GetBranchName(r *http.Request) string {
+	if val, ok := r.Context().Value(ContextBranchName).(string); ok {
 		return val
 	}
 	return ""

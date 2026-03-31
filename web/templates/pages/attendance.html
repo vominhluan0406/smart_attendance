@@ -12,7 +12,20 @@
 
             <div id="checkin-result" class="mb-6"></div>
 
-            <!-- Scanner — always available -->
+            <!-- Hidden form (shared by QR scanner and face recognition) -->
+            <div class="hidden">
+                <form id="checkin-form" hx-post="/attendance/log" hx-target="#checkin-result"
+                    hx-swap="innerHTML">
+                    <input type="text" name="totp_code" id="totp_code">
+                    <input type="hidden" name="lat" id="lat">
+                    <input type="hidden" name="lng" id="lng">
+                    <input type="hidden" name="face_verified" id="face_verified" value="0">
+                    <button type="submit" id="submit-btn"></button>
+                </form>
+            </div>
+
+            {{if and .QREnabled (eq .UserRole "employee")}}
+            <!-- QR Scanner (Employee + QR enabled) -->
             <div class="bg-white shadow-xl rounded-2xl border border-gray-100 overflow-hidden mb-6">
                 <div class="p-6">
                     <div id="reader-container" class="relative">
@@ -28,6 +41,7 @@
                         </div>
                     </div>
 
+                    {{if .LocationEnabled}}
                     <div class="mt-6">
                         <div id="location-status"
                             class="flex items-center justify-center text-xs font-bold text-gray-400 mb-4 px-3 py-1 bg-gray-50 rounded-full w-max mx-auto">
@@ -38,20 +52,56 @@
                             Đang xác định vị trí...
                         </div>
                     </div>
-                </div>
-
-                <div class="hidden">
-                    <form id="checkin-form" hx-post="/attendance/log" hx-target="#checkin-result"
-                        hx-swap="innerHTML">
-                        <input type="text" name="totp_code" id="totp_code">
-                        <input type="hidden" name="lat" id="lat">
-                        <input type="hidden" name="lng" id="lng">
-                        <button type="submit" id="submit-btn"></button>
-                    </form>
+                    {{end}}
                 </div>
             </div>
-
             <p class="mb-6 text-center text-sm text-gray-500">Quét mã QR tại chi nhánh để chấm công</p>
+            {{end}}
+
+            {{if and (not .QREnabled) (eq .UserRole "employee")}}
+            <!-- No check-in method available for employee -->
+            <div class="bg-white shadow-sm rounded-2xl border border-gray-100 p-8 text-center mb-6">
+                <svg class="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                <p class="text-gray-500 font-medium">Chi nhánh chưa bật phương thức chấm công.</p>
+                <p class="text-sm text-gray-400 mt-1">Vui lòng liên hệ quản lý.</p>
+            </div>
+            {{end}}
+
+            {{if and .FaceEnabled (or (eq .UserRole "manager") (eq .UserRole "admin"))}}
+            <!-- Face Recognition Panel (only when branch has face method enabled) -->
+            <div id="face-panel" class="bg-white shadow-xl rounded-2xl border border-gray-100 overflow-hidden mb-6">
+                <div class="p-6">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="p-1.5 bg-violet-100 rounded-lg">
+                            <svg class="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        </div>
+                        <h3 class="text-sm font-bold text-gray-700 uppercase">Nhận diện khuôn mặt</h3>
+                    </div>
+
+                    <!-- Camera preview area -->
+                    <div id="face-camera" class="hidden rounded-xl overflow-hidden bg-gray-900 aspect-video mb-4 relative">
+                        <video id="face-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                        <div id="face-overlay" class="absolute inset-0 flex items-center justify-center">
+                            <div class="w-48 h-48 border-4 border-violet-400 rounded-full opacity-50 animate-pulse"></div>
+                        </div>
+                        <div id="face-scanning" class="absolute bottom-4 left-0 right-0 text-center">
+                            <span class="bg-black/60 text-white text-sm font-bold px-4 py-2 rounded-full">Đang quét khuôn mặt...</span>
+                        </div>
+                    </div>
+
+                    <div id="face-result" class="hidden rounded-xl bg-green-50 p-4 mb-4 text-center">
+                        <svg class="w-10 h-10 text-green-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <p class="text-green-800 font-bold">Nhận diện thành công!</p>
+                    </div>
+
+                    <button id="face-btn" onclick="window.startFaceRecognition()"
+                        class="w-full flex items-center justify-center gap-3 rounded-2xl bg-violet-600 px-6 py-4 text-base font-bold text-white shadow-lg hover:bg-violet-700 active:scale-95 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        Chấm công bằng khuôn mặt
+                    </button>
+                </div>
+            </div>
+            {{end}}
 
             <!-- Today's summary + log history -->
             {{if .Today}}
@@ -184,5 +234,57 @@
     };
 
     window.initQRScanner();
+
+    // Mock Face Recognition (Manager only)
+    window.startFaceRecognition = function() {
+        var btn = document.getElementById('face-btn');
+        var camera = document.getElementById('face-camera');
+        var video = document.getElementById('face-video');
+        var result = document.getElementById('face-result');
+        if (!btn || !camera) return;
+
+        btn.disabled = true;
+        btn.classList.add('opacity-50');
+        camera.classList.remove('hidden');
+
+        // Try to open real camera for visual effect
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+                .then(function(stream) {
+                    video.srcObject = stream;
+                    // Simulate face detection after 2 seconds
+                    setTimeout(function() {
+                        // Stop camera
+                        stream.getTracks().forEach(function(t) { t.stop(); });
+                        camera.classList.add('hidden');
+                        result.classList.remove('hidden');
+                        // Submit
+                        document.getElementById('face_verified').value = '1';
+                        document.getElementById('totp_code').value = '';
+                        document.getElementById('submit-btn').click();
+                    }, 2000);
+                })
+                .catch(function() {
+                    // No camera? Just simulate without video
+                    camera.querySelector('#face-scanning span').textContent = 'Đang xử lý...';
+                    setTimeout(function() {
+                        camera.classList.add('hidden');
+                        result.classList.remove('hidden');
+                        document.getElementById('face_verified').value = '1';
+                        document.getElementById('totp_code').value = '';
+                        document.getElementById('submit-btn').click();
+                    }, 2000);
+                });
+        } else {
+            // Fallback: no getUserMedia support
+            setTimeout(function() {
+                camera.classList.add('hidden');
+                result.classList.remove('hidden');
+                document.getElementById('face_verified').value = '1';
+                document.getElementById('totp_code').value = '';
+                document.getElementById('submit-btn').click();
+            }, 2000);
+        }
+    };
 </script>
 {{end}}

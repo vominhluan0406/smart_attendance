@@ -7,6 +7,7 @@ const (
 	MethodQRTOTP   CheckInMethod = "qr_totp"
 	MethodIP       CheckInMethod = "ip"
 	MethodLocation CheckInMethod = "location"
+	MethodFace     CheckInMethod = "face"
 )
 
 type Branch struct {

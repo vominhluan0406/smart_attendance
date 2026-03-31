@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/smart-attendance/smart-attendance/internal/models"
+	"github.com/smart-attendance/smart-attendance/internal/timezone"
 	"gorm.io/gorm"
 )
 
@@ -34,7 +35,7 @@ func (r *AttendanceRepository) FindByID(id string) (*models.Attendance, error) {
 // FindTodayByUser returns today's attendance record for a user (if any).
 // Uses composite index (user_id, work_date) for fast lookup.
 func (r *AttendanceRepository) FindTodayByUser(userID string) (*models.Attendance, error) {
-	today := time.Now().Format("2006-01-02")
+	today := timezone.Now().Format("2006-01-02")
 
 	var att models.Attendance
 	err := r.db.Where("user_id = ? AND work_date = ?", userID, today).

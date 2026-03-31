@@ -41,7 +41,7 @@ func New(deps Deps) http.Handler {
 	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
 	// Handlers
-	home := handler.NewHomeHandler(deps.Render)
+	home := handler.NewHomeHandler(deps.Render, deps.BranchService)
 	oauth := handler.NewOAuthHandler(deps.AuthService, deps.Config)
 	auth := handler.NewAuthHandler(deps.AuthService, deps.Render, oauth.IsEnabled())
 	users := handler.NewUserHandler(deps.UserService, deps.AuthService, deps.BranchService, deps.Render)
@@ -107,20 +107,19 @@ func New(deps Deps) http.Handler {
 			})
 		})
 
-		// Attendance — time log (replaces separate check-in/check-out)
+		// Attendance — time log + QR display
 		pr.Route("/attendance", func(ar chi.Router) {
-			ar.Use(middleware.RateLimit(deps.RateLimitPerMin))
-
+			// Check-in page + log (rate limited)
 			ar.Group(func(ciRouter chi.Router) {
 				ciRouter.Use(requirePerm(models.PermAttendanceCheckIn))
 				ciRouter.Get("/", attendance.AttendancePage)
-				ciRouter.Post("/log", attendance.LogTimeForm)
+				ciRouter.With(middleware.RateLimit(deps.RateLimitPerMin)).Post("/log", attendance.LogTimeForm)
 			})
 
 			// Manager redirect
 			ar.Get("/qr-manager", attendance.ManagerQRRedirect)
 
-			// QR display (Manager/Admin) — shows live QR for branch
+			// QR display (Manager/Admin) — no rate limit, auto-refreshes every 15s
 			ar.Get("/qr/{branchID}", attendance.QRDisplayPage)
 			ar.Get("/qr/{branchID}/partial", attendance.QRCodePartial)
 			ar.Get("/qr/{branchID}/image", attendance.QRImage)

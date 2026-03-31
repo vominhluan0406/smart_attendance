@@ -6,22 +6,32 @@ import (
 	"strings"
 
 	"github.com/smart-attendance/smart-attendance/internal/middleware"
+	"github.com/smart-attendance/smart-attendance/internal/models"
 	"github.com/smart-attendance/smart-attendance/internal/renderer"
+	"github.com/smart-attendance/smart-attendance/internal/service"
 )
 
 type HomeHandler struct {
-	render *renderer.Renderer
+	render        *renderer.Renderer
+	branchService *service.BranchService
 }
 
-func NewHomeHandler(render *renderer.Renderer) *HomeHandler {
-	return &HomeHandler{render: render}
+func NewHomeHandler(render *renderer.Renderer, branchService *service.BranchService) *HomeHandler {
+	return &HomeHandler{render: render, branchService: branchService}
 }
 
 func (h *HomeHandler) Index(w http.ResponseWriter, r *http.Request) {
-	data := map[string]interface{}{
-		"UserRole":   middleware.GetUserRole(r),
-		"UserBranch": middleware.GetBranchID(r),
+	data := userContext(r)
+
+	// Check which methods are enabled for user's branch
+	branchID := middleware.GetBranchID(r)
+	if branchID != "" {
+		if branch, err := h.branchService.GetByIDCached(branchID); err == nil {
+			data["QREnabled"] = h.branchService.HasMethod(branch, models.MethodQRTOTP)
+			data["FaceEnabled"] = h.branchService.HasMethod(branch, models.MethodFace)
+		}
 	}
+
 	if err := h.render.Render(w, "home.html", data); err != nil {
 		log.Printf("[handler][home] render error: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

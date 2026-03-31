@@ -28,20 +28,34 @@ type TokenPair struct {
 }
 
 type Claims struct {
-	UserID   string      `json:"user_id"`
-	Email    string      `json:"email"`
-	Role     models.Role `json:"role"`
-	BranchID *string     `json:"branch_id,omitempty"`
+	UserID     string      `json:"user_id"`
+	Email      string      `json:"email"`
+	FullName   string      `json:"full_name"`
+	Role       models.Role `json:"role"`
+	BranchID   *string     `json:"branch_id,omitempty"`
+	BranchName string      `json:"branch_name,omitempty"`
 	jwt.RegisteredClaims
 }
 
 type AuthService struct {
-	userRepo *repository.UserRepository
-	cfg      *config.Config
+	userRepo   *repository.UserRepository
+	branchRepo *repository.BranchRepository
+	cfg        *config.Config
 }
 
-func NewAuthService(userRepo *repository.UserRepository, cfg *config.Config) *AuthService {
-	return &AuthService{userRepo: userRepo, cfg: cfg}
+func NewAuthService(userRepo *repository.UserRepository, branchRepo *repository.BranchRepository, cfg *config.Config) *AuthService {
+	return &AuthService{userRepo: userRepo, branchRepo: branchRepo, cfg: cfg}
+}
+
+func (s *AuthService) resolveBranchName(user *models.User) string {
+	if user.BranchID == nil {
+		return ""
+	}
+	branch, err := s.branchRepo.FindByIDSimple(*user.BranchID)
+	if err != nil {
+		return ""
+	}
+	return branch.Name
 }
 
 type RegisterInput struct {
@@ -109,7 +123,7 @@ func (s *AuthService) Login(input LoginInput) (*TokenPair, *models.User, error) 
 		return nil, nil, ErrInvalidCredentials
 	}
 
-	tokens, err := s.generateTokenPair(user)
+	tokens, err := s.generateTokenPair(user, s.resolveBranchName(user))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -134,7 +148,7 @@ func (s *AuthService) LoginOrCreateFromOAuth(info OAuthUserInfo) (*TokenPair, *m
 		if !user.IsActive {
 			return nil, nil, ErrAccountDisabled
 		}
-		tokens, err := s.generateTokenPair(user)
+		tokens, err := s.generateTokenPair(user, s.resolveBranchName(user))
 		return tokens, user, err
 	}
 
@@ -150,7 +164,7 @@ func (s *AuthService) LoginOrCreateFromOAuth(info OAuthUserInfo) (*TokenPair, *m
 		if err := s.userRepo.Update(user); err != nil {
 			return nil, nil, fmt.Errorf("link oauth to user: %w", err)
 		}
-		tokens, err := s.generateTokenPair(user)
+		tokens, err := s.generateTokenPair(user, s.resolveBranchName(user))
 		return tokens, user, err
 	}
 
@@ -167,7 +181,7 @@ func (s *AuthService) LoginOrCreateFromOAuth(info OAuthUserInfo) (*TokenPair, *m
 		return nil, nil, fmt.Errorf("create oauth user: %w", err)
 	}
 
-	tokens, err := s.generateTokenPair(user)
+	tokens, err := s.generateTokenPair(user, s.resolveBranchName(user))
 	return tokens, user, err
 }
 
@@ -186,7 +200,7 @@ func (s *AuthService) RefreshToken(refreshToken string) (*TokenPair, error) {
 		return nil, ErrAccountDisabled
 	}
 
-	return s.generateTokenPair(user)
+	return s.generateTokenPair(user, s.resolveBranchName(user))
 }
 
 func (s *AuthService) ValidateToken(tokenString string) (*Claims, error) {
@@ -208,15 +222,17 @@ func (s *AuthService) ValidateToken(tokenString string) (*Claims, error) {
 	return claims, nil
 }
 
-func (s *AuthService) generateTokenPair(user *models.User) (*TokenPair, error) {
+func (s *AuthService) generateTokenPair(user *models.User, branchName string) (*TokenPair, error) {
 	now := time.Now()
 
 	// Access token
 	accessClaims := &Claims{
-		UserID:   user.ID,
-		Email:    user.Email,
-		Role:     user.Role,
-		BranchID: user.BranchID,
+		UserID:     user.ID,
+		Email:      user.Email,
+		FullName:   user.FullName,
+		Role:       user.Role,
+		BranchID:   user.BranchID,
+		BranchName: branchName,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(s.cfg.JWTExpireMinutes) * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -230,10 +246,12 @@ func (s *AuthService) generateTokenPair(user *models.User) (*TokenPair, error) {
  
 	// Refresh token
 	refreshClaims := &Claims{
-		UserID:   user.ID,
-		Email:    user.Email,
-		Role:     user.Role,
-		BranchID: user.BranchID,
+		UserID:     user.ID,
+		Email:      user.Email,
+		FullName:   user.FullName,
+		Role:       user.Role,
+		BranchID:   user.BranchID,
+		BranchName: branchName,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(s.cfg.JWTRefreshHours) * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(now),

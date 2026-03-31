@@ -55,7 +55,7 @@ func Seed(db *gorm.DB) error {
 			Lng:            floatPtr(b.Lng),
 			RadiusM:        500,
 			TOTPSecret:     base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(secret),
-			AllowedMethods: "qr_totp,ip,location",
+			AllowedMethods: "qr_totp,ip,location,face",
 			WorkStartTime:  "08:00",
 			WorkEndTime:    "17:00",
 			IsActive:       true,
