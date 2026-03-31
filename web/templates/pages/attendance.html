@@ -101,106 +101,83 @@
 {{end}}
 
 {{define "scripts"}}
-<script>
-    // Geolocation logic — only run when scanner form exists
-    const latField = document.getElementById('lat');
-    const lngField = document.getElementById('lng');
-    if (navigator.geolocation && latField && lngField) {
-        navigator.geolocation.watchPosition(
-            function (pos) {
-                latField.value = pos.coords.latitude;
-                lngField.value = pos.coords.longitude;
-
-                const locStatus = document.getElementById('location-status');
-                if (locStatus) {
-                    locStatus.innerHTML = `<span class="relative flex h-2 w-2 mr-2"><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span> GPS: ${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
-                    locStatus.classList.remove('text-gray-400');
-                    locStatus.classList.add('text-green-600');
-                }
-            },
-            function (err) {
-                const locStatus = document.getElementById('location-status');
-                if (locStatus) {
-                    locStatus.innerText = "Lỗi GPS: " + err.message;
-                    locStatus.classList.add('text-red-500');
-                }
-            },
-            { enableHighAccuracy: true, timeout: 20000 }
-        );
-    }
-
-    // QR Scanner logic
-    const scannerElement = document.getElementById('reader');
-    if (scannerElement) {
-        const html5QrCode = new Html5Qrcode("reader");
-        const scanConfig = { fps: 10, qrbox: { width: 250, height: 250 } };
-
-        const onScanSuccess = (decodedText, decodedResult) => {
-            // Success!
-            console.log(`Code matched = ${decodedText}`, decodedResult);
-
-            // QR content format is branchID:TOTPCode
-            const parts = decodedText.split(":");
-            if (parts.length === 2) {
-                // Stop scanner to avoid multiple hits
-                html5QrCode.stop().then(() => {
-                    document.getElementById('scanner-line').classList.add('opacity-0');
-                    document.getElementById('totp_code').value = parts[1];
-
-                    // Show success feedback in UI before submitting
-                    document.getElementById('reader').innerHTML = `
-                    <div class="text-center p-12 bg-white h-full flex flex-col items-center justify-center">
-                        <div class="inline-flex items-center justify-center p-4 bg-indigo-100 rounded-full mb-6 animate-bounce">
-                            <i data-lucide="check" class="w-12 h-12 text-indigo-600"></i>
-                        </div>
-                        <p class="text-xl font-bold text-gray-900">Quét thành công!</p>
-                        <p class="text-sm text-gray-500 mt-2">Đang xử lý điểm danh...</p>
-                    </div>
-                `;
-                    lucide.createIcons();
-
-                    // Submit form via HTMX
-                    document.getElementById('submit-btn').click();
-                }).catch(err => {
-                    console.error("Stop failed", err);
-                });
-            }
-        };
-
-        const qrCodeErrorCallback = (message) => {
-            // ignore errors
-        };
-
-        html5QrCode.start({ facingMode: "environment" }, scanConfig, onScanSuccess, qrCodeErrorCallback)
-            .then(() => {
-                document.getElementById('scanner-line').classList.remove('opacity-0');
-                document.getElementById('scanner-line').classList.add('animate-scan');
-            })
-            .catch(err => {
-                console.error("Scanner start error", err);
-                document.getElementById('reader-placeholder').innerHTML = `
-                <div class="text-center p-6">
-                    <p class="text-red-500 font-bold">Không thể mở camera</p>
-                    <p class="text-xs text-gray-500 mt-2">${err}</p>
-                </div>
-            `;
-            });
-    }
-
-    // Add animation style
-    const style = document.createElement('style');
-    style.textContent = `
+<style>
     @keyframes scan {
         0% { top: 0%; opacity: 0; }
         10% { opacity: 1; }
         90% { opacity: 1; }
         100% { top: 100%; opacity: 0; }
     }
-    .animate-scan {
-        animation: scan 2s linear infinite;
-    }
-`;
-    document.head.appendChild(style);
+    .animate-scan { animation: scan 2s linear infinite; }
+</style>
+<script>
+    // Define global scanner init — called by base.html htmx:afterSettle + on direct load
+    window.initQRScanner = function() {
+        var readerEl = document.getElementById('reader');
+        if (!readerEl) return;
+        // Prevent double init
+        if (readerEl.dataset.scannerActive === 'true') return;
 
+        // Geolocation
+        var latField = document.getElementById('lat');
+        var lngField = document.getElementById('lng');
+        if (navigator.geolocation && latField && lngField) {
+            navigator.geolocation.watchPosition(
+                function(pos) {
+                    latField.value = pos.coords.latitude;
+                    lngField.value = pos.coords.longitude;
+                    var s = document.getElementById('location-status');
+                    if (s) {
+                        s.innerHTML = '<span class="relative flex h-2 w-2 mr-2"><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span> GPS: ' + pos.coords.latitude.toFixed(6) + ', ' + pos.coords.longitude.toFixed(6);
+                        s.className = s.className.replace('text-gray-400', 'text-green-600');
+                    }
+                },
+                function(err) {
+                    var s = document.getElementById('location-status');
+                    if (s) { s.innerText = 'Lỗi GPS: ' + err.message; s.classList.add('text-red-500'); }
+                },
+                { enableHighAccuracy: true, timeout: 20000 }
+            );
+        }
+
+        // QR Scanner
+        if (typeof Html5Qrcode === 'undefined') {
+            var p = document.getElementById('reader-placeholder');
+            if (p) p.innerHTML = '<div class="text-center p-6"><p class="text-red-500 font-bold">QR library chưa tải</p><p class="text-xs text-gray-500 mt-2">Vui lòng tải lại trang (F5)</p></div>';
+            return;
+        }
+
+        readerEl.dataset.scannerActive = 'true';
+        var qr = new Html5Qrcode("reader");
+
+        qr.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            function(decodedText) {
+                var parts = decodedText.split(":");
+                if (parts.length === 2) {
+                    qr.stop().then(function() {
+                        var sl = document.getElementById('scanner-line');
+                        if (sl) sl.classList.add('opacity-0');
+                        document.getElementById('totp_code').value = parts[1];
+                        readerEl.innerHTML = '<div class="text-center p-12 bg-white h-full flex flex-col items-center justify-center"><div class="inline-flex items-center justify-center p-4 bg-indigo-100 rounded-full mb-6 animate-bounce"><svg class="w-12 h-12 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div><p class="text-xl font-bold text-gray-900">Quét thành công!</p><p class="text-sm text-gray-500 mt-2">Đang xử lý điểm danh...</p></div>';
+                        document.getElementById('submit-btn').click();
+                    });
+                }
+            },
+            function() {}
+        ).then(function() {
+            var sl = document.getElementById('scanner-line');
+            if (sl) { sl.classList.remove('opacity-0'); sl.classList.add('animate-scan'); }
+        }).catch(function(err) {
+            console.error("Scanner error:", err);
+            readerEl.dataset.scannerActive = '';
+            var p = document.getElementById('reader-placeholder');
+            if (p) p.innerHTML = '<div class="text-center p-6"><p class="text-red-500 font-bold">Không thể mở camera</p><p class="text-xs text-gray-500 mt-2">' + err + '</p></div>';
+        });
+    };
+
+    // Init on direct page load
+    window.initQRScanner();
 </script>
 {{end}}
