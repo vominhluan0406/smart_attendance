@@ -152,7 +152,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}) error {
 	return tmpl.Execute(w, data)
 }
 
-// RenderPartial renders an HTMX partial fragment (from partials/)
+// RenderPartial renders an HTMX partial fragment (from partials/).
 func (r *Renderer) RenderPartial(w io.Writer, name string, data interface{}) error {
 	return r.Render(w, "partials/"+name, data)
 }

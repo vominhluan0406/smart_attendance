@@ -16,9 +16,11 @@ func NewLocationValidator() *LocationValidator {
 }
 
 // Validate checks if the given lat/lng is within any of the branch's allowed locations.
+// Returns true if locations list is empty (no restriction configured — logs warning).
 func (v *LocationValidator) Validate(lat, lng float64, locations []models.BranchLocation) bool {
 	if len(locations) == 0 {
-		return true // No locations configured = allow all
+		log.Printf("[service][location-validator] WARNING: Location method enabled but no locations configured — allowing all positions")
+		return true
 	}
 
 	for _, loc := range locations {

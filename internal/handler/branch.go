@@ -52,7 +52,7 @@ func (h *BranchHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 	data["UserRole"] = middleware.GetUserRole(r)
 	data["UserBranch"] = middleware.GetBranchID(r)
 
-	if r.Header.Get("HX-Request") == "true" {
+	if r.Header.Get("HX-Request") == "true" && r.Header.Get("HX-Boosted") != "true" {
 		h.render.RenderPartial(w, "branch_list.html", data)
 		return
 	}

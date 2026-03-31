@@ -11,6 +11,12 @@ import (
 )
 
 func Seed(db *gorm.DB) error {
+	// These seeds are idempotent (each checks own count) — always run
+	seedLeaveTypes(db)
+	seedHolidays(db)
+	seedPermissions(db)
+
+	// Users: only seed if DB is empty
 	var userCount int64
 	db.Model(&models.User{}).Count(&userCount)
 	if userCount > 0 {
@@ -83,15 +89,6 @@ func Seed(db *gorm.DB) error {
 	}
 	db.Create(employee)
 	log.Printf("[seed] employee (QR scanner): employee@smartattendance.com / password123 → branch: %s", branch.Name)
-
-	// 5. Default leave types
-	seedLeaveTypes(db)
-
-	// 6. Default holidays (Vietnam)
-	seedHolidays(db)
-
-	// 7. Permissions & role-permission mapping
-	seedPermissions(db)
 
 	return nil
 }

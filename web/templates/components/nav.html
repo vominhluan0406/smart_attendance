@@ -24,7 +24,7 @@
                     </a>
                     {{end}}
 
-                    {{if or (eq .UserRole "admin") (eq .UserRole "manager")}}
+                    {{if eq .UserRole "manager"}}
                     <a href="/attendance/qr-manager"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
                         <i data-lucide="qr-code" class="w-4 h-4"></i> Mã QR
@@ -86,7 +86,7 @@
         <span>Check-in</span>
     </a>
     {{end}}
-    {{if or (eq .UserRole "admin") (eq .UserRole "manager")}}
+    {{if eq .UserRole "manager"}}
     <a href="/attendance/qr-manager" class="bottom-nav-item">
         <i data-lucide="qr-code"></i>
         <span>QR</span>

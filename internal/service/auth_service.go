@@ -49,6 +49,7 @@ type RegisterInput struct {
 	Password string      `json:"password"`
 	FullName string      `json:"full_name"`
 	Role     models.Role `json:"role"`
+	BranchID *string     `json:"branch_id,omitempty"`
 }
 
 func (s *AuthService) Register(input RegisterInput) (*models.User, error) {
@@ -71,6 +72,7 @@ func (s *AuthService) Register(input RegisterInput) (*models.User, error) {
 		PasswordHash: string(hash),
 		FullName:     input.FullName,
 		Role:         role,
+		BranchID:     input.BranchID,
 		IsActive:     true,
 	}
 

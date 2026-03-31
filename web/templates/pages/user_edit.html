@@ -38,6 +38,16 @@
                             <option value="admin" {{if eq (printf "%s" .User.Role) "admin"}}selected{{end}}>Admin</option>
                         </select>
                     </div>
+                    <div>
+                        <label for="branch_id" class="block text-sm font-medium text-gray-700">Chi nhánh</label>
+                        <select name="branch_id" id="branch_id"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                            <option value="">-- Chưa gán --</option>
+                            {{range .Branches}}
+                            <option value="{{.ID}}" {{if eq .ID $.CurrentBranch}}selected{{end}}>{{.Name}}</option>
+                            {{end}}
+                        </select>
+                    </div>
                     <div class="flex items-center">
                         <input type="checkbox" name="is_active" id="is_active" {{if .User.IsActive}}checked{{end}}
                                class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">

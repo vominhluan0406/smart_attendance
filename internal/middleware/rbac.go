@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/smart-attendance/smart-attendance/internal/models"
+	"github.com/smart-attendance/smart-attendance/internal/service"
 )
 
 // RequireRoles returns middleware that restricts access to specified roles.
@@ -46,11 +47,55 @@ const errorPage403 = `<!DOCTYPE html>
 <button onclick="history.back()" class="rounded-xl bg-white border border-gray-200 px-5 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50">Quay lại</button>
 </div></div></body></html>`
 
-// Convenience middleware
+// Convenience middleware (role-based, no DB lookup)
 func AdminOnly(next http.Handler) http.Handler {
 	return RequireRoles(models.RoleAdmin)(next)
 }
 
 func ManagerOrAdmin(next http.Handler) http.Handler {
 	return RequireRoles(models.RoleAdmin, models.RoleManager)(next)
+}
+
+// RequirePermission returns middleware that checks if the user's role
+// has the specified permission via PermissionService (cached DB lookup).
+func RequirePermission(permService *service.PermissionService, permCode string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			role := GetUserRole(r)
+			if !permService.HasPermission(role, permCode) {
+				if strings.HasPrefix(r.URL.Path, "/api/") {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusForbidden)
+					w.Write([]byte(`{"success":false,"error":{"code":"FORBIDDEN","message":"missing permission: ` + permCode + `"}}`))
+					return
+				}
+				w.WriteHeader(http.StatusForbidden)
+				w.Write([]byte(errorPage403))
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// RequireAnyPermission returns middleware that checks if the user's role
+// has at least one of the specified permissions.
+func RequireAnyPermission(permService *service.PermissionService, permCodes ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			role := GetUserRole(r)
+			if !permService.HasAnyPermission(role, permCodes...) {
+				if strings.HasPrefix(r.URL.Path, "/api/") {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusForbidden)
+					w.Write([]byte(`{"success":false,"error":{"code":"FORBIDDEN","message":"insufficient permissions"}}`))
+					return
+				}
+				w.WriteHeader(http.StatusForbidden)
+				w.Write([]byte(errorPage403))
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
