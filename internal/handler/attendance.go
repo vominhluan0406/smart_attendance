@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -201,7 +202,7 @@ func (h *AttendanceHandler) LogTimeForm(w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusBadRequest)
 		h.render.RenderPartial(w, "checkin_result.html", map[string]interface{}{
 			"Success": false,
-			"Error":   err.Error(),
+			"Error":   translateAttendanceError(err),
 		})
 		return
 	}
@@ -268,6 +269,40 @@ func (h *AttendanceHandler) APIStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // --- Helpers ---
+
+func translateAttendanceError(err error) string {
+	switch {
+	case errors.Is(err, service.ErrNoBranch):
+		return "Bạn chưa được gán chi nhánh. Vui lòng liên hệ quản lý."
+	case errors.Is(err, service.ErrTOTPInvalid):
+		return "Mã QR không hợp lệ hoặc đã hết hạn. Vui lòng quét lại."
+	case errors.Is(err, service.ErrIPNotAllowed):
+		return "Bạn không thể chấm công từ mạng này. Vui lòng kết nối WiFi chi nhánh."
+	case errors.Is(err, service.ErrLocationOutside):
+		return "Bạn đang ngoài khu vực chi nhánh. Vui lòng di chuyển đến gần hơn."
+	case errors.Is(err, service.ErrMethodRequired):
+		return "Không xác minh được. Vui lòng quét mã QR tại chi nhánh."
+	case errors.Is(err, service.ErrUserNotFound):
+		return "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại."
+	case errors.Is(err, service.ErrBranchNotFound):
+		return "Chi nhánh không tồn tại. Vui lòng liên hệ quản lý."
+	default:
+		msg := err.Error()
+		if strings.Contains(msg, "invalid or expired QR") {
+			return "Mã QR đã hết hạn. Vui lòng quét mã mới."
+		}
+		if strings.Contains(msg, "QR/TOTP code required") {
+			return "Vui lòng quét mã QR tại chi nhánh để chấm công."
+		}
+		if strings.Contains(msg, "GPS location required") {
+			return "Không lấy được vị trí GPS. Vui lòng bật định vị và thử lại."
+		}
+		if strings.Contains(msg, "location outside") {
+			return "Bạn đang ngoài khu vực chi nhánh."
+		}
+		return "Có lỗi xảy ra. Vui lòng thử lại."
+	}
+}
 
 func getClientIP(r *http.Request) string {
 	if ip := r.Header.Get("X-Real-Ip"); ip != "" {
