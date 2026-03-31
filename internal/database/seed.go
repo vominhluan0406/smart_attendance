@@ -3,7 +3,11 @@ package database
 import (
 	"crypto/rand"
 	"encoding/base32"
+	"fmt"
 	"log"
+	"math"
+	mrand "math/rand"
+	"time"
 
 	"github.com/smart-attendance/smart-attendance/internal/models"
 	"golang.org/x/crypto/bcrypt"
@@ -26,71 +30,304 @@ func Seed(db *gorm.DB) error {
 	hash, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 	pw := string(hash)
 
-	// 1. Create branch
-	secret := make([]byte, 20)
-	rand.Read(secret)
-
-	branch := &models.Branch{
-		Name:           "HQ - Ho Chi Minh",
-		Address:        "123 Nguyen Hue, Quan 1, TP.HCM",
-		Lat:            floatPtr(10.773889),
-		Lng:            floatPtr(106.701944),
-		RadiusM:        500,
-		TOTPSecret:     base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(secret),
-		AllowedMethods: "qr_totp,ip,location",
-		WorkStartTime:  "08:00",
-		WorkEndTime:    "17:00",
-		IsActive:       true,
-	}
-	if err := db.Create(branch).Error; err != nil {
-		return err
+	// ============================================================
+	// 1. Branches (3 branches)
+	// ============================================================
+	branches := []struct {
+		Name    string
+		Address string
+		Lat     float64
+		Lng     float64
+	}{
+		{"HQ - Hồ Chí Minh", "123 Nguyễn Huệ, Quận 1, TP.HCM", 10.773889, 106.701944},
+		{"Chi nhánh Hà Nội", "45 Lý Thường Kiệt, Hoàn Kiếm, Hà Nội", 21.024800, 105.841171},
+		{"Chi nhánh Đà Nẵng", "78 Bạch Đằng, Hải Châu, Đà Nẵng", 16.068083, 108.212028},
 	}
 
-	// Add IP whitelist
-	db.Create(&models.BranchIPWhitelist{BranchID: branch.ID, IPCIDR: "127.0.0.1/32", Label: "Localhost"})
-	db.Create(&models.BranchIPWhitelist{BranchID: branch.ID, IPCIDR: "192.168.1.0/24", Label: "Office LAN"})
+	var branchIDs []string
+	for _, b := range branches {
+		secret := make([]byte, 20)
+		rand.Read(secret)
+		branch := &models.Branch{
+			Name:           b.Name,
+			Address:        b.Address,
+			Lat:            floatPtr(b.Lat),
+			Lng:            floatPtr(b.Lng),
+			RadiusM:        500,
+			TOTPSecret:     base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(secret),
+			AllowedMethods: "qr_totp,ip,location",
+			WorkStartTime:  "08:00",
+			WorkEndTime:    "17:00",
+			IsActive:       true,
+		}
+		db.Create(branch)
+		branchIDs = append(branchIDs, branch.ID)
 
-	// Add location
-	db.Create(&models.BranchLocation{BranchID: branch.ID, Lat: 10.773889, Lng: 106.701944, RadiusM: 500, Label: "Main Office"})
+		db.Create(&models.BranchIPWhitelist{BranchID: branch.ID, IPCIDR: "127.0.0.1/32", Label: "Localhost"})
+		db.Create(&models.BranchIPWhitelist{BranchID: branch.ID, IPCIDR: "192.168.1.0/24", Label: "Office LAN"})
+		db.Create(&models.BranchLocation{BranchID: branch.ID, Lat: b.Lat, Lng: b.Lng, RadiusM: 500, Label: "Main Office"})
+		log.Printf("[seed] branch: %s", b.Name)
+	}
 
-	log.Printf("[seed] created branch: %s (%s)", branch.Name, branch.ID)
+	// ============================================================
+	// 2. Departments (per branch)
+	// ============================================================
+	deptDefs := []struct {
+		Name string
+		Code string
+	}{
+		{"Phòng Kỹ thuật", "IT"},
+		{"Phòng Nhân sự", "HR"},
+		{"Phòng Kinh doanh", "SALES"},
+	}
 
-	// 2. Admin
+	deptMap := make(map[string][]string) // branchID → []deptID
+	for _, bid := range branchIDs {
+		for _, d := range deptDefs {
+			dept := &models.Department{BranchID: bid, Name: d.Name, Code: d.Code, IsActive: true}
+			db.Create(dept)
+			deptMap[bid] = append(deptMap[bid], dept.ID)
+		}
+	}
+	log.Printf("[seed] created %d departments", len(branchIDs)*len(deptDefs))
+
+	// ============================================================
+	// 3. Work Shifts (per branch)
+	// ============================================================
+	shiftDefs := []struct {
+		Name      string
+		Code      string
+		Start     string
+		End       string
+		Color     string
+		IsDefault bool
+	}{
+		{"Ca sáng", "MORNING", "07:00", "15:00", "#F59E0B", false},
+		{"Ca chính", "MAIN", "08:00", "17:00", "#3B82F6", true},
+		{"Ca chiều", "AFTERNOON", "13:00", "21:00", "#8B5CF6", false},
+	}
+
+	shiftMap := make(map[string][]string) // branchID → []shiftID
+	for _, bid := range branchIDs {
+		// Remove default shift created by migration
+		db.Where("branch_id = ? AND code = 'DEFAULT'", bid).Delete(&models.WorkShift{})
+		for _, s := range shiftDefs {
+			shift := &models.WorkShift{
+				BranchID: bid, Name: s.Name, Code: s.Code,
+				StartTime: s.Start, EndTime: s.End,
+				GracePeriodMinutes: 15, BreakDurationMinutes: 60,
+				WorkingDays: "1,2,3,4,5", Color: s.Color,
+				IsDefault: s.IsDefault, IsActive: true,
+			}
+			db.Create(shift)
+			shiftMap[bid] = append(shiftMap[bid], shift.ID)
+		}
+	}
+	log.Printf("[seed] created %d shifts", len(branchIDs)*len(shiftDefs))
+
+	// ============================================================
+	// 4. Users (1 admin + 3 managers + 15 employees = 19 users)
+	// ============================================================
+	joinDate := time.Date(2025, 6, 1, 0, 0, 0, 0, time.Local)
+
+	// Admin
 	admin := &models.User{
-		Email:        "admin@smartattendance.com",
-		PasswordHash: pw,
-		FullName:     "System Admin",
-		Role:         models.RoleAdmin,
-		IsActive:     true,
+		EmployeeCode: "ADM001", Email: "admin@smartattendance.com", PasswordHash: pw,
+		FullName: "Trần Quốc Bảo", Phone: "0901000001",
+		Role: models.RoleAdmin, Position: "System Administrator",
+		JoinDate: &joinDate, IsActive: true,
 	}
 	db.Create(admin)
-	log.Printf("[seed] admin: admin@smartattendance.com / password123")
 
-	// 3. Manager — generates QR code for branch
-	manager := &models.User{
-		Email:        "manager@smartattendance.com",
-		PasswordHash: pw,
-		FullName:     "Branch Manager",
-		Role:         models.RoleManager,
-		BranchID:     &branch.ID,
-		IsActive:     true,
+	// Managers (1 per branch)
+	managerDefs := []struct {
+		Code  string
+		Email string
+		Name  string
+		Phone string
+	}{
+		{"MGR001", "manager.hcm@demo.com", "Nguyễn Thị Hương", "0901000010"},
+		{"MGR002", "manager.hn@demo.com", "Phạm Văn Đức", "0901000020"},
+		{"MGR003", "manager.dn@demo.com", "Lê Thị Mai", "0901000030"},
 	}
-	db.Create(manager)
-	log.Printf("[seed] manager (QR generator): manager@smartattendance.com / password123 → branch: %s", branch.Name)
 
-	// 4. Employee — scans QR to check-in
-	employee := &models.User{
-		Email:        "employee@smartattendance.com",
-		PasswordHash: pw,
-		FullName:     "Nguyen Van A",
-		Role:         models.RoleEmployee,
-		BranchID:     &branch.ID,
-		IsActive:     true,
+	var managerIDs []string
+	for i, m := range managerDefs {
+		user := &models.User{
+			EmployeeCode: m.Code, Email: m.Email, PasswordHash: pw,
+			FullName: m.Name, Phone: m.Phone,
+			Role: models.RoleManager, BranchID: &branchIDs[i],
+			DepartmentID: &deptMap[branchIDs[i]][0], // IT dept
+			Position: "Branch Manager", JoinDate: &joinDate, IsActive: true,
+		}
+		db.Create(user)
+		managerIDs = append(managerIDs, user.ID)
 	}
-	db.Create(employee)
-	log.Printf("[seed] employee (QR scanner): employee@smartattendance.com / password123 → branch: %s", branch.Name)
+
+	// Set managers on departments
+	for i, bid := range branchIDs {
+		for _, did := range deptMap[bid] {
+			db.Model(&models.Department{}).Where("id = ?", did).Update("manager_id", managerIDs[i])
+		}
+	}
+
+	// Employees (5 per branch = 15)
+	empNames := []struct {
+		Name     string
+		Phone    string
+		Position string
+	}{
+		{"Hoàng Văn An", "0912000001", "Developer"},
+		{"Trần Thị Bích", "0912000002", "HR Specialist"},
+		{"Ngô Quang Cường", "0912000003", "Sales Executive"},
+		{"Đỗ Thị Dung", "0912000004", "QA Engineer"},
+		{"Vũ Minh Hiếu", "0912000005", "Accountant"},
+	}
+
+	var allEmployeeIDs []string
+	empIdx := 0
+	for bIdx, bid := range branchIDs {
+		depts := deptMap[bid]
+		for eIdx, emp := range empNames {
+			empIdx++
+			deptID := depts[eIdx%len(depts)]
+			user := &models.User{
+				EmployeeCode: fmt.Sprintf("EMP%03d", empIdx),
+				Email:        fmt.Sprintf("emp%d.%s@demo.com", empIdx, []string{"hcm", "hn", "dn"}[bIdx]),
+				PasswordHash: pw, FullName: emp.Name, Phone: emp.Phone,
+				Role: models.RoleEmployee, BranchID: &bid, DepartmentID: &deptID,
+				Position: emp.Position, JoinDate: &joinDate, IsActive: true,
+			}
+			db.Create(user)
+			allEmployeeIDs = append(allEmployeeIDs, user.ID)
+		}
+	}
+	log.Printf("[seed] created 19 users (1 admin, 3 managers, 15 employees)")
+	log.Printf("[seed] login: admin@smartattendance.com / password123")
+	log.Printf("[seed] login: manager.hcm@demo.com / password123")
+	log.Printf("[seed] login: emp1.hcm@demo.com / password123")
+
+	// ============================================================
+	// 5. Attendance + Logs (last 14 working days)
+	// ============================================================
+	seedAttendanceData(db, branchIDs, shiftMap, managerIDs, allEmployeeIDs)
 
 	return nil
+}
+
+func seedAttendanceData(db *gorm.DB, branchIDs []string, shiftMap map[string][]string, managerIDs, employeeIDs []string) {
+	now := time.Now()
+	rng := mrand.New(mrand.NewSource(now.UnixNano()))
+
+	// Build user→branch map
+	type userInfo struct {
+		ID       string
+		BranchID string
+		ShiftIdx int // 0=morning, 1=main(default), 2=afternoon
+	}
+
+	var users []userInfo
+	for i, mid := range managerIDs {
+		users = append(users, userInfo{mid, branchIDs[i], 1}) // managers on main shift
+	}
+	for i, eid := range employeeIDs {
+		bIdx := i / 5 // 5 employees per branch
+		shiftIdx := 1 // default to main shift
+		if i%5 == 0 {
+			shiftIdx = 0 // first employee per branch on morning shift
+		} else if i%5 == 4 {
+			shiftIdx = 2 // last employee per branch on afternoon shift
+		}
+		users = append(users, userInfo{eid, branchIDs[bIdx], shiftIdx})
+	}
+
+	shiftTimes := []struct{ Start, End int }{
+		{7, 15},  // morning
+		{8, 17},  // main
+		{13, 21}, // afternoon
+	}
+
+	var attBatch []models.Attendance
+	var logBatch []models.AttendanceLog
+
+	for dayOffset := 14; dayOffset >= 1; dayOffset-- {
+		day := now.AddDate(0, 0, -dayOffset)
+		if day.Weekday() == time.Saturday || day.Weekday() == time.Sunday {
+			continue
+		}
+		workDate := day.Format("2006-01-02")
+
+		for _, u := range users {
+			// 90% attendance rate
+			if rng.Float64() > 0.90 {
+				continue
+			}
+
+			shifts := shiftMap[u.BranchID]
+			if len(shifts) == 0 {
+				continue
+			}
+			shiftID := shifts[u.ShiftIdx%len(shifts)]
+			st := shiftTimes[u.ShiftIdx%len(shiftTimes)]
+
+			// Generate check-in time: 70% on-time, 30% late
+			var checkInMinOffset int
+			if rng.Float64() < 0.70 {
+				checkInMinOffset = rng.Intn(15) - 5 // -5 to +10 min (on time)
+			} else {
+				checkInMinOffset = 15 + rng.Intn(30) // 15-45 min late
+			}
+			checkIn := time.Date(day.Year(), day.Month(), day.Day(), st.Start, checkInMinOffset, rng.Intn(60), 0, now.Location())
+
+			// Check-out: 8-9 hours later
+			checkOutMinOffset := rng.Intn(60) // 0-60 min past end
+			checkOut := time.Date(day.Year(), day.Month(), day.Day(), st.End, checkOutMinOffset, rng.Intn(60), 0, now.Location())
+
+			// Status
+			gracePeriod := 15
+			deadline := time.Date(day.Year(), day.Month(), day.Day(), st.Start, gracePeriod, 0, 0, now.Location())
+			status := models.StatusOnTime
+			if checkIn.After(deadline) {
+				status = models.StatusLate
+			}
+
+			method := "qr_totp"
+			att := models.Attendance{
+				UserID: u.ID, BranchID: u.BranchID, ShiftID: &shiftID,
+				WorkDate: workDate, CheckInAt: &checkIn, CheckOutAt: &checkOut,
+				Status: status, Method: method,
+				TOTPVerified: true, IPVerified: true, LocVerified: true,
+			}
+			attBatch = append(attBatch, att)
+
+			// 2 logs per day (in + out)
+			logBatch = append(logBatch,
+				models.AttendanceLog{
+					UserID: u.ID, BranchID: u.BranchID, ShiftID: &shiftID,
+					WorkDate: workDate, LoggedAt: checkIn, Method: method,
+					TOTPVerified: true, IPVerified: true, LocVerified: true,
+				},
+				models.AttendanceLog{
+					UserID: u.ID, BranchID: u.BranchID, ShiftID: &shiftID,
+					WorkDate: workDate, LoggedAt: checkOut, Method: method,
+					TOTPVerified: true, IPVerified: true, LocVerified: true,
+				},
+			)
+		}
+	}
+
+	// Batch insert
+	batchSize := 100
+	for i := 0; i < len(attBatch); i += batchSize {
+		end := int(math.Min(float64(i+batchSize), float64(len(attBatch))))
+		db.Create(attBatch[i:end])
+	}
+	for i := 0; i < len(logBatch); i += batchSize {
+		end := int(math.Min(float64(i+batchSize), float64(len(logBatch))))
+		db.Create(logBatch[i:end])
+	}
+
+	log.Printf("[seed] created %d attendance records + %d time logs (14 working days)", len(attBatch), len(logBatch))
 }
 
 func seedLeaveTypes(db *gorm.DB) {
