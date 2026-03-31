@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/smart-attendance/smart-attendance/internal/config"
 	"github.com/smart-attendance/smart-attendance/internal/handler"
 	"github.com/smart-attendance/smart-attendance/internal/middleware"
 	"github.com/smart-attendance/smart-attendance/internal/renderer"
@@ -19,6 +20,8 @@ type Deps struct {
 	AttendanceService *service.AttendanceService
 	TOTPService       *service.TOTPService
 	ReportService     *service.ReportService
+	DashboardService  *service.DashboardService
+	Config            *config.Config
 	RateLimitPerMin   int
 }
 
@@ -37,14 +40,17 @@ func New(deps Deps) http.Handler {
 
 	// Handlers
 	home := handler.NewHomeHandler(deps.Render)
-	auth := handler.NewAuthHandler(deps.AuthService, deps.Render)
+	oauth := handler.NewOAuthHandler(deps.AuthService, deps.Config)
+	auth := handler.NewAuthHandler(deps.AuthService, deps.Render, oauth.IsEnabled())
 	users := handler.NewUserHandler(deps.UserService, deps.AuthService, deps.Render)
 	branches := handler.NewBranchHandler(deps.BranchService, deps.Render)
 	attendance := handler.NewAttendanceHandler(deps.AttendanceService, deps.BranchService, deps.TOTPService, deps.UserService, deps.Render)
 	reports := handler.NewReportHandler(deps.ReportService, deps.BranchService, deps.Render)
+	dashboard := handler.NewDashboardHandler(deps.DashboardService, deps.BranchService, deps.Render)
 
-	// Public pages
-	r.Get("/", home.Index)
+	// Custom error pages
+	r.NotFound(home.NotFound)
+	r.MethodNotAllowed(home.NotFound)
 
 	// Auth pages (no JWT required)
 	r.Route("/auth", func(ar chi.Router) {
@@ -53,13 +59,26 @@ func New(deps Deps) http.Handler {
 		ar.Get("/register", auth.RegisterPage)
 		ar.Post("/register", auth.RegisterForm)
 		ar.Get("/logout", auth.Logout)
+
+		// Microsoft OAuth
+		ar.Get("/oauth/microsoft", oauth.MicrosoftLogin)
+		ar.Get("/oauth/microsoft/callback", oauth.MicrosoftCallback)
 	})
 
 	// Protected pages (JWT required)
 	r.Group(func(pr chi.Router) {
 		pr.Use(middleware.JWTAuth(deps.AuthService))
 
-		pr.Get("/dashboard", home.Index)
+		pr.Get("/", home.Index)
+
+		// Dashboard (Manager/Admin only)
+		pr.Route("/dashboard", func(dr chi.Router) {
+			dr.Use(middleware.ManagerOrAdmin)
+			dr.Get("/", dashboard.DashboardPage)
+			dr.Get("/stats", dashboard.StatsPartial)
+			dr.Get("/chart", dashboard.ChartPartial)
+			dr.Get("/recent", dashboard.RecentPartial)
+		})
 		
 		// Reports (User specific)
 		pr.Route("/reports", func(rr chi.Router) {
@@ -127,6 +146,13 @@ func New(deps Deps) http.Handler {
 		// Protected API
 		api.Group(func(pa chi.Router) {
 			pa.Use(middleware.JWTAuth(deps.AuthService))
+
+			// Dashboard API (Manager/Admin only)
+			pa.Route("/dashboard", func(da chi.Router) {
+				da.Use(middleware.ManagerOrAdmin)
+				da.Get("/stats", dashboard.APIStats)
+				da.Get("/charts", dashboard.APICharts)
+			})
 
 			// Attendance API
 			pa.Route("/attendance", func(aa chi.Router) {

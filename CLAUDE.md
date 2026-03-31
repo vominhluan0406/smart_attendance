@@ -78,9 +78,9 @@ smart_attendance/
 
 ### 1. Check-in / Check-out
 - **3 phương thức xác thực song song** (multi-factor):
-  - **QR Code (TOTP)**: Mã QR hiển thị tại chi nhánh, chứa TOTP code reset mỗi 15 giây. Nhân viên quét QR để check-in. Chống chụp ảnh/share QR vì code hết hạn nhanh
-  - **IP Whitelist**: Mỗi chi nhánh cấu hình danh sách IP được phép (mạng nội bộ công ty). Request check-in phải từ IP trong whitelist
-  - **Location Whitelist**: Mỗi chi nhánh cấu hình tọa độ (lat, lng) + bán kính. GPS của nhân viên phải nằm trong vùng cho phép (haversine distance)
+  - **Camera QR Scanner**: Nhân viên sử dụng camera điện thoại/máy tính quét mã QR tại chi nhánh. Mã QR chứa TOTP code reset mỗi 15 giây. Tự động bóc tách và gửi lệnh điểm danh.
+  - **IP Whitelist**: Mỗi chi nhánh cấu hình danh sách IP được phép (mạng nội bộ công ty). Request check-in phải từ IP trong whitelist.
+  - **Location Whitelist**: Mỗi chi nhánh cấu hình tọa độ (lat, lng) + bán kính. GPS của nhân viên phải nằm trong vùng cho phép (haversine distance).
 - Chống gian lận: TOTP expire 15s, IP verify, GPS geofencing, detect mock location
 - Mỗi nhân viên chỉ check-in được tại chi nhánh được gán
 - Hỗ trợ check-in bằng 1 hoặc kết hợp nhiều phương thức (configurable per branch)

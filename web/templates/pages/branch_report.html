@@ -1,90 +1,83 @@
-{{ define "title" }}Branch Report - {{ .Branch.Name }}{{ end }}
+{{define "title"}}Báo cáo chi nhánh — {{.Branch.Name}}{{end}}
 
-{{ define "content" }}
-<div class="px-4 py-8 max-w-7xl mx-auto">
-    <div class="mb-8 flex justify-between items-center">
-        <div>
-            <div class="flex items-center gap-2 text-sm text-indigo-600 font-medium mb-1">
-                <a href="/branches" class="hover:underline">Branches</a>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-                <span>Report</span>
-            </div>
-            <h1 class="text-2xl font-bold text-gray-900">{{ .Branch.Name }} - Attendance Report</h1>
-        </div>
-        <a href="/reports/branch/{{ .Branch.ID }}/export?date_from={{ .DateFrom }}&date_to={{ .DateTo }}&status={{ .Status }}"
-            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
-            Export to Excel
-        </a>
-    </div>
-
-    <!-- Filters -->
-    <div class="bg-white p-4 rounded-lg shadow mb-6">
-        <form id="filter-form" class="flex flex-wrap gap-4 items-end" hx-get="/reports/branch/{{ .Branch.ID }}/partial"
-            hx-target="#history-list" hx-push-url="false" hx-trigger="change, submit">
-
+{{define "body"}}
+<div class="min-h-full">
+    {{template "nav" .}}
+    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div class="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">From Date</label>
-                <input type="date" name="date_from" value="{{ .DateFrom }}"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                <div class="flex items-center gap-2 text-sm text-indigo-600 font-medium mb-1">
+                    <a href="/branches" class="hover:underline">Chi nhánh</a>
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    <span>Báo cáo</span>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900">{{.Branch.Name}}</h1>
+                <p class="text-sm text-gray-500 mt-1">Báo cáo chấm công chi nhánh</p>
             </div>
-
-            <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">To Date</label>
-                <input type="date" name="date_to" value="{{ .DateTo }}"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-            </div>
-
-            <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                <select name="status"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                    <option value="">All Status</option>
-                    <option value="on_time" {{ if eq .Status "on_time" }}selected{{ end }}>On Time</option>
-                    <option value="late" {{ if eq .Status "late" }}selected{{ end }}>Late</option>
-                    <option value="absent" {{ if eq .Status "absent" }}selected{{ end }}>Absent</option>
-                </select>
-            </div>
-
-            <div>
-                <button type="submit"
-                    class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700">
-                    Filter
-                </button>
-                <a href="/reports/branch/{{ .Branch.ID }}"
-                    class="ml-2 inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                    Clear
-                </a>
-            </div>
-        </form>
-    </div>
-
-    <!-- Error message -->
-    {{ if .Error }}
-    <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
-        <div class="flex">
-            <div class="ml-3">
-                <p class="text-sm text-red-700">{{ .Error }}</p>
-            </div>
-        </div>
-    </div>
-    {{ end }}
-
-    <!-- Table content (HTMX target) -->
-    <div id="history-list" class="relative">
-        <div
-            class="htmx-indicator absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center z-10 hidden">
-            <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none"
-                viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                </path>
-            </svg>
+            <a href="/reports/branch/{{.Branch.ID}}/export?date_from={{.DateFrom}}&date_to={{.DateTo}}&status={{.Status}}"
+                class="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 transition-all">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                Export Excel
+            </a>
         </div>
 
-        {{ template "history_list.html" . }}
-    </div>
+        <!-- Filters -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
+            <form id="filter-form" class="flex flex-wrap gap-4 items-end"
+                hx-get="/reports/branch/{{.Branch.ID}}/partial"
+                hx-target="#history-list"
+                hx-swap="innerHTML"
+                hx-push-url="false">
+
+                <div class="flex-1 min-w-[140px]">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Từ ngày</label>
+                    <input type="date" name="date_from" value="{{.DateFrom}}"
+                        class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 ring-1 ring-inset ring-gray-300">
+                </div>
+
+                <div class="flex-1 min-w-[140px]">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Đến ngày</label>
+                    <input type="date" name="date_to" value="{{.DateTo}}"
+                        class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 ring-1 ring-inset ring-gray-300">
+                </div>
+
+                <div class="w-36">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Trạng thái</label>
+                    <select name="status"
+                        class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 ring-1 ring-inset ring-gray-300">
+                        <option value="">Tất cả</option>
+                        <option value="on_time" {{if eq .Status "on_time"}}selected{{end}}>Đúng giờ</option>
+                        <option value="late" {{if eq .Status "late"}}selected{{end}}>Trễ</option>
+                        <option value="absent" {{if eq .Status "absent"}}selected{{end}}>Vắng</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-2">
+                    <button type="submit"
+                        class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors">
+                        Lọc
+                    </button>
+                    <a href="/reports/branch/{{.Branch.ID}}"
+                        class="rounded-lg bg-white border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">
+                        Xoá lọc
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        {{if .Error}}
+        <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+            <div class="flex items-center gap-2">
+                <i data-lucide="alert-circle" class="w-5 h-5 text-red-500"></i>
+                <p class="text-sm text-red-700">{{.Error}}</p>
+            </div>
+        </div>
+        {{end}}
+
+        <!-- Table content (HTMX target) -->
+        <div id="history-list" class="relative">
+            {{template "history_list.html" .}}
+        </div>
+    </main>
 </div>
-{{ end }}
+{{end}}

@@ -105,3 +105,11 @@ func (r *UserRepository) Count() (int64, error) {
 	err := r.db.Model(&models.User{}).Count(&count).Error
 	return count, err
 }
+
+func (r *UserRepository) FindByOAuthID(provider, oauthID string) (*models.User, error) {
+	var user models.User
+	if err := r.db.First(&user, "oauth_provider = ? AND oauth_id = ?", provider, oauthID).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}

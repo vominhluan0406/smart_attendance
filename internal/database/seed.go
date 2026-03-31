@@ -84,7 +84,113 @@ func Seed(db *gorm.DB) error {
 	db.Create(employee)
 	log.Printf("[seed] employee (QR scanner): employee@smartattendance.com / password123 → branch: %s", branch.Name)
 
+	// 5. Default leave types
+	seedLeaveTypes(db)
+
+	// 6. Default holidays (Vietnam)
+	seedHolidays(db)
+
+	// 7. Permissions & role-permission mapping
+	seedPermissions(db)
+
 	return nil
+}
+
+func seedLeaveTypes(db *gorm.DB) {
+	var count int64
+	db.Model(&models.LeaveType{}).Count(&count)
+	if count > 0 {
+		return
+	}
+
+	types := []models.LeaveType{
+		{Name: "Nghỉ phép năm", Code: "ANNUAL", MaxDaysPerYear: 12, IsPaid: true, RequiresApproval: true, Color: "#10B981"},
+		{Name: "Nghỉ ốm", Code: "SICK", MaxDaysPerYear: 30, IsPaid: true, RequiresApproval: true, Color: "#F59E0B"},
+		{Name: "Nghỉ việc riêng", Code: "PERSONAL", MaxDaysPerYear: 3, IsPaid: false, RequiresApproval: true, Color: "#8B5CF6"},
+		{Name: "Nghỉ cưới", Code: "WEDDING", MaxDaysPerYear: 3, IsPaid: true, RequiresApproval: true, Color: "#EC4899"},
+		{Name: "Nghỉ tang", Code: "FUNERAL", MaxDaysPerYear: 3, IsPaid: true, RequiresApproval: true, Color: "#6B7280"},
+		{Name: "Nghỉ thai sản", Code: "MATERNITY", MaxDaysPerYear: 180, IsPaid: true, RequiresApproval: true, Color: "#F472B6"},
+		{Name: "Nghỉ không lương", Code: "UNPAID", MaxDaysPerYear: 365, IsPaid: false, RequiresApproval: true, Color: "#9CA3AF"},
+	}
+
+	for i := range types {
+		types[i].IsActive = true
+	}
+
+	if err := db.Create(&types).Error; err != nil {
+		log.Printf("[seed] warning: failed to create leave types: %v", err)
+		return
+	}
+	log.Printf("[seed] created %d leave types", len(types))
+}
+
+func seedPermissions(db *gorm.DB) {
+	var count int64
+	db.Model(&models.Permission{}).Count(&count)
+	if count > 0 {
+		return
+	}
+
+	// 1. Create all permissions
+	perms := models.DefaultPermissions()
+	if err := db.Create(&perms).Error; err != nil {
+		log.Printf("[seed] warning: failed to create permissions: %v", err)
+		return
+	}
+	log.Printf("[seed] created %d permissions", len(perms))
+
+	// Build code → ID map
+	permMap := make(map[string]string, len(perms))
+	for _, p := range perms {
+		permMap[p.Code] = p.ID
+	}
+
+	// 2. Create role-permission mappings
+	rolePerms := models.DefaultRolePermissions()
+	var rps []models.RolePermission
+	for role, codes := range rolePerms {
+		for _, code := range codes {
+			if pid, ok := permMap[code]; ok {
+				rps = append(rps, models.RolePermission{Role: role, PermissionID: pid})
+			}
+		}
+	}
+
+	if err := db.Create(&rps).Error; err != nil {
+		log.Printf("[seed] warning: failed to create role permissions: %v", err)
+		return
+	}
+	log.Printf("[seed] created %d role-permission mappings", len(rps))
+}
+
+func seedHolidays(db *gorm.DB) {
+	var count int64
+	db.Model(&models.Holiday{}).Count(&count)
+	if count > 0 {
+		return
+	}
+
+	holidays := []models.Holiday{
+		{Name: "Tết Dương lịch", Date: "2026-01-01", HolidayType: "national", IsRecurring: true, IsActive: true},
+		{Name: "Giỗ tổ Hùng Vương", Date: "2026-04-06", HolidayType: "national", IsRecurring: false, IsActive: true},
+		{Name: "Ngày Giải phóng miền Nam", Date: "2026-04-30", HolidayType: "national", IsRecurring: true, IsActive: true},
+		{Name: "Ngày Quốc tế Lao động", Date: "2026-05-01", HolidayType: "national", IsRecurring: true, IsActive: true},
+		{Name: "Quốc khánh", Date: "2026-09-02", HolidayType: "national", IsRecurring: true, IsActive: true},
+		{Name: "Nghỉ bù Quốc khánh", Date: "2026-09-03", HolidayType: "national", IsRecurring: false, IsActive: true},
+		{Name: "Tết Nguyên Đán (28 Tết)", Date: "2026-02-15", HolidayType: "national", IsRecurring: false, IsActive: true},
+		{Name: "Tết Nguyên Đán (29 Tết)", Date: "2026-02-16", HolidayType: "national", IsRecurring: false, IsActive: true},
+		{Name: "Tết Nguyên Đán (30 Tết)", Date: "2026-02-17", HolidayType: "national", IsRecurring: false, IsActive: true},
+		{Name: "Tết Nguyên Đán (Mùng 1)", Date: "2026-02-17", HolidayType: "national", IsRecurring: false, IsActive: true},
+		{Name: "Tết Nguyên Đán (Mùng 2)", Date: "2026-02-18", HolidayType: "national", IsRecurring: false, IsActive: true},
+		{Name: "Tết Nguyên Đán (Mùng 3)", Date: "2026-02-19", HolidayType: "national", IsRecurring: false, IsActive: true},
+		{Name: "Tết Nguyên Đán (Mùng 4)", Date: "2026-02-20", HolidayType: "national", IsRecurring: false, IsActive: true},
+	}
+
+	if err := db.Create(&holidays).Error; err != nil {
+		log.Printf("[seed] warning: failed to create holidays: %v", err)
+		return
+	}
+	log.Printf("[seed] created %d holidays", len(holidays))
 }
 
 func floatPtr(f float64) *float64 {

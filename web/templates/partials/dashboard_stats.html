@@ -1,0 +1,60 @@
+{{define "dashboard_stats"}}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Total Employees -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-3">
+            <div class="p-2 bg-blue-100 rounded-xl">
+                <i data-lucide="users" class="w-5 h-5 text-blue-600"></i>
+            </div>
+            {{if eq .UserRole "admin"}}
+            <span class="text-xs text-gray-400">Toàn hệ thống</span>
+            {{else}}
+            <span class="text-xs text-gray-400">Chi nhánh</span>
+            {{end}}
+        </div>
+        <p class="text-2xl font-bold text-gray-900">{{.Stats.TotalEmployees}}</p>
+        <p class="text-xs text-gray-500 mt-1">Nhân viên</p>
+    </div>
+
+    <!-- Today Check-ins -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-3">
+            <div class="p-2 bg-green-100 rounded-xl">
+                <i data-lucide="log-in" class="w-5 h-5 text-green-600"></i>
+            </div>
+            <span class="text-xs text-gray-400">Hôm nay</span>
+        </div>
+        <p class="text-2xl font-bold text-gray-900">{{.Stats.TodayCheckIns}}</p>
+        <p class="text-xs text-gray-500 mt-1">Đã check-in</p>
+    </div>
+
+    <!-- On-time Rate -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-3">
+            <div class="p-2 bg-emerald-100 rounded-xl">
+                <i data-lucide="target" class="w-5 h-5 text-emerald-600"></i>
+            </div>
+            <span class="text-xs font-medium {{if ge .Stats.OnTimeRate 80.0}}text-green-600{{else if ge .Stats.OnTimeRate 60.0}}text-amber-600{{else}}text-red-600{{end}}">
+                {{printf "%.0f" .Stats.OnTimeRate}}%
+            </span>
+        </div>
+        <div class="flex items-baseline gap-2">
+            <p class="text-2xl font-bold text-gray-900">{{.Stats.TodayOnTime}}</p>
+            <span class="text-sm text-gray-400">/ {{.Stats.TodayCheckIns}}</span>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">Đúng giờ</p>
+    </div>
+
+    <!-- Late -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-3">
+            <div class="p-2 bg-amber-100 rounded-xl">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600"></i>
+            </div>
+            <span class="text-xs text-gray-400">Hôm nay</span>
+        </div>
+        <p class="text-2xl font-bold text-gray-900">{{.Stats.TodayLate}}</p>
+        <p class="text-xs text-gray-500 mt-1">Đi trễ</p>
+    </div>
+</div>
+{{end}}

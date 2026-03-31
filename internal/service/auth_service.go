@@ -99,6 +99,10 @@ func (s *AuthService) Login(input LoginInput) (*TokenPair, *models.User, error) 
 		return nil, nil, ErrAccountDisabled
 	}
 
+	if user.PasswordHash == "" {
+		return nil, nil, ErrInvalidCredentials
+	}
+
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.Password)); err != nil {
 		return nil, nil, ErrInvalidCredentials
 	}
@@ -109,6 +113,60 @@ func (s *AuthService) Login(input LoginInput) (*TokenPair, *models.User, error) 
 	}
 
 	return tokens, user, nil
+}
+
+// OAuthUserInfo holds user info extracted from an OAuth provider.
+type OAuthUserInfo struct {
+	Provider string
+	OAuthID  string
+	Email    string
+	FullName string
+}
+
+// LoginOrCreateFromOAuth finds an existing user by OAuth ID or email,
+// or creates a new one. Then generates a JWT token pair.
+func (s *AuthService) LoginOrCreateFromOAuth(info OAuthUserInfo) (*TokenPair, *models.User, error) {
+	// 1. Try to find by OAuth ID
+	user, err := s.userRepo.FindByOAuthID(info.Provider, info.OAuthID)
+	if err == nil {
+		if !user.IsActive {
+			return nil, nil, ErrAccountDisabled
+		}
+		tokens, err := s.generateTokenPair(user)
+		return tokens, user, err
+	}
+
+	// 2. Try to find by email (link existing account)
+	user, err = s.userRepo.FindByEmail(info.Email)
+	if err == nil {
+		if !user.IsActive {
+			return nil, nil, ErrAccountDisabled
+		}
+		// Link OAuth to existing account
+		user.OAuthProvider = info.Provider
+		user.OAuthID = info.OAuthID
+		if err := s.userRepo.Update(user); err != nil {
+			return nil, nil, fmt.Errorf("link oauth to user: %w", err)
+		}
+		tokens, err := s.generateTokenPair(user)
+		return tokens, user, err
+	}
+
+	// 3. Create new user (no password, OAuth-only)
+	user = &models.User{
+		Email:         info.Email,
+		FullName:      info.FullName,
+		Role:          models.RoleEmployee,
+		IsActive:      true,
+		OAuthProvider: info.Provider,
+		OAuthID:       info.OAuthID,
+	}
+	if err := s.userRepo.Create(user); err != nil {
+		return nil, nil, fmt.Errorf("create oauth user: %w", err)
+	}
+
+	tokens, err := s.generateTokenPair(user)
+	return tokens, user, err
 }
 
 func (s *AuthService) RefreshToken(refreshToken string) (*TokenPair, error) {

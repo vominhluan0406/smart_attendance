@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/smart-attendance/smart-attendance/internal/middleware"
+	"github.com/smart-attendance/smart-attendance/internal/models"
 	"github.com/smart-attendance/smart-attendance/internal/renderer"
 	"github.com/smart-attendance/smart-attendance/internal/service"
 )
@@ -37,15 +38,21 @@ func (h *ReportHandler) UserHistoryPage(w http.ResponseWriter, r *http.Request) 
 
 	result, err := h.reportService.GetUserHistory(userID, page, limit, dateFrom, dateTo, status)
 	if err != nil {
-		h.render.Render(w, "my_history.html", map[string]interface{}{"Error": err.Error()})
+		h.render.Render(w, "my_history.html", map[string]interface{}{
+			"Error":      err.Error(),
+			"UserRole":   middleware.GetUserRole(r),
+			"UserBranch": middleware.GetBranchID(r),
+		})
 		return
 	}
 
 	h.render.Render(w, "my_history.html", map[string]interface{}{
-		"Result":   result,
-		"DateFrom": r.URL.Query().Get("date_from"),
-		"DateTo":   r.URL.Query().Get("date_to"),
-		"Status":   status,
+		"Result":     result,
+		"DateFrom":   r.URL.Query().Get("date_from"),
+		"DateTo":     r.URL.Query().Get("date_to"),
+		"Status":     status,
+		"UserRole":   middleware.GetUserRole(r),
+		"UserBranch": middleware.GetBranchID(r),
 	})
 }
 
@@ -69,6 +76,16 @@ func (h *ReportHandler) UserHistoryPartial(w http.ResponseWriter, r *http.Reques
 func (h *ReportHandler) BranchReportPage(w http.ResponseWriter, r *http.Request) {
 	branchID := chi.URLParam(r, "branchID")
 	
+	// RBAC: Manager can only see their own branch
+	role := middleware.GetUserRole(r)
+	if role == models.RoleManager {
+		userBranchID := middleware.GetBranchID(r)
+		if userBranchID != branchID {
+			http.Error(w, "Forbidden: You can only view reports for your own branch.", http.StatusForbidden)
+			return
+		}
+	}
+
 	branch, err := h.branchService.GetByIDCached(branchID)
 	if err != nil {
 		http.Error(w, "Branch not found", http.StatusNotFound)
@@ -79,22 +96,38 @@ func (h *ReportHandler) BranchReportPage(w http.ResponseWriter, r *http.Request)
 
 	result, err := h.reportService.GetBranchReport(branchID, page, limit, dateFrom, dateTo, status)
 	if err != nil {
-		h.render.Render(w, "branch_report.html", map[string]interface{}{"Error": err.Error(), "Branch": branch})
+		h.render.Render(w, "branch_report.html", map[string]interface{}{
+			"Error":      err.Error(),
+			"Branch":     branch,
+			"UserRole":   middleware.GetUserRole(r),
+			"UserBranch": middleware.GetBranchID(r),
+		})
 		return
 	}
 
 	h.render.Render(w, "branch_report.html", map[string]interface{}{
-		"Branch":   branch,
-		"Result":   result,
-		"DateFrom": r.URL.Query().Get("date_from"),
-		"DateTo":   r.URL.Query().Get("date_to"),
-		"Status":   status,
+		"Branch":     branch,
+		"Result":     result,
+		"DateFrom":   r.URL.Query().Get("date_from"),
+		"DateTo":     r.URL.Query().Get("date_to"),
+		"Status":     status,
+		"UserRole":   middleware.GetUserRole(r),
+		"UserBranch": middleware.GetBranchID(r),
 	})
 }
 
 // BranchReportPartial renders just the HTMX partial table
 func (h *ReportHandler) BranchReportPartial(w http.ResponseWriter, r *http.Request) {
 	branchID := chi.URLParam(r, "branchID")
+
+	// RBAC: Manager check
+	if middleware.GetUserRole(r) == models.RoleManager {
+		if middleware.GetBranchID(r) != branchID {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+	}
+
 	page, limit, dateFrom, dateTo, status := h.parseFilters(r)
 
 	result, err := h.reportService.GetBranchReport(branchID, page, limit, dateFrom, dateTo, status)
@@ -128,6 +161,15 @@ func (h *ReportHandler) ExportUserHistory(w http.ResponseWriter, r *http.Request
 // ExportBranchReport generates and downloads Excel file
 func (h *ReportHandler) ExportBranchReport(w http.ResponseWriter, r *http.Request) {
 	branchID := chi.URLParam(r, "branchID")
+
+	// RBAC: Manager check
+	if middleware.GetUserRole(r) == models.RoleManager {
+		if middleware.GetBranchID(r) != branchID {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+	}
+
 	_, _, dateFrom, dateTo, status := h.parseFilters(r)
 
 	buf, err := h.reportService.ExportBranchReportExcel(branchID, dateFrom, dateTo, status)

@@ -1,0 +1,70 @@
+{{define "toast"}}
+<div id="toast-container"
+    class="fixed bottom-20 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-xs pointer-events-none">
+</div>
+
+<template id="toast-template">
+    <div
+        class="toast-item pointer-events-auto bg-white border border-gray-100 shadow-2xl rounded-2xl p-4 flex items-center gap-3 transition-all transform translate-y-8 opacity-0">
+        <div class="toast-icon-container p-2 rounded-xl">
+            <i class="toast-icon w-5 h-5"></i>
+        </div>
+        <div class="flex-1">
+            <p class="toast-message text-sm font-bold text-gray-900 lowercase first-letter:uppercase"></p>
+        </div>
+    </div>
+</template>
+
+<script>
+    window.showToast = function (message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const template = document.getElementById('toast-template');
+        if (!container || !template) return;
+
+        const clone = template.content.cloneNode(true);
+        const item = clone.querySelector('.toast-item');
+        const icon = clone.querySelector('.toast-icon');
+        const iconContainer = clone.querySelector('.toast-icon-container');
+        const msgEl = clone.querySelector('.toast-message');
+
+        msgEl.textContent = message;
+
+        if (type === 'success') {
+            icon.setAttribute('data-lucide', 'check-circle');
+            iconContainer.classList.add('bg-green-100', 'text-green-600');
+        } else if (type === 'error') {
+            icon.setAttribute('data-lucide', 'alert-circle');
+            iconContainer.classList.add('bg-red-100', 'text-red-600');
+        } else if (type === 'warning') {
+            icon.setAttribute('data-lucide', 'alert-triangle');
+            iconContainer.classList.add('bg-amber-100', 'text-amber-600');
+        } else {
+            icon.setAttribute('data-lucide', 'info');
+            iconContainer.classList.add('bg-blue-100', 'text-blue-600');
+        }
+
+        container.appendChild(clone);
+        lucide.createIcons();
+
+        // Animate in
+        requestAnimationFrame(() => {
+            const lastItem = container.lastElementChild;
+            if (lastItem) {
+                lastItem.style.transform = 'translateY(0)';
+                lastItem.style.opacity = '1';
+            }
+        });
+
+        // Remove after delay (error/warning: 5s, others: 3s)
+        var delay = (type === 'error' || type === 'warning') ? 5000 : 3000;
+        setTimeout(() => {
+            const firstItem = container.querySelector('.toast-item');
+            if (firstItem) {
+                firstItem.style.transform = 'translateY(-8px)';
+                firstItem.style.opacity = '0';
+                setTimeout(() => firstItem.remove(), 300);
+            }
+        }, delay);
+    }
+</script>
+{{end}}

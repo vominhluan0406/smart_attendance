@@ -1,6 +1,6 @@
 {{define "user_table"}}
 <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-    <table class="min-w-full divide-y divide-gray-200">
+    <table class="min-w-full divide-y divide-gray-200 responsive-table">
         <thead class="bg-gray-50">
             <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
@@ -13,29 +13,35 @@
         <tbody class="bg-white divide-y divide-gray-200">
             {{range .Users}}
             <tr class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{.FullName}}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{.Email}}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
+                <td data-label="Name" class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {{.FullName}}</td>
+                <td data-label="Email" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{.Email}}</td>
+                <td data-label="Role" class="px-6 py-4 whitespace-nowrap">
                     {{if eq (printf "%s" .Role) "admin"}}
-                    <span class="inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">Admin</span>
+                    <span
+                        class="inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">Admin</span>
                     {{else if eq (printf "%s" .Role) "manager"}}
-                    <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">Manager</span>
+                    <span
+                        class="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">Manager</span>
                     {{else}}
-                    <span class="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">Employee</span>
+                    <span
+                        class="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">Employee</span>
                     {{end}}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
+                <td data-label="Status" class="px-6 py-4 whitespace-nowrap">
                     {{if .IsActive}}
-                    <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Active</span>
+                    <span
+                        class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Active</span>
                     {{else}}
-                    <span class="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">Disabled</span>
+                    <span
+                        class="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">Disabled</span>
                     {{end}}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <a href="/users/{{.ID}}/edit" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
+                    <a href="/users/{{.ID}}/edit" class="text-indigo-600 hover:text-indigo-900 mr-3 btn-mobile">Edit</a>
                     <button hx-delete="/users/{{.ID}}" hx-confirm="Are you sure you want to delete this user?"
-                            hx-target="closest tr" hx-swap="outerHTML swap:0.5s"
-                            class="text-red-600 hover:text-red-900">Delete</button>
+                        hx-target="closest tr" hx-swap="outerHTML swap:0.5s"
+                        class="text-red-600 hover:text-red-900 btn-mobile">Delete</button>
                 </td>
             </tr>
             {{else}}
@@ -46,18 +52,20 @@
         </tbody>
     </table>
 
-    {{if .HasNextPage}}
+    {{if or .HasNextPage .HasPrevPage}}
     <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
         <div class="text-sm text-gray-700">
-            Page <span class="font-medium">{{.Page}}</span> — <span class="font-medium">{{.Total}}</span> total users
+            Trang <span class="font-medium">{{.Page}}</span> — <span class="font-medium">{{.Total}}</span> users
         </div>
         <div class="flex space-x-2">
             {{if .HasPrevPage}}
             <a hx-get="/users?page={{.PrevPage}}" hx-target="#user-table" hx-swap="innerHTML"
-               class="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Previous</a>
+                class="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Previous</a>
             {{end}}
+            {{if .HasNextPage}}
             <a hx-get="/users?page={{.NextPage}}" hx-target="#user-table" hx-swap="innerHTML"
-               class="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Next</a>
+                class="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Next</a>
+            {{end}}
         </div>
     </div>
     {{end}}

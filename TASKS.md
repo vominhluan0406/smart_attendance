@@ -22,7 +22,7 @@
 |---|------|--------|------|---------|--------|
 | 1.1 | Models: User (id, email, password_hash, full_name, role, branch_id, is_active, timestamps) | `feature/auth` | S | 0.4 | DONE |
 | 1.2 | Repository: UserRepository (Create, FindByEmail, FindByID, List w/ pagination+filter, Update, Delete, Count) | `feature/auth` | M | 1.1 | DONE |
-| 1.3 | Service: AuthService (Register, Login, RefreshToken, ValidateToken, bcrypt hash/verify) | `feature/auth` | M | 1.2 | DONE |
+| 1.3 | Service: AuthService (Register, Login, RefreshToken, ValidateToken, bcrypt hash/verify, BranchID in JWT) | `feature/auth` | M | 1.2 | DONE |
 | 1.4 | JWT middleware: extract token (header + cookie), validate, inject claims into context | `feature/auth` | M | 1.3 | DONE |
 | 1.5 | RBAC middleware: RequireRoles, AdminOnly, ManagerOrAdmin | `feature/auth` | S | 1.4 | DONE |
 | 1.6 | Handler: Auth API (login, register, refresh) + HTMX form handlers + cookie management | `feature/auth` | M | 1.3, 1.4 | DONE |
@@ -68,27 +68,29 @@
 | 4.4 | Templates: attendance history page (filter ngày/tuần/tháng, HTMX partial reload) | `feature/reports` | L | 4.3 | DONE |
 | 4.5 | Export CSV/Excel (go library: excelize) | `feature/reports` | M | 4.2 | DONE |
 | 4.6 | Cache: cache report aggregation, invalidate khi có check-in mới | `feature/reports` | S | 4.2 | DONE |
+| 4.7 | RBAC Enforcement: Branch-level security for Managers, JWT BranchID injection | `feature/rbac-polish` | M | P1, 4.2 | DONE |
+| 4.8 | Camera Scanner: QR scanning via html5-qrcode for user check-in (replacing manual input) | `feature/attendance` | M | 3.9 | DONE |
 
 ## Phase 5 — Dashboard
 
 | # | Task | Branch | Size | Depends | Status |
 |---|------|--------|------|---------|--------|
-| 5.1 | Service: DashboardService (tổng nhân viên, tổng check-in hôm nay, tỉ lệ đúng giờ, top trễ) | `feature/dashboard` | M | 4.2, 3.2 | TODO |
-| 5.2 | Handler: GET /api/v1/dashboard/stats, GET /api/v1/dashboard/charts | `feature/dashboard` | M | 5.1 | TODO |
-| 5.3 | Templates: dashboard page (stat cards + Chart.js charts + filter chi nhánh) | `feature/dashboard` | L | 5.2, 0.5 | TODO |
-| 5.4 | HTMX: dynamic filter by branch/department (partial reload stats + charts) | `feature/dashboard` | M | 5.3 | TODO |
-| 5.5 | Cache: cache dashboard stats (TTL 5 min), invalidate on new check-in | `feature/dashboard` | S | 5.1 | TODO |
+| 5.1 | Service: DashboardService (tổng nhân viên, tổng check-in hôm nay, tỉ lệ đúng giờ, top trễ) | `feature/dashboard` | M | 4.2, 3.2 | DONE |
+| 5.2 | Handler: GET /api/v1/dashboard/stats, GET /api/v1/dashboard/charts | `feature/dashboard` | M | 5.1 | DONE |
+| 5.3 | Templates: dashboard page (stat cards + Chart.js charts + filter chi nhánh) | `feature/dashboard` | L | 5.2, 0.5 | DONE |
+| 5.4 | HTMX: dynamic filter by branch/department (partial reload stats + charts) | `feature/dashboard` | M | 5.3 | DONE |
+| 5.5 | Cache: cache dashboard stats (TTL 5 min), invalidate on new check-in | `feature/dashboard` | S | 5.1 | DONE |
 
 ## Phase 6 — Polish & Delivery
 
 | # | Task | Branch | Size | Depends | Status |
 |---|------|--------|------|---------|--------|
-| 6.1 | Responsive UI: test & fix mobile layout cho tất cả pages | `feature/ui-polish` | M | P1–P5 | TODO |
-| 6.2 | Error pages: 404, 403, 500 (template) | `feature/ui-polish` | S | 0.5 | TODO |
-| 6.3 | Seed data: script tạo 100 branches + 5.000 employees + attendance records | `feature/seed-data` | M | P1–P3 | TODO |
-| 6.4 | README.md: setup guide, architecture diagram, scaling strategy, screenshots | `docs/readme` | L | P0–P5 | TODO |
-| 6.5 | Docker: test docker-compose up from scratch, verify 1-click deploy | `feature/docker-setup` | M | 0.7, P1–P5 | TODO |
-| 6.6 | PROMPT_LOG.md: hoàn thiện log tất cả sessions | `docs/prompt-log` | S | — | TODO |
+| 6.1 | Responsive UI: test & fix mobile layout cho tất cả pages | `feature/ui-polish` | M | P1–P5 | DONE |
+| 6.2 | Error pages: 404, 403, 500 (template) | `feature/ui-polish` | S | 0.5 | DONE |
+| 6.3 | Seed data: script tạo 100 branches + 5.000 employees + attendance records | `feature/seed-data` | M | P1–P3 | DONE |
+| 6.4 | README.md: setup guide, architecture diagram, scaling strategy, screenshots | `docs/readme` | L | P0–P5 | DONE |
+| 6.5 | Docker: test docker-compose up from scratch, verify 1-click deploy | `feature/docker-setup` | M | 0.7, P1–P5 | DONE |
+| 6.6 | PROMPT_LOG.md: hoàn thiện log tất cả sessions | `docs/prompt-log` | S | — | DONE |
 
 ---
 

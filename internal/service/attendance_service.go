@@ -24,6 +24,7 @@ var (
 
 type AttendanceService struct {
 	attendanceRepo *repository.AttendanceRepository
+	shiftRepo      *repository.ShiftRepository
 	branchService  *BranchService
 	userService    *UserService
 	totpService    *TOTPService
@@ -33,6 +34,7 @@ type AttendanceService struct {
 
 func NewAttendanceService(
 	attendanceRepo *repository.AttendanceRepository,
+	shiftRepo *repository.ShiftRepository,
 	branchService *BranchService,
 	userService *UserService,
 	totpService *TOTPService,
@@ -41,6 +43,7 @@ func NewAttendanceService(
 ) *AttendanceService {
 	return &AttendanceService{
 		attendanceRepo: attendanceRepo,
+		shiftRepo:      shiftRepo,
 		branchService:  branchService,
 		userService:    userService,
 		totpService:    totpService,
@@ -140,15 +143,30 @@ func (s *AttendanceService) CheckIn(input CheckInInput) (*CheckInResult, error) 
 		return nil, ErrMethodRequired
 	}
 
-	// 4. Create attendance record
+	// 4. Resolve shift and create attendance record
 	now := time.Now()
+	workDate := now.Format("2006-01-02")
 	method := buildMethodString(result)
+
+	// Resolve the user's work shift for today
+	var shiftID *string
+	gracePeriod := 15 // default
+	workStartTime := branch.WorkStartTime
+
+	shift, err := s.shiftRepo.FindUserShift(input.UserID, *user.BranchID, workDate)
+	if err == nil && shift != nil {
+		shiftID = &shift.ID
+		gracePeriod = shift.GracePeriodMinutes
+		workStartTime = shift.StartTime
+	}
 
 	att := &models.Attendance{
 		UserID:       input.UserID,
 		BranchID:     *user.BranchID,
+		ShiftID:      shiftID,
+		WorkDate:     workDate,
 		CheckInAt:    &now,
-		Status:       calculateStatus(now, branch.WorkStartTime),
+		Status:       calculateStatusWithGrace(now, workStartTime, gracePeriod),
 		Method:       method,
 		IPAddress:    input.IP,
 		Lat:          input.Lat,
@@ -208,17 +226,19 @@ func (s *AttendanceService) List(params repository.AttendanceListParams) (*repos
 
 // --- Helpers ---
 
-func calculateStatus(checkInTime time.Time, workStartTime string) models.AttendanceStatus {
+func calculateStatusWithGrace(checkInTime time.Time, workStartTime string, gracePeriodMinutes int) models.AttendanceStatus {
 	if workStartTime == "" {
 		workStartTime = "08:00"
+	}
+	if gracePeriodMinutes < 0 {
+		gracePeriodMinutes = 15
 	}
 
 	var hour, min int
 	fmt.Sscanf(workStartTime, "%d:%d", &hour, &min)
 
 	deadline := time.Date(checkInTime.Year(), checkInTime.Month(), checkInTime.Day(), hour, min, 0, 0, checkInTime.Location())
-	// 15 minute grace period
-	deadline = deadline.Add(15 * time.Minute)
+	deadline = deadline.Add(time.Duration(gracePeriodMinutes) * time.Minute)
 
 	if checkInTime.Before(deadline) {
 		return models.StatusOnTime

@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	qrcode "github.com/skip2/go-qrcode"
 	"github.com/smart-attendance/smart-attendance/internal/middleware"
+	"github.com/smart-attendance/smart-attendance/internal/models"
 	"github.com/smart-attendance/smart-attendance/internal/renderer"
 	"github.com/smart-attendance/smart-attendance/internal/service"
 )
@@ -64,13 +65,23 @@ func (h *AttendanceHandler) CheckInPage(w http.ResponseWriter, r *http.Request) 
 	today, _ := h.attendanceService.GetTodayStatus(userID)
 
 	h.render.Render(w, "attendance.html", map[string]interface{}{
-		"Today": today,
+		"Today":      today,
+		"UserRole":   middleware.GetUserRole(r),
+		"UserBranch": middleware.GetBranchID(r),
 	})
 }
 
 // QRDisplayPage shows the live QR code for a specific branch (Manager/Admin only).
 func (h *AttendanceHandler) QRDisplayPage(w http.ResponseWriter, r *http.Request) {
 	branchID := chi.URLParam(r, "branchID")
+
+	// RBAC: Manager check
+	if middleware.GetUserRole(r) == models.RoleManager {
+		if middleware.GetBranchID(r) != branchID {
+			http.Error(w, "Forbidden: You can only view QR for your own branch.", http.StatusForbidden)
+			return
+		}
+	}
 
 	branch, err := h.branchService.GetByID(branchID)
 	if err != nil {
@@ -87,16 +98,26 @@ func (h *AttendanceHandler) QRDisplayPage(w http.ResponseWriter, r *http.Request
 	}
 
 	h.render.Render(w, "qr_display.html", map[string]interface{}{
-		"Branch":    branch,
-		"BranchID":  branch.ID,
-		"TOTPCode":  code,
-		"Remaining": remaining,
+		"Branch":     branch,
+		"BranchID":   branch.ID,
+		"TOTPCode":   code,
+		"Remaining":  remaining,
+		"UserRole":   middleware.GetUserRole(r),
+		"UserBranch": middleware.GetBranchID(r),
 	})
 }
 
 // QRCodePartial returns the QR code partial (HTMX auto-refresh target).
 func (h *AttendanceHandler) QRCodePartial(w http.ResponseWriter, r *http.Request) {
 	branchID := chi.URLParam(r, "branchID")
+
+	// RBAC: Manager check
+	if middleware.GetUserRole(r) == models.RoleManager {
+		if middleware.GetBranchID(r) != branchID {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+	}
 
 	branch, err := h.branchService.GetByIDCached(branchID)
 	if err != nil {
@@ -120,6 +141,14 @@ func (h *AttendanceHandler) QRCodePartial(w http.ResponseWriter, r *http.Request
 // QRImage generates a QR code PNG containing the current TOTP code for a branch.
 func (h *AttendanceHandler) QRImage(w http.ResponseWriter, r *http.Request) {
 	branchID := chi.URLParam(r, "branchID")
+
+	// RBAC: Manager check (Optional for image but good to have)
+	if middleware.GetUserRole(r) == models.RoleManager {
+		if middleware.GetBranchID(r) != branchID {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+	}
 
 	branch, err := h.branchService.GetByIDCached(branchID)
 	if err != nil {

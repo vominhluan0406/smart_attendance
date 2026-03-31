@@ -12,19 +12,21 @@ import (
 )
 
 type AuthHandler struct {
-	authService *service.AuthService
-	render      *renderer.Renderer
+	authService    *service.AuthService
+	render         *renderer.Renderer
+	microsoftOAuth bool
 }
 
-func NewAuthHandler(authService *service.AuthService, render *renderer.Renderer) *AuthHandler {
-	return &AuthHandler{authService: authService, render: render}
+func NewAuthHandler(authService *service.AuthService, render *renderer.Renderer, microsoftOAuth bool) *AuthHandler {
+	return &AuthHandler{authService: authService, render: render, microsoftOAuth: microsoftOAuth}
 }
 
 // --- Pages ---
 
 func (h *AuthHandler) LoginPage(w http.ResponseWriter, r *http.Request) {
 	h.render.Render(w, "login.html", map[string]interface{}{
-		"Error": r.URL.Query().Get("error"),
+		"Error":          r.URL.Query().Get("error"),
+		"MicrosoftOAuth": h.microsoftOAuth,
 	})
 }
 

@@ -12,9 +12,10 @@ import (
 type contextKey string
 
 const (
-	ContextUserID contextKey = "user_id"
-	ContextEmail  contextKey = "email"
-	ContextRole   contextKey = "role"
+	ContextUserID   contextKey = "user_id"
+	ContextEmail    contextKey = "email"
+	ContextRole     contextKey = "role"
+	ContextBranchID contextKey = "branch_id"
 )
 
 func JWTAuth(authService *service.AuthService) func(http.Handler) http.Handler {
@@ -55,6 +56,9 @@ func JWTAuth(authService *service.AuthService) func(http.Handler) http.Handler {
 			ctx := context.WithValue(r.Context(), ContextUserID, claims.UserID)
 			ctx = context.WithValue(ctx, ContextEmail, claims.Email)
 			ctx = context.WithValue(ctx, ContextRole, claims.Role)
+			if claims.BranchID != nil {
+				ctx = context.WithValue(ctx, ContextBranchID, *claims.BranchID)
+			}
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -85,6 +89,13 @@ func GetUserID(r *http.Request) string {
 
 func GetUserRole(r *http.Request) models.Role {
 	if val, ok := r.Context().Value(ContextRole).(models.Role); ok {
+		return val
+	}
+	return ""
+}
+
+func GetBranchID(r *http.Request) string {
+	if val, ok := r.Context().Value(ContextBranchID).(string); ok {
 		return val
 	}
 	return ""
