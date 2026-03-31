@@ -80,6 +80,7 @@ func main() {
 	branchRepo := repository.NewBranchRepository(db)
 	attendanceRepo := repository.NewAttendanceRepository(db)
 	shiftRepo := repository.NewShiftRepository(db)
+	permRepo := repository.NewPermissionRepository(db)
 
 	// Init services
 	authService := service.NewAuthService(userRepo, cfg)
@@ -91,6 +92,7 @@ func main() {
 	attendanceService := service.NewAttendanceService(attendanceRepo, shiftRepo, branchService, userService, totpService, ipValidator, locValidator)
 	reportService := service.NewReportService(attendanceRepo)
 	dashboardService := service.NewDashboardService(attendanceRepo, branchRepo, userRepo, appCache, db)
+	permissionService := service.NewPermissionService(permRepo, appCache)
 
 	// Setup router
 	handler := router.New(router.Deps{
@@ -102,6 +104,7 @@ func main() {
 		TOTPService:       totpService,
 		ReportService:     reportService,
 		DashboardService:  dashboardService,
+		PermissionService: permissionService,
 		Config:            cfg,
 		RateLimitPerMin:   cfg.RateLimitPerMin,
 	})

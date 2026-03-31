@@ -14,9 +14,11 @@ func NewIPValidator() *IPValidator {
 }
 
 // Validate checks if the given IP address matches any of the branch's IP whitelist entries.
+// Returns true if whitelist is empty (no restriction configured — logs warning).
 func (v *IPValidator) Validate(ipStr string, whitelist []models.BranchIPWhitelist) bool {
 	if len(whitelist) == 0 {
-		return true // No whitelist configured = allow all
+		log.Printf("[service][ip-validator] WARNING: IP method enabled but whitelist is empty — allowing all IPs")
+		return true
 	}
 
 	ip := net.ParseIP(ipStr)

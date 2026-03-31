@@ -12,7 +12,7 @@ const (
 
 type User struct {
 	BaseModel
-	EmployeeCode  string     `gorm:"type:text;uniqueIndex" json:"employee_code,omitempty"`
+	EmployeeCode  string     `gorm:"type:text;index" json:"employee_code,omitempty"`
 	Email         string     `gorm:"type:text;uniqueIndex;not null" json:"email"`
 	PasswordHash  string     `gorm:"type:text" json:"-"`
 	FullName      string     `gorm:"type:text;not null" json:"full_name"`

@@ -59,7 +59,7 @@ func (h *AuthHandler) LoginForm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	setTokenCookies(w, tokens)
-	w.Header().Set("HX-Redirect", "/dashboard")
+	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
 }
 
