@@ -18,6 +18,9 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <!-- QR Scanner -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
     <style>
         .htmx-indicator {
             display: none;
@@ -79,6 +82,11 @@
             if (window.showToast && event.detail) {
                 showToast(event.detail.message || 'Thông báo', event.detail.type || 'info');
             }
+        });
+        // Re-init lucide icons + QR scanner after every HTMX swap
+        document.body.addEventListener('htmx:afterSettle', function() {
+            if (window.lucide) lucide.createIcons();
+            if (window.initQRScanner) window.initQRScanner();
         });
     </script>
     {{block "scripts" .}}{{end}}
