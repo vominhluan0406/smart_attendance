@@ -8,6 +8,7 @@ import (
 
 	"github.com/smart-attendance/smart-attendance/internal/models"
 	"github.com/smart-attendance/smart-attendance/internal/repository"
+	"github.com/smart-attendance/smart-attendance/internal/timezone"
 	"gorm.io/gorm"
 )
 
@@ -137,7 +138,7 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 	}
 
 	// 3. Resolve shift
-	now := time.Now()
+	now := timezone.Now()
 	workDate := now.Format("2006-01-02")
 	method := buildMethodStr(result)
 
@@ -238,7 +239,7 @@ func (s *AttendanceService) GetTodayStatus(userID string) (*models.Attendance, e
 
 // GetTodayLogs returns all time logs for a user today.
 func (s *AttendanceService) GetTodayLogs(userID string) ([]models.AttendanceLog, error) {
-	workDate := time.Now().Format("2006-01-02")
+	workDate := timezone.Now().Format("2006-01-02")
 	return s.logRepo.FindTodayLogs(userID, workDate)
 }
 

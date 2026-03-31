@@ -8,6 +8,7 @@ import (
 	"github.com/smart-attendance/smart-attendance/internal/cache"
 	"github.com/smart-attendance/smart-attendance/internal/models"
 	"github.com/smart-attendance/smart-attendance/internal/repository"
+	"github.com/smart-attendance/smart-attendance/internal/timezone"
 	"gorm.io/gorm"
 )
 
@@ -137,7 +138,7 @@ func (s *DashboardService) GetTopLate(branchID string, limit int) ([]repository.
 		return cached.([]repository.TopLateUser), nil
 	}
 
-	now := time.Now()
+	now := timezone.Now()
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	monthEnd := monthStart.AddDate(0, 1, 0)
 

@@ -11,6 +11,7 @@ import (
 	"github.com/smart-attendance/smart-attendance/internal/models"
 	"github.com/smart-attendance/smart-attendance/internal/renderer"
 	"github.com/smart-attendance/smart-attendance/internal/service"
+	"github.com/smart-attendance/smart-attendance/internal/timezone"
 )
 
 type ReportHandler struct {
@@ -152,7 +153,7 @@ func (h *ReportHandler) ExportUserHistory(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	filename := fmt.Sprintf("my_history_%s.xlsx", time.Now().Format("20060102"))
+	filename := fmt.Sprintf("my_history_%s.xlsx", timezone.Now().Format("20060102"))
 	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 	w.Write(buf)
@@ -178,7 +179,7 @@ func (h *ReportHandler) ExportBranchReport(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	filename := fmt.Sprintf("branch_report_%s.xlsx", time.Now().Format("20060102"))
+	filename := fmt.Sprintf("branch_report_%s.xlsx", timezone.Now().Format("20060102"))
 	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 	w.Write(buf)
