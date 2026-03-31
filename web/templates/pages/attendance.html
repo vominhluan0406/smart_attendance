@@ -7,57 +7,17 @@
                 <div class="p-2 bg-indigo-100 rounded-xl">
                     <i data-lucide="camera" class="w-6 h-6 text-indigo-600"></i>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-900">Điểm danh</h1>
+                <h1 class="text-2xl font-bold text-gray-900">Chấm công</h1>
             </div>
 
             <div id="checkin-result" class="mb-6"></div>
 
-            {{if .Today}}
-            <!-- Already checked in -->
-            <div
-                class="bg-white shadow-lg rounded-2xl border border-gray-100 p-8 text-center transition-all hover:shadow-xl">
-                <div class="inline-flex items-center justify-center p-4 bg-green-100 rounded-full mb-6">
-                    <i data-lucide="check-circle" class="w-10 h-10 text-green-600"></i>
-                </div>
-                <h3 class="text-2xl font-bold text-gray-900 mb-2">Đã điểm danh</h3>
-
-                <div class="grid grid-cols-2 gap-4 mt-6 text-left border-t border-gray-100 pt-6">
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase font-bold">Thời gian</p>
-                        <p class="text-lg font-mono font-bold text-indigo-600">{{.Today.CheckInAt.Format "15:04:05"}}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase font-bold">Trạng thái</p>
-                        <p class="text-lg font-bold text-gray-900">{{.Today.Status}}</p>
-                    </div>
-                </div>
-
-                {{if .Today.CheckOutAt}}
-                <div class="mt-6 p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase font-bold">Check-out</p>
-                        <p class="text-lg font-mono font-bold text-gray-700">{{.Today.CheckOutAt.Format "15:04:05"}}</p>
-                    </div>
-                    <i data-lucide="log-out" class="w-6 h-6 text-gray-400"></i>
-                </div>
-                {{else}}
-                <div class="mt-8">
-                    <button hx-post="/attendance/check-out" hx-target="#checkin-result" hx-swap="innerHTML"
-                        class="w-full rounded-2xl bg-red-500 py-4 text-base font-bold text-white shadow-lg hover:bg-red-600 active:scale-95 transition-all flex items-center justify-center gap-2">
-                        <i data-lucide="log-out" class="w-5 h-5"></i> Check Out
-                    </button>
-                </div>
-                {{end}}
-            </div>
-            {{else}}
-            <!-- Scanner View -->
-            <div class="bg-white shadow-xl rounded-2xl border border-gray-100 overflow-hidden">
+            <!-- Scanner — always available -->
+            <div class="bg-white shadow-xl rounded-2xl border border-gray-100 overflow-hidden mb-6">
                 <div class="p-6">
                     <div id="reader-container" class="relative">
                         <div id="reader"
                             class="rounded-xl overflow-hidden border-2 border-dashed border-gray-200 aspect-square flex items-center justify-center bg-gray-900">
-                            <!-- Scanner will be mounted here -->
                             <div class="text-center p-6" id="reader-placeholder">
                                 <i data-lucide="camera" class="w-12 h-12 text-gray-600 mx-auto mb-4 animate-pulse"></i>
                                 <p class="text-sm text-gray-400">Đang khởi tạo camera...</p>
@@ -72,10 +32,8 @@
                         <div id="location-status"
                             class="flex items-center justify-center text-xs font-bold text-gray-400 mb-4 px-3 py-1 bg-gray-50 rounded-full w-max mx-auto">
                             <span class="relative flex h-2 w-2 mr-2">
-                                <span id="loc-ping"
-                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                                <span id="loc-dot"
-                                    class="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
                             </span>
                             Đang xác định vị trí...
                         </div>
@@ -83,7 +41,7 @@
                 </div>
 
                 <div class="hidden">
-                    <form id="checkin-form" hx-post="/attendance/check-in" hx-target="#checkin-result"
+                    <form id="checkin-form" hx-post="/attendance/log" hx-target="#checkin-result"
                         hx-swap="innerHTML">
                         <input type="text" name="totp_code" id="totp_code">
                         <input type="hidden" name="lat" id="lat">
@@ -93,7 +51,59 @@
                 </div>
             </div>
 
-            <p class="mt-4 text-center text-sm text-gray-500">Quét mã QR tại chi nhánh để điểm danh</p>
+            <p class="mb-6 text-center text-sm text-gray-500">Quét mã QR tại chi nhánh để chấm công</p>
+
+            <!-- Today's summary + log history -->
+            {{if .Today}}
+            <div class="bg-white shadow-sm rounded-2xl border border-gray-100 p-6 mb-4">
+                <h3 class="text-sm font-bold text-gray-500 uppercase mb-4">Hôm nay</h3>
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <p class="text-xs text-gray-500">Vào</p>
+                        <p class="text-lg font-mono font-bold text-indigo-600">{{if .Today.CheckInAt}}{{.Today.CheckInAt.Format "15:04"}}{{else}}--:--{{end}}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Ra</p>
+                        <p class="text-lg font-mono font-bold text-gray-700">{{if .Today.CheckOutAt}}{{.Today.CheckOutAt.Format "15:04"}}{{else}}--:--{{end}}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Trạng thái</p>
+                        {{if eq (printf "%s" .Today.Status) "on_time"}}
+                        <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-bold text-green-700">Đúng giờ</span>
+                        {{else if eq (printf "%s" .Today.Status) "late"}}
+                        <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700">Trễ</span>
+                        {{else}}
+                        <span class="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-bold text-gray-600">{{.Today.Status}}</span>
+                        {{end}}
+                    </div>
+                </div>
+            </div>
+            {{end}}
+
+            {{if .Logs}}
+            <div class="bg-white shadow-sm rounded-2xl border border-gray-100 p-6">
+                <h3 class="text-sm font-bold text-gray-500 uppercase mb-4">Lịch sử quét ({{len .Logs}} lần)</h3>
+                <div class="space-y-3">
+                    {{range $i, $log := .Logs}}
+                    <div class="flex items-center justify-between py-2 {{if $i}}border-t border-gray-50{{end}}">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-xs font-bold text-indigo-600">
+                                {{add $i 1}}
+                            </div>
+                            <div>
+                                <p class="text-sm font-mono font-bold text-gray-900">{{$log.LoggedAt.Format "15:04:05"}}</p>
+                                <p class="text-xs text-gray-400">{{$log.Method}}</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-1">
+                            {{if $log.TOTPVerified}}<span class="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">QR</span>{{end}}
+                            {{if $log.IPVerified}}<span class="text-xs bg-green-50 text-green-600 px-1.5 py-0.5 rounded">IP</span>{{end}}
+                            {{if $log.LocVerified}}<span class="text-xs bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded">GPS</span>{{end}}
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
             {{end}}
         </div>
     </main>
@@ -111,14 +121,11 @@
     .animate-scan { animation: scan 2s linear infinite; }
 </style>
 <script>
-    // Define global scanner init — called by base.html htmx:afterSettle + on direct load
     window.initQRScanner = function() {
         var readerEl = document.getElementById('reader');
         if (!readerEl) return;
-        // Prevent double init
         if (readerEl.dataset.scannerActive === 'true') return;
 
-        // Geolocation
         var latField = document.getElementById('lat');
         var lngField = document.getElementById('lng');
         if (navigator.geolocation && latField && lngField) {
@@ -140,7 +147,6 @@
             );
         }
 
-        // QR Scanner
         if (typeof Html5Qrcode === 'undefined') {
             var p = document.getElementById('reader-placeholder');
             if (p) p.innerHTML = '<div class="text-center p-6"><p class="text-red-500 font-bold">QR library chưa tải</p><p class="text-xs text-gray-500 mt-2">Vui lòng tải lại trang (F5)</p></div>';
@@ -160,7 +166,7 @@
                         var sl = document.getElementById('scanner-line');
                         if (sl) sl.classList.add('opacity-0');
                         document.getElementById('totp_code').value = parts[1];
-                        readerEl.innerHTML = '<div class="text-center p-12 bg-white h-full flex flex-col items-center justify-center"><div class="inline-flex items-center justify-center p-4 bg-indigo-100 rounded-full mb-6 animate-bounce"><svg class="w-12 h-12 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div><p class="text-xl font-bold text-gray-900">Quét thành công!</p><p class="text-sm text-gray-500 mt-2">Đang xử lý điểm danh...</p></div>';
+                        readerEl.innerHTML = '<div class="text-center p-12 bg-white h-full flex flex-col items-center justify-center"><div class="inline-flex items-center justify-center p-4 bg-indigo-100 rounded-full mb-6 animate-bounce"><svg class="w-12 h-12 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div><p class="text-xl font-bold text-gray-900">Quét thành công!</p><p class="text-sm text-gray-500 mt-2">Đang xử lý...</p></div>';
                         document.getElementById('submit-btn').click();
                     });
                 }
@@ -177,7 +183,6 @@
         });
     };
 
-    // Init on direct page load
     window.initQRScanner();
 </script>
 {{end}}
