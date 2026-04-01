@@ -12,24 +12,44 @@ import (
 	"github.com/smart-attendance/smart-attendance/internal/models"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func Seed(db *gorm.DB) error {
-	// These seeds are idempotent (each checks own count) — always run
-	seedLeaveTypes(db)
-	seedHolidays(db)
-	seedPermissions(db)
+	// Silence logging during seeding to avoid massive SQL dumps in development mode
+	originalLogger := db.Logger
+	db.Logger = originalLogger.LogMode(logger.Warn)
+	defer func() { db.Logger = originalLogger }()
 
-	// Users: only seed if DB is empty
-	var userCount int64
-	db.Model(&models.User{}).Count(&userCount)
-	if userCount > 0 {
-		return nil
-	}
+	return db.Transaction(func(tx *gorm.DB) error {
+		// These seeds are idempotent (each checks own count) — always run
+		seedLeaveTypes(tx)
+		seedHolidays(tx)
+		seedPermissions(tx)
 
-	hash, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
-	pw := string(hash)
+		// Users: only seed if DB is empty
+		var userCount int64
+		if err := tx.Model(&models.User{}).Count(&userCount).Error; err != nil {
+			log.Printf("[seed] CRITICAL ERROR: count users failed: %v", err)
+			return err
+		}
+		log.Printf("[seed] Initial users count in DB = %d", userCount)
+		if userCount > 0 {
+			log.Printf("[seed] users table has %d rows — skipping user/data seed", userCount)
+			return nil
+		}
 
+		hash, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+		pw := string(hash)
+
+		// ... (rest of the logic remains same but uses tx instead of db)
+		// I'll need to update the entire function to use tx.
+		// For brevity in this chunk, I'll just show the start and then use another chunk or bigger replacement.
+		return seedAllData(tx, pw)
+	})
+}
+
+func seedAllData(db *gorm.DB, pw string) error {
 	// ============================================================
 	// 1. Branches (3 branches)
 	// ============================================================
@@ -60,13 +80,16 @@ func Seed(db *gorm.DB) error {
 			WorkEndTime:    "17:00",
 			IsActive:       true,
 		}
-		db.Create(branch)
+		if err := db.Create(branch).Error; err != nil {
+			log.Printf("[seed] error creating branch %s: %v", b.Name, err)
+			continue
+		}
 		branchIDs = append(branchIDs, branch.ID)
 
 		db.Create(&models.BranchIPWhitelist{BranchID: branch.ID, IPCIDR: "127.0.0.1/32", Label: "Localhost"})
 		db.Create(&models.BranchIPWhitelist{BranchID: branch.ID, IPCIDR: "192.168.1.0/24", Label: "Office LAN"})
 		db.Create(&models.BranchLocation{BranchID: branch.ID, Lat: b.Lat, Lng: b.Lng, RadiusM: 500, Label: "Main Office"})
-		log.Printf("[seed] branch: %s", b.Name)
+		log.Printf("[seed] branch created: %s", b.Name)
 	}
 
 	// ============================================================
@@ -85,7 +108,9 @@ func Seed(db *gorm.DB) error {
 	for _, bid := range branchIDs {
 		for _, d := range deptDefs {
 			dept := &models.Department{BranchID: bid, Name: d.Name, Code: d.Code, IsActive: true}
-			db.Create(dept)
+			if err := db.Create(dept).Error; err != nil {
+				log.Printf("[seed] error creating department %s: %v", d.Name, err)
+			}
 			deptMap[bid] = append(deptMap[bid], dept.ID)
 		}
 	}
@@ -158,7 +183,7 @@ func Seed(db *gorm.DB) error {
 			FullName: m.Name, Phone: m.Phone,
 			Role: models.RoleManager, BranchID: &branchIDs[i],
 			DepartmentID: &deptMap[branchIDs[i]][0], // IT dept
-			Position: "Branch Manager", JoinDate: &joinDate, IsActive: true,
+			Position:     "Branch Manager", JoinDate: &joinDate, IsActive: true,
 		}
 		db.Create(user)
 		managerIDs = append(managerIDs, user.ID)
@@ -198,7 +223,9 @@ func Seed(db *gorm.DB) error {
 				Role: models.RoleEmployee, BranchID: &bid, DepartmentID: &deptID,
 				Position: emp.Position, JoinDate: &joinDate, IsActive: true,
 			}
-			db.Create(user)
+			if err := db.Create(user).Error; err != nil {
+				log.Printf("[seed] error creating employee %s: %v", user.Email, err)
+			}
 			allEmployeeIDs = append(allEmployeeIDs, user.ID)
 		}
 	}
@@ -216,6 +243,12 @@ func Seed(db *gorm.DB) error {
 }
 
 func seedAttendanceData(db *gorm.DB, branchIDs []string, shiftMap map[string][]string, managerIDs, employeeIDs []string) {
+	var attCount int64
+	db.Model(&models.Attendance{}).Count(&attCount)
+	if attCount > 0 {
+		return
+	}
+
 	now := time.Now()
 	rng := mrand.New(mrand.NewSource(now.UnixNano()))
 
@@ -320,11 +353,15 @@ func seedAttendanceData(db *gorm.DB, branchIDs []string, shiftMap map[string][]s
 	batchSize := 100
 	for i := 0; i < len(attBatch); i += batchSize {
 		end := int(math.Min(float64(i+batchSize), float64(len(attBatch))))
-		db.Create(attBatch[i:end])
+		if err := db.Create(attBatch[i:end]).Error; err != nil {
+			log.Printf("[seed] error creating attendance batch: %v", err)
+		}
 	}
 	for i := 0; i < len(logBatch); i += batchSize {
 		end := int(math.Min(float64(i+batchSize), float64(len(logBatch))))
-		db.Create(logBatch[i:end])
+		if err := db.Create(logBatch[i:end]).Error; err != nil {
+			log.Printf("[seed] error creating log batch: %v", err)
+		}
 	}
 
 	log.Printf("[seed] created %d attendance records + %d time logs (14 working days)", len(attBatch), len(logBatch))

@@ -33,33 +33,37 @@ func main() {
 		log.Fatalf("database connection failed: %v", err)
 	}
 
-	// Auto-migrate models
-	if err := database.AutoMigrate(db,
-		&models.User{},
-		&models.Branch{},
-		&models.BranchIPWhitelist{},
-		&models.BranchLocation{},
-		&models.Attendance{},
-		// New tables
-		&models.Department{},
-		&models.WorkShift{},
-		&models.UserShiftAssignment{},
-		&models.Holiday{},
-		&models.LeaveType{},
-		&models.LeaveRequest{},
-		&models.LeaveBalance{},
-		&models.AttendanceAdjustment{},
-		&models.OvertimeRequest{},
-		&models.Permission{},
-		&models.RolePermission{},
-		&models.AttendanceLog{},
-	); err != nil {
-		log.Fatalf("auto-migrate failed: %v", err)
-	}
+	// Migrate: Turso uses raw SQL, local uses GORM AutoMigrate
+	if cfg.TursoURL != "" {
+		if err := database.RawMigrateTurso(db); err != nil {
+			log.Fatalf("turso migrate failed: %v", err)
+		}
+	} else {
+		if err := database.SafeMigrate(db,
+			&models.User{},
+			&models.Branch{},
+			&models.BranchIPWhitelist{},
+			&models.BranchLocation{},
+			&models.Attendance{},
+			&models.Department{},
+			&models.WorkShift{},
+			&models.UserShiftAssignment{},
+			&models.Holiday{},
+			&models.LeaveType{},
+			&models.LeaveRequest{},
+			&models.LeaveBalance{},
+			&models.AttendanceAdjustment{},
+			&models.OvertimeRequest{},
+			&models.Permission{},
+			&models.RolePermission{},
+			&models.AttendanceLog{},
+		); err != nil {
+			log.Fatalf("auto-migrate failed: %v", err)
+		}
 
-	// Run data migrations (backfill work_date, create default shifts)
-	if err := database.RunMigrations(db); err != nil {
-		log.Fatalf("data migration failed: %v", err)
+		if err := database.RunMigrations(db); err != nil {
+			log.Fatalf("data migration failed: %v", err)
+		}
 	}
 
 	// Seed default data
