@@ -55,23 +55,27 @@ func NewAttendanceService(
 
 // LogTimeInput is the input for each QR scan / time log.
 type LogTimeInput struct {
-	UserID       string   `json:"user_id"`
-	TOTPCode     string   `json:"totp_code"`
-	IP           string   `json:"ip"`
-	Lat          *float64 `json:"lat"`
-	Lng          *float64 `json:"lng"`
-	FaceVerified bool     `json:"face_verified"`
+	UserID           string   `json:"user_id"`
+	TOTPCode         string   `json:"totp_code"`
+	IP               string   `json:"ip"`
+	Lat              *float64 `json:"lat"`
+	Lng              *float64 `json:"lng"`
+	FaceVerified     bool     `json:"face_verified"`
+	NFCVerified      bool     `json:"nfc_verified"`
+	PasswordVerified bool     `json:"password_verified"`
 }
 
 // LogTimeResult is returned after a successful time log.
 type LogTimeResult struct {
 	Log          *models.AttendanceLog `json:"log"`
 	Attendance   *models.Attendance    `json:"attendance"`
-	TOTPVerified bool                  `json:"totp_verified"`
-	IPVerified   bool                  `json:"ip_verified"`
-	LocVerified  bool                  `json:"loc_verified"`
-	FaceVerified bool                  `json:"face_verified"`
-	LogCount     int                   `json:"log_count"`
+	TOTPVerified     bool                  `json:"totp_verified"`
+	IPVerified       bool                  `json:"ip_verified"`
+	LocVerified      bool                  `json:"loc_verified"`
+	FaceVerified     bool                  `json:"face_verified"`
+	NFCVerified      bool                  `json:"nfc_verified"`
+	PasswordVerified bool                  `json:"password_verified"`
+	LogCount         int                   `json:"log_count"`
 }
 
 // LogTime records a time scan (replaces separate CheckIn/CheckOut).
@@ -136,8 +140,13 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		result.FaceVerified = true
 	}
 
+	// Password check
+	if s.branchService.HasMethod(branch, models.MethodPassword) && input.PasswordVerified {
+		result.PasswordVerified = true
+	}
+
 	// At least one method must pass (OR logic)
-	anyPassed := result.TOTPVerified || result.IPVerified || result.LocVerified || result.FaceVerified
+	anyPassed := result.TOTPVerified || result.IPVerified || result.LocVerified || result.FaceVerified || result.NFCVerified || result.PasswordVerified
 	if !anyPassed {
 		log.Printf("[service][attendance] log denied for user %s: %v", input.UserID, validationErrors)
 		if len(validationErrors) > 0 {
@@ -173,9 +182,12 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		IPAddress:    input.IP,
 		Lat:          input.Lat,
 		Lng:          input.Lng,
-		TOTPVerified: result.TOTPVerified,
-		IPVerified:   result.IPVerified,
-		LocVerified:  result.LocVerified,
+		TOTPVerified:     result.TOTPVerified,
+		IPVerified:       result.IPVerified,
+		LocVerified:      result.LocVerified,
+		FaceVerified:     result.FaceVerified,
+		NFCVerified:      result.NFCVerified,
+		PasswordVerified: result.PasswordVerified,
 	}
 	if err := s.logRepo.Create(attLog); err != nil {
 		return nil, fmt.Errorf("create attendance log: %w", err)
@@ -197,9 +209,12 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 			IPAddress:    input.IP,
 			Lat:          input.Lat,
 			Lng:          input.Lng,
-			TOTPVerified: result.TOTPVerified,
-			IPVerified:   result.IPVerified,
-			LocVerified:  result.LocVerified,
+			TOTPVerified:     result.TOTPVerified,
+			IPVerified:       result.IPVerified,
+			LocVerified:      result.LocVerified,
+			FaceVerified:     result.FaceVerified,
+			NFCVerified:      result.NFCVerified,
+			PasswordVerified: result.PasswordVerified,
 		}
 		if err := s.attendanceRepo.Create(att); err != nil {
 			return nil, fmt.Errorf("create attendance: %w", err)
@@ -225,7 +240,8 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		return nil, fmt.Errorf("find attendance: %w", err)
 	}
 
-	// 6. Count today's logs
+
+	// 7. Count today's logs
 	count, _ := s.logRepo.CountTodayLogs(input.UserID, workDate)
 	result.Attendance = att
 	result.LogCount = int(count)
@@ -305,6 +321,18 @@ func buildMethodStr(result *LogTimeResult) string {
 			s += ","
 		}
 		s += "face"
+	}
+	if result.NFCVerified {
+		if s != "" {
+			s += ","
+		}
+		s += "nfc"
+	}
+	if result.PasswordVerified {
+		if s != "" {
+			s += ","
+		}
+		s += "password"
 	}
 	return s
 }

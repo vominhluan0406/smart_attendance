@@ -23,12 +23,15 @@ type Attendance struct {
 	IPAddress    string           `gorm:"type:text" json:"ip_address"`
 	Lat          *float64         `gorm:"type:real" json:"lat,omitempty"`
 	Lng          *float64         `gorm:"type:real" json:"lng,omitempty"`
-	TOTPVerified bool             `gorm:"default:false" json:"totp_verified"`
-	IPVerified   bool             `gorm:"default:false" json:"ip_verified"`
-	LocVerified  bool             `gorm:"default:false" json:"loc_verified"`
-	Note         string           `gorm:"type:text" json:"note,omitempty"`
-	IsAdjusted   bool             `gorm:"default:false" json:"is_adjusted"`
-	AdjustedByID *string          `gorm:"type:text" json:"adjusted_by_id,omitempty"`
+	TOTPVerified     bool             `gorm:"default:false" json:"totp_verified"`
+	IPVerified       bool             `gorm:"default:false" json:"ip_verified"`
+	LocVerified      bool             `gorm:"default:false" json:"loc_verified"`
+	FaceVerified     bool             `gorm:"default:false" json:"face_verified"`
+	NFCVerified      bool             `gorm:"default:false" json:"nfc_verified"`
+	PasswordVerified bool             `gorm:"default:false" json:"password_verified"`
+	Note             string           `gorm:"type:text" json:"note,omitempty"`
+	IsAdjusted       bool             `gorm:"default:false" json:"is_adjusted"`
+	AdjustedByID     *string          `gorm:"type:text" json:"adjusted_by_id,omitempty"`
 
 	// Relations (for preload)
 	User   *User      `gorm:"foreignKey:UserID" json:"user,omitempty"`

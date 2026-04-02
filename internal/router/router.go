@@ -46,7 +46,7 @@ func New(deps Deps) http.Handler {
 	auth := handler.NewAuthHandler(deps.AuthService, deps.Render, oauth.IsEnabled())
 	users := handler.NewUserHandler(deps.UserService, deps.AuthService, deps.BranchService, deps.Render)
 	branches := handler.NewBranchHandler(deps.BranchService, deps.Render)
-	attendance := handler.NewAttendanceHandler(deps.AttendanceService, deps.BranchService, deps.TOTPService, deps.UserService, deps.Render)
+	attendance := handler.NewAttendanceHandler(deps.AttendanceService, deps.BranchService, deps.TOTPService, deps.UserService, deps.AuthService, deps.Render)
 	reports := handler.NewReportHandler(deps.ReportService, deps.BranchService, deps.Render)
 	dashboard := handler.NewDashboardHandler(deps.DashboardService, deps.BranchService, deps.Render)
 
@@ -114,6 +114,10 @@ func New(deps Deps) http.Handler {
 				ciRouter.Use(requirePerm(models.PermAttendanceCheckIn))
 				ciRouter.Get("/", attendance.AttendancePage)
 				ciRouter.With(middleware.RateLimit(deps.RateLimitPerMin)).Post("/log", attendance.LogTimeForm)
+				
+				// Fallback Password check-in
+				ciRouter.Get("/password", attendance.PasswordCheckinPage)
+				ciRouter.With(middleware.RateLimit(deps.RateLimitPerMin)).Post("/password", attendance.PasswordLogForm)
 			})
 
 			// Manager redirect

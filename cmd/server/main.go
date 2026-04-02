@@ -35,10 +35,12 @@ func main() {
 
 	// Migrate: Turso uses raw SQL, local uses GORM AutoMigrate
 	if cfg.TursoURL != "" {
+		log.Printf("[main] using Turso migration path")
 		if err := database.RawMigrateTurso(db); err != nil {
 			log.Fatalf("turso migrate failed: %v", err)
 		}
 	} else {
+		log.Printf("[main] using local SQLite migration path")
 		if err := database.SafeMigrate(db,
 			&models.User{},
 			&models.Branch{},
@@ -95,10 +97,10 @@ func main() {
 	totpService := service.NewTOTPService()
 	ipValidator := service.NewIPValidator()
 	locValidator := service.NewLocationValidator()
+	permissionService := service.NewPermissionService(permRepo, appCache)
 	attendanceService := service.NewAttendanceService(attendanceRepo, attendanceLogRepo, shiftRepo, branchService, userService, totpService, ipValidator, locValidator)
 	reportService := service.NewReportService(attendanceRepo)
 	dashboardService := service.NewDashboardService(attendanceRepo, branchRepo, userRepo, appCache, db)
-	permissionService := service.NewPermissionService(permRepo, appCache)
 
 	// Setup router
 	handler := router.New(router.Deps{

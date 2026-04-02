@@ -149,9 +149,10 @@ func (s *BranchService) Update(id string, input UpdateBranchInput) (*models.Bran
 	if input.RadiusM > 0 {
 		branch.RadiusM = input.RadiusM
 	}
-	if input.AllowedMethods != "" {
-		branch.AllowedMethods = input.AllowedMethods
-	}
+	// Always update AllowedMethods from input as it's the full set of methods
+	log.Printf("[service][branch] Updating branch %s: OldMethods=%s NewMethods=%s", id, branch.AllowedMethods, input.AllowedMethods)
+	branch.AllowedMethods = input.AllowedMethods
+
 	if input.WorkStartTime != "" {
 		branch.WorkStartTime = input.WorkStartTime
 	}

@@ -128,6 +128,7 @@ func (h *BranchHandler) UpdateForm(w http.ResponseWriter, r *http.Request) {
 	radiusM, _ := strconv.Atoi(r.FormValue("radius_m"))
 	isActive := r.FormValue("is_active") == "on"
 	methods := r.Form["allowed_methods"]
+	log.Printf("[handler][branch] UpdateForm ID=%s, methods=%v", id, methods)
 
 	input := service.UpdateBranchInput{
 		Name:           r.FormValue("name"),

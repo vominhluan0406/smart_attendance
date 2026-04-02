@@ -131,6 +131,31 @@ func (s *AuthService) Login(input LoginInput) (*TokenPair, *models.User, error) 
 	return tokens, user, nil
 }
 
+// VerifyPassword checks if the credentials are valid without creating a token session.
+func (s *AuthService) VerifyPassword(email, password string) (*models.User, error) {
+	user, err := s.userRepo.FindByEmail(email)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrInvalidCredentials
+		}
+		return nil, err
+	}
+
+	if !user.IsActive {
+		return nil, ErrAccountDisabled
+	}
+
+	if user.PasswordHash == "" {
+		return nil, ErrInvalidCredentials
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	return user, nil
+}
+
 // OAuthUserInfo holds user info extracted from an OAuth provider.
 type OAuthUserInfo struct {
 	Provider string
