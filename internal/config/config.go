@@ -30,6 +30,10 @@ type Config struct {
 	MicrosoftClientSecret string
 	MicrosoftRedirectURI  string
 	MicrosoftTenantID     string
+
+	// WebAuthn
+	WebAuthnRPID   string
+	WebAuthnOrigin string
 }
 
 func Load() *Config {
@@ -52,6 +56,9 @@ func Load() *Config {
 		MicrosoftClientSecret: getEnv("MICROSOFT_CLIENT_SECRET", ""),
 		MicrosoftRedirectURI:  getEnv("MICROSOFT_REDIRECT_URI", "http://localhost:8080/auth/oauth/microsoft/callback"),
 		MicrosoftTenantID:     getEnv("MICROSOFT_TENANT_ID", "common"),
+
+		WebAuthnRPID:   getEnv("WEBAUTHN_RPID", "localhost"),
+		WebAuthnOrigin: getEnv("WEBAUTHN_ORIGIN", "http://localhost:8080"),
 	}
 }
 
