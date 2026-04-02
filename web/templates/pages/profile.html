@@ -27,12 +27,19 @@
                             Đăng ký vân tay hoặc khuôn mặt trên thiết bị này để chấm công nhanh hơn và bảo mật hơn.
                         </p>
                         
+                        {{ if eq (len .User.Credentials) 0 }}
                         <div id="biometric-status" class="hidden mb-4 p-3 rounded-xl text-sm"></div>
 
                         <button id="register-biometric" class="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-emerald-700 active:scale-95 transition-all">
                             <i data-lucide="plus-circle" class="w-5 h-5"></i>
                             Đăng ký thiết bị mới
                         </button>
+                        {{ else }}
+                        <div class="flex items-center gap-3 p-4 bg-emerald-50 text-emerald-700 rounded-2xl border border-emerald-100">
+                            <i data-lucide="check-circle" class="w-5 h-5"></i>
+                            <span class="font-medium text-sm">Thiết bị sinh trắc học đã được đăng ký</span>
+                        </div>
+                        {{ end }}
                     </div>
 
                     <div class="p-4 border border-indigo-50 rounded-2xl bg-indigo-50/20">

@@ -10,6 +10,8 @@ type UserCredential struct {
 	AttestationType     string `gorm:"type:text" json:"attestation_type"`
 	AuthenticatorAAGUID []byte `gorm:"type:blob;column:authenticator_aaguid" json:"authenticator_aaguid"`
 	SignCount           uint32 `gorm:"type:integer" json:"sign_count"`
+	BackupEligible      bool   `gorm:"type:boolean" json:"backup_eligible"`
+	BackupState         bool   `gorm:"type:boolean" json:"backup_state"`
 	Transport           string `gorm:"type:text" json:"transport"` // Comma-separated list
 }
 
@@ -23,6 +25,10 @@ func (c *UserCredential) ToWebAuthn() webauthn.Credential {
 		Authenticator: webauthn.Authenticator{
 			AAGUID:    c.AuthenticatorAAGUID,
 			SignCount: c.SignCount,
+		},
+		Flags: webauthn.CredentialFlags{
+			BackupEligible: c.BackupEligible,
+			BackupState:    c.BackupState,
 		},
 	}
 }

@@ -86,6 +86,8 @@ func (s *WebAuthnService) FinishRegistration(user *models.User, r *http.Request)
 		AttestationType:     credential.AttestationType,
 		AuthenticatorAAGUID: credential.Authenticator.AAGUID,
 		SignCount:           credential.Authenticator.SignCount,
+		BackupEligible:      credential.Flags.BackupEligible,
+		BackupState:         credential.Flags.BackupState,
 	}
 
 	if err := s.credRepo.Create(newCred); err != nil {
@@ -145,6 +147,8 @@ func (s *WebAuthnService) FinishLogin(user *models.User, r *http.Request) error 
 	for i := range user.Credentials {
 		if string(user.Credentials[i].CredentialID) == string(credential.ID) {
 			user.Credentials[i].SignCount = credential.Authenticator.SignCount
+			user.Credentials[i].BackupEligible = credential.Flags.BackupEligible
+			user.Credentials[i].BackupState = credential.Flags.BackupState
 			s.credRepo.Update(&user.Credentials[i])
 			break
 		}
