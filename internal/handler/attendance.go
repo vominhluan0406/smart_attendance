@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	"net"
 	"net/http"
 	"strings"
 
@@ -234,6 +233,9 @@ func (h *AttendanceHandler) LogTimeForm(w http.ResponseWriter, r *http.Request) 
 		FaceVerified:    r.FormValue("face_verified") == "1",
 	}
 
+	log.Printf("[handler][attendance] LogTimeForm input: User=%s, IP=%s, Lat=%v, Lng=%v, BranchID=%s, TOTP=%s",
+		input.UserID, input.IP, input.Lat, input.Lng, input.ScannedBranchID, input.TOTPCode)
+
 	result, err := h.attendanceService.LogTime(input)
 	if err != nil {
 		log.Printf("[handler][attendance] log-time failed for user %s: %v", userID, err)
@@ -383,18 +385,4 @@ func translateAttendanceError(err error) string {
 		}
 		return "Có lỗi xảy ra. Vui lòng thử lại."
 	}
-}
-
-func getClientIP(r *http.Request) string {
-	if ip := r.Header.Get("X-Real-Ip"); ip != "" {
-		return ip
-	}
-	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-		return strings.Split(forwarded, ",")[0]
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
 }

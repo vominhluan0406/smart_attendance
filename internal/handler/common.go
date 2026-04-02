@@ -2,8 +2,10 @@ package handler
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/smart-attendance/smart-attendance/internal/middleware"
 )
@@ -37,4 +39,18 @@ func parseLatLng(latStr, lngStr string) (*float64, *float64) {
 		}
 	}
 	return lat, lng
+}
+
+func getClientIP(r *http.Request) string {
+	if ip := r.Header.Get("X-Real-Ip"); ip != "" {
+		return ip
+	}
+	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+		return strings.Split(forwarded, ",")[0]
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
 }

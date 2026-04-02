@@ -31,7 +31,8 @@ func (h *HomeHandler) Index(w http.ResponseWriter, r *http.Request) {
 			data["FaceEnabled"] = h.branchService.HasMethod(branch, models.MethodFace)
 			data["PasswordEnabled"] = h.branchService.HasMethod(branch, models.MethodPassword) && data["UserRole"] != string(models.RoleEmployee)
 			data["WiFiGPSEnabled"] = h.branchService.HasMethod(branch, models.MethodWiFiGPS)
-			log.Printf("[home] Role=%s, Branch=%s, PasswordEnabled=%v", data["UserRole"], branchID, data["PasswordEnabled"])
+			data["ClientIP"] = getClientIP(r)
+			log.Printf("[home] Role=%s, Branch=%s, PasswordEnabled=%v, IP=%s", data["UserRole"], branchID, data["PasswordEnabled"], data["ClientIP"])
 		}
 	}
 

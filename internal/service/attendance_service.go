@@ -159,10 +159,20 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		}
 	}
 
-	// At least one method must pass (OR logic)
-	anyPassed := result.TOTPVerified || result.IPVerified || result.LocVerified || result.FaceVerified || result.NFCVerified || result.PasswordVerified || result.WiFiGPSVerified
+	// 3. Final decision: At least one of the ALLOWED methods must have passed verification.
+	// We check each verified flag against whether its corresponding method is actually enabled for the branch.
+	// This ensures that if 'wifi_gps' is the only method, individual IP or Location passes aren't enough.
+	anyPassed := (result.TOTPVerified && s.branchService.HasMethod(branch, models.MethodQRTOTP)) ||
+		(result.IPVerified && s.branchService.HasMethod(branch, models.MethodIP)) ||
+		(result.LocVerified && s.branchService.HasMethod(branch, models.MethodLocation)) ||
+		(result.FaceVerified && s.branchService.HasMethod(branch, models.MethodFace)) ||
+		(result.PasswordVerified && s.branchService.HasMethod(branch, models.MethodPassword)) ||
+		(result.WiFiGPSVerified && s.branchService.HasMethod(branch, models.MethodWiFiGPS)) ||
+		(result.NFCVerified && s.branchService.HasMethod(branch, models.MethodNFC))
+
 	if !anyPassed {
-		log.Printf("[service][attendance] log denied for user %s: %v", input.UserID, validationErrors)
+		log.Printf("[service][attendance] log denied for user %s: branch_id=%s, IP_ok=%v, Loc_ok=%v, WiFiGPS_ok=%v, errors=%v",
+			input.UserID, branch.ID, result.IPVerified, result.LocVerified, result.WiFiGPSVerified, validationErrors)
 		if len(validationErrors) > 0 {
 			return nil, fmt.Errorf("%s", validationErrors[0])
 		}
