@@ -130,6 +130,48 @@
 
 ---
 
+## BUG-009: Docker build Go version mismatch
+
+| Field | Detail |
+|---|---|
+| **Ngày phát hiện** | 2026-04-02 |
+| **Mức độ** | Medium |
+| **Trang** | CI/CD (Docker Build) |
+| **Triệu chứng** | Docker build failed với lỗi `go.mod` require Go 1.25.1 nhưng image builder dùng 1.22 |
+| **Nguyên nhân** | `Dockerfile` chưa update image `golang:alpine` lên version mới nhất để khớp với `go.mod` |
+| **Fix** | Update `Dockerfile` sang `golang:1.25-alpine` |
+| **Status** | **FIXED** |
+
+---
+
+## BUG-010: SQLite error: table user_credentials has no column named authenticator_aa_guid
+
+| Field | Detail |
+|---|---|
+| **Ngày phát hiện** | 2026-04-02 |
+| **Mức độ** | High |
+| **Trang** | WebAuthn Registration/Login |
+| **Triệu chứng** | GORM báo lỗi không tìm thấy cột `authenticator_aa_guid` khi migrate hoặc query |
+| **Nguyên nhân** | Naming mismatch giữa GORM (tự sinh name) và thực tế schema. GORM parse `AuthenticatorAAGUID` thành `authenticator_aa_guid` thay vì `authenticator_aaguid` |
+| **Fix** | Thêm explicit column tag: `gorm:"column:authenticator_aaguid"` vào model |
+| **Status** | **FIXED** |
+
+---
+
+## BUG-011: WebAuthn "Backup Eligible flag inconsistency"
+
+| Field | Detail |
+|---|---|
+| **Ngày phát hiện** | 2026-04-02 |
+| **Mức độ** | High |
+| **Trang** | WebAuthn Login |
+| **Triệu chứng** | Login thất bại với lỗi: `Backup Eligible flag inconsistency detected during login validation` |
+| **Nguyên nhân** | Model thiếu `BackupEligible` flag. DB lưu mặc định là `false` (0) nhưng thiết bị (iPhone/Mac) báo là `true`. Library detect sự khác biệt và từ chối login |
+| **Fix** | (1) Thêm backup flags vào model. (2) Chạy migration UPDATE `backup_eligible = 1` cho user cũ. (3) Map flags trong `ToWebAuthn()` |
+| **Status** | **FIXED** |
+
+---
+
 ## Summary
 
 | # | Bug | Severity | Status |
@@ -142,3 +184,6 @@
 | BUG-006 | Admin 403 trên mọi endpoint | Critical | FIXED |
 | BUG-007 | Admin UI hiển thị Mã QR | Low | FIXED |
 | BUG-008 | /users, /branches trang trắng | Critical | FIXED |
+| BUG-009 | Docker Go version mismatch | Medium | FIXED |
+| BUG-010 | SQLite column naming error | High | FIXED |
+| BUG-011 | WebAuthn flag inconsistency | High | FIXED |

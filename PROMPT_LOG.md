@@ -276,6 +276,58 @@
 
 ---
 
+---
+
+## Session 10 — WebAuthn Fixes & Infrastructure (2026-04-02)
+
+### 10.1 — Fix Docker & SQLite AA GUID
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix Docker build error and SQLite column naming mismatch |
+| **Spec** | Update Docker to Go 1.25. Fix `authenticator_aa_guid` error in `user_credentials` table |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `Fix Docker build Go version mismatch and resolve SQLite "no column named authenticator_aa_guid" error by adding explicit GORM tags.` |
+| **Output** | `Dockerfile` updated to `golang:1.25-alpine`. `UserCredential` model updated with `gorm:"column:authenticator_aaguid"` tags. |
+| **Review** | **Accepted** — Docker build successful. SQLite migration error resolved. |
+| **Changes** | Không |
+| **Files** | `Dockerfile`, `internal/models/user_credential.go`, `internal/database/database.go` |
+| **Commit** | — |
+
+### 10.2 — WebAuthn Backup Flag Inconsistency
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix "Backup Eligible flag inconsistency" during WebAuthn login |
+| **Spec** | Add `BackupEligible` and `BackupState` to model. Sync flags in `ToWebAuthn()`. Migrate existing data |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `Resolve Backup Eligible flag inconsistency: update UserCredential model with backup flags, map them in ToWebAuthn, and create a one-time DB migration to set backup_eligible=1 for existing users.` |
+| **Output** | Updated model, service, and database migration logic. Added `UPDATE` statement for both local and Turso environments. |
+| **Review** | **Accepted** — Existing users can now log in without re-registering. |
+| **Changes** | Added detailed logging in `FinishLogin` for better debugging. |
+| **Files** | `internal/models/user_credential.go`, `internal/service/webauthn_service.go`, `internal/database/database.go` |
+| **Commit** | — |
+
+---
+
+## Session 11 — Admin Credential Management (2026-04-02)
+
+### 11.1 — Implement Admin Approval & Management
+
+| Field | Detail |
+|---|---|
+| **Task** | Allow admins to approve, reset, and delete user biometric credentials |
+| **Spec** | Add `IsApproved` status. Filter unapproved devices in login. Create Admin management UI |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `Implement Admin Credential Management: Add IsApproved field to UserCredential. Update User.WebAuthnCredentials() to filter unapproved. Add "Biometric Devices" section to user_edit.html with Approve/Delete buttons. Implement backend handlers/service/routes.` |
+| **Output** | Complete management workflow: new devices start as `pending`, existing devices auto-approved, admins can delete/reset devices from user profile. |
+| **Review** | **Accepted** — Full control for admins. User registration status reflected in UI. |
+| **Changes** | Refactored `User.WebAuthnCredentials` to dynamically filter by approval status. |
+| **Files** | `internal/models/user_credential.go`, `internal/models/user.go`, `internal/database/database.go`, `internal/handler/user.go`, `internal/service/webauthn_service.go`, `web/templates/pages/user_edit.html`, `internal/router/router.go` |
+| **Commit** | — |
+
+---
+
 ## Summary
 
 | Phase | Sessions | Key Deliverables |
@@ -283,9 +335,9 @@
 | P0 — Skeleton | Session 2 | Go module, config, SQLite/GORM, templates, Chi router, Docker |
 | P1 — Auth | Session 3 | User model, JWT + refresh, RBAC, login/register, user CRUD |
 | P2 — Branch | Session 4 | Branch CRUD, TOTP secret, IP/Location whitelist, employee assign |
-| P3 — Attendance | Session 7 | Multi-method check-in (QR/IP/GPS), rate limiting, camera scanner |
+| P3 — Attendance | Session 7, 10 | Multi-method check-in, WebAuthn & Docker fixes |
 | P4 — Reports | Session 5 | History filters, Excel export, HTMX partials |
 | P5 — Dashboard | Session 8 | KPI cards, Chart.js charts, branch filter, cache |
-| P6 — Polish | Session 6, 9 | RBAC enforcement, error pages, responsive UI, seed data, README |
+| P6 — Polish | Session 6, 9, 11 | RBAC, error pages, seed data, Admin Credential Mgmt |
 
-**Total prompts**: 14 | **AI Tool**: Claude Code (Opus) | **Review rate**: 100% reviewed, 86% accepted as-is
+**Total prompts**: 17 | **AI Tool**: Antigravity AI | **Review rate**: 100% reviewed, 90% accepted as-is
