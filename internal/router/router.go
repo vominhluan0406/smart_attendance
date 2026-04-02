@@ -42,7 +42,7 @@ func New(deps Deps) http.Handler {
 	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
 	// Handlers
-	home := handler.NewHomeHandler(deps.Render, deps.BranchService)
+	home := handler.NewHomeHandler(deps.Render, deps.BranchService, deps.WebAuthnService, deps.UserService)
 	oauth := handler.NewOAuthHandler(deps.AuthService, deps.Config)
 	auth := handler.NewAuthHandler(deps.AuthService, deps.Render, oauth.IsEnabled())
 	users := handler.NewUserHandler(deps.UserService, deps.AuthService, deps.BranchService, deps.WebAuthnService, deps.Render)

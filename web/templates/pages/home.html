@@ -14,6 +14,29 @@
             <p class="max-w-2xl text-lg leading-relaxed text-gray-600 mb-12 px-4 text-center">
                 Hệ thống quản lý nhân sự tập trung, an toàn và chính xác cho mọi doanh nghiệp.
             </p>
+            
+            {{if and (eq .UserRole "employee") .BiometricRequired (not .HasBiometric)}}
+            <!-- Biometric Registration Hook -->
+            <div class="mb-12 w-full max-w-sm px-4 animate-in fade-in slide-in-from-top-4 duration-1000">
+                <div class="bg-emerald-50 rounded-2xl p-6 border border-emerald-100 shadow-sm relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 opacity-10">
+                        <i data-lucide="fingerprint" class="w-24 h-24 text-emerald-600"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-2 text-emerald-700">
+                            <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                            <span class="text-xs font-bold uppercase tracking-wider">Yêu cầu bảo mật</span>
+                        </div>
+                        <h3 class="text-base font-bold text-emerald-900 mb-1">Kích hoạt Biometric</h3>
+                        <p class="text-sm text-emerald-600/80 mb-4 leading-snug">Chi nhánh của bạn yêu cầu xác thực vân tay/khuôn mặt. Vui lòng thiết lập ngay để có thể chấm công.</p>
+                        <a href="/profile" class="inline-flex items-center justify-center gap-2 w-full bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-md hover:bg-emerald-700 transition-all">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                            Đăng ký ngay
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {{end}}
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-sm px-4">
                 {{if eq .UserRole "employee"}}

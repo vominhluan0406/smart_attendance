@@ -12,12 +12,14 @@ import (
 )
 
 type HomeHandler struct {
-	render        *renderer.Renderer
-	branchService *service.BranchService
+	render          *renderer.Renderer
+	branchService   *service.BranchService
+	webauthnService *service.WebAuthnService
+	userService     *service.UserService
 }
 
-func NewHomeHandler(render *renderer.Renderer, branchService *service.BranchService) *HomeHandler {
-	return &HomeHandler{render: render, branchService: branchService}
+func NewHomeHandler(render *renderer.Renderer, branchService *service.BranchService, webauthnService *service.WebAuthnService, userService *service.UserService) *HomeHandler {
+	return &HomeHandler{render: render, branchService: branchService, webauthnService: webauthnService, userService: userService}
 }
 
 func (h *HomeHandler) Index(w http.ResponseWriter, r *http.Request) {
@@ -27,12 +29,20 @@ func (h *HomeHandler) Index(w http.ResponseWriter, r *http.Request) {
 	branchID := middleware.GetBranchID(r)
 	if branchID != "" {
 		if branch, err := h.branchService.GetByIDCached(branchID); err == nil {
+			data["BiometricRequired"] = branch.RequireBiometric
 			data["QREnabled"] = h.branchService.HasMethod(branch, models.MethodQRTOTP)
 			data["FaceEnabled"] = h.branchService.HasMethod(branch, models.MethodFace)
 			data["PasswordEnabled"] = h.branchService.HasMethod(branch, models.MethodPassword) && data["UserRole"] != string(models.RoleEmployee)
 			data["WiFiGPSEnabled"] = h.branchService.HasMethod(branch, models.MethodWiFiGPS)
 			data["ClientIP"] = getClientIP(r)
-			log.Printf("[home] Role=%s, Branch=%s, PasswordEnabled=%v, IP=%s", data["UserRole"], branchID, data["PasswordEnabled"], data["ClientIP"])
+			
+			// Check if user has biometric credentials registered
+			userID := middleware.GetUserID(r)
+			if user, err := h.userService.GetByID(userID); err == nil {
+				data["HasBiometric"] = len(user.Credentials) > 0
+			}
+			
+			log.Printf("[home] Role=%s, Branch=%s, BiometricRequired=%v, HasBiometric=%v", data["UserRole"], branchID, data["BiometricRequired"], data["HasBiometric"])
 		}
 	}
 
