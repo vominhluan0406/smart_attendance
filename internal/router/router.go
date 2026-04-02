@@ -91,6 +91,12 @@ func New(deps Deps) http.Handler {
 
 		// Reports
 		pr.Route("/reports", func(rr chi.Router) {
+			// Admin report selection (requires report.view_all)
+			rr.Group(func(admRr chi.Router) {
+				admRr.Use(requirePerm(models.PermReportViewAll))
+				admRr.Get("/", reports.AdminReportPage)
+			})
+
 			// Personal history (requires report.view_own)
 			rr.Group(func(ownRr chi.Router) {
 				ownRr.Use(requirePerm(models.PermReportViewOwn))

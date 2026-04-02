@@ -454,6 +454,60 @@
 
 ---
 
+## Session 20 — UI/UX: Admin Report Selection (2026-04-02)
+
+### 20.1 — Dedicated /reports page
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix "Báo cáo" link leading to branch management |
+| **Spec** | Create `/reports` page listing branches with "Xem báo cáo" buttons. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `admin ấn báo cáo nhưng lại ra branch` |
+| **Output** | Dedicated report selection UI implemented. |
+| **Review** | **Accepted** — improved UX by separating management and reports. |
+| **Changes** | None |
+| **Files** | `internal/handler/report.go`, `internal/router/router.go`, `web/templates/pages/report_branches.html` |
+| **Commit** | — |
+
+---
+
+## Session 21 — UI/UX: Dashboard Beautification (2026-04-02)
+
+### 21.1 — Premium Dashboard Design
+
+| Field | Detail |
+|---|---|
+| **Task** | Beautify Dashboard UI |
+| **Spec** | Use mesh gradients, glassmorphism, animations, and new card designs. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `UI dashboard đang xấu` |
+| **Output** | High-end, modern dashboard implemented. |
+| **Review** | **Accepted** — significantly improved visual aesthetics. |
+| **Changes** | None |
+| **Files** | `web/static/css/index.css`, `web/templates/pages/dashboard.html` + Partials |
+| **Commit** | — |
+
+---
+
+## Session 22 — UI/UX: Dashboard Chart Removal (2026-04-02)
+
+### 22.1 — Refined Dashboard Layout
+
+| Field | Detail |
+|---|---|
+| **Task** | Remove Attendance Chart from Dashboard |
+| **Spec** | Move Recent Activity into the vacated 2/3 column for a cleaner look. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `bỏ Biểu đồ chấm công ở dashboard đi` |
+| **Output** | Chart removed, layout reorganized with glassmorphism. |
+| **Review** | **Accepted** — improved clarity and focus. |
+| **Changes** | None |
+| **Files** | `web/templates/pages/dashboard.html` |
+| **Commit** | — |
+
+---
+
 ## Summary
 
 | Phase | Sessions | Key Deliverables |
@@ -462,8 +516,8 @@
 | P1 — Auth | Session 3, 15 | User model, JWT + refresh, RBAC, Profile Restriction |
 | P2 — Branch | Session 4 | Branch CRUD, TOTP secret, IP/Location whitelist, employee assign |
 | P3 — Attendance | Session 7, 10, 12, 13 | Multi-method check-in, WebAuthn fixes, Panic fix, Employee dropdown |
-| P4 — Reports | Session 5, 14, 18 | History filters, RBAC Restriction, Excel export, Admin Access |
-| P5 — Dashboard | Session 8, 19 | KPI cards, Chart.js charts, branch filter, cache, Chart fix |
+| P4 — Reports | Session 5, 14, 18, 20 | History filters, RBAC Restriction, Excel export, Admin Selection UI |
+| P5 — Dashboard | Session 8, 19, 21, 22 | KPI cards, Chart.js charts (removed), branch filter, cache, Chart fix, Beautification |
 | P6 — Polish | Session 6, 9, 11, 16, 17 | RBAC, User Edit Biometric fix, Route 404 fix, Admin Credential Mgmt |
 
-**Total prompts**: 25 | **AI Tool**: Antigravity AI | **Review rate**: 100% reviewed, 90% accepted as-is
+**Total prompts**: 28 | **AI Tool**: Antigravity AI | **Review rate**: 100% reviewed, 90% accepted as-is

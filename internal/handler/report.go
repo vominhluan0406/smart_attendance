@@ -20,6 +20,18 @@ type ReportHandler struct {
 	render        *renderer.Renderer
 }
 
+func (h *ReportHandler) AdminReportPage(w http.ResponseWriter, r *http.Request) {
+	branches, err := h.branchService.ListAll()
+	if err != nil {
+		http.Error(w, "Failed to list branches", http.StatusInternalServerError)
+		return
+	}
+
+	data := userContext(r)
+	data["Branches"] = branches
+	h.render.Render(w, "report_branches.html", data)
+}
+
 func NewReportHandler(
 	reportService *service.ReportService,
 	branchService *service.BranchService,
