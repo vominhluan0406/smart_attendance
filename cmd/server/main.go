@@ -101,10 +101,11 @@ func main() {
 	locValidator := service.NewLocationValidator()
 	permissionService := service.NewPermissionService(permRepo, appCache)
 
-	// WebAuthn RPID and Origin from config or default
-	rpID := "localhost" // Should come from config in production
-	origin := "http://localhost:8080"
-	webAuthnService, _ := service.NewWebAuthnService(rpID, origin, credRepo, userRepo, appCache)
+	// WebAuthn RPID and Origin from config
+	webAuthnService, err := service.NewWebAuthnService(cfg.WebAuthnRPID, cfg.WebAuthnOrigin, credRepo, userRepo, appCache)
+	if err != nil {
+		log.Fatalf("Failed to initialize WebAuthnService: %v", err)
+	}
 
 	attendanceService := service.NewAttendanceService(attendanceRepo, attendanceLogRepo, shiftRepo, branchService, userService, totpService, ipValidator, locValidator)
 	reportService := service.NewReportService(attendanceRepo)
