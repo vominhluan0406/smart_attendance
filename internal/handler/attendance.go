@@ -21,6 +21,7 @@ type AttendanceHandler struct {
 	branchService     *service.BranchService
 	totpService       *service.TOTPService
 	userService       *service.UserService
+	authService       *service.AuthService
 	render            *renderer.Renderer
 }
 
@@ -29,6 +30,7 @@ func NewAttendanceHandler(
 	branchService *service.BranchService,
 	totpService *service.TOTPService,
 	userService *service.UserService,
+	authService *service.AuthService,
 	render *renderer.Renderer,
 ) *AttendanceHandler {
 	return &AttendanceHandler{
@@ -36,6 +38,7 @@ func NewAttendanceHandler(
 		branchService:     branchService,
 		totpService:       totpService,
 		userService:       userService,
+		authService:       authService,
 		render:            render,
 	}
 }
@@ -82,6 +85,12 @@ func (h *AttendanceHandler) AttendancePage(w http.ResponseWriter, r *http.Reques
 	}
 
 	h.render.Render(w, "attendance.html", data)
+}
+
+// PasswordCheckinPage shows a login form specifically for attendance check-in (shared device).
+func (h *AttendanceHandler) PasswordCheckinPage(w http.ResponseWriter, r *http.Request) {
+	data := userContext(r)
+	h.render.Render(w, "password_checkin.html", data)
 }
 
 // QRDisplayPage shows the live QR code for a specific branch (Manager/Admin only).
@@ -192,7 +201,7 @@ func (h *AttendanceHandler) QRImage(w http.ResponseWriter, r *http.Request) {
 func (h *AttendanceHandler) LogTimeForm(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		h.render.RenderPartial(w, "auth_error.html", "Invalid form data")
+		h.render.RenderPartial(w, "auth_error.html", "Dữ liệu không hợp lệ")
 		return
 	}
 
@@ -226,6 +235,49 @@ func (h *AttendanceHandler) LogTimeForm(w http.ResponseWriter, r *http.Request) 
 		"IP":         result.IPVerified,
 		"Location":   result.LocVerified,
 		"Face":       result.FaceVerified,
+		"NFC":        result.NFCVerified,
+		"Password":   result.PasswordVerified,
+	})
+}
+
+// PasswordLogForm handles check-in via username/password (Fallback method).
+func (h *AttendanceHandler) PasswordLogForm(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		h.render.RenderPartial(w, "auth_error.html", "Dữ liệu không hợp lệ")
+		return
+	}
+
+	email := r.FormValue("email")
+	password := r.FormValue("password")
+
+	// 1. Verify credentials via AuthService
+	user, err := h.authService.VerifyPassword(email, password)
+	if err != nil {
+		h.render.RenderPartial(w, "auth_error.html", "Email hoặc mật khẩu không chính xác")
+		return
+	}
+
+	input := service.LogTimeInput{
+		UserID:           user.ID,
+		IP:               getClientIP(r),
+		PasswordVerified: true,
+	}
+
+	result, err := h.attendanceService.LogTime(input)
+	if err != nil {
+		h.render.RenderPartial(w, "checkin_result.html", map[string]interface{}{
+			"Success": false,
+			"Error":   translateAttendanceError(err),
+		})
+		return
+	}
+
+	h.render.RenderPartial(w, "checkin_result.html", map[string]interface{}{
+		"Success":    true,
+		"Attendance": result.Attendance,
+		"LogCount":   result.LogCount,
+		"Password":   true,
 	})
 }
 
