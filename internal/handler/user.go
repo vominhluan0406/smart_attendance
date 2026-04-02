@@ -91,6 +91,13 @@ func (h *UserHandler) EditPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) ProfilePage(w http.ResponseWriter, r *http.Request) {
+	// RBAC: Admin and Manager don't have personal profiles (managed via admin UI)
+	role := middleware.GetUserRole(r)
+	if role == models.RoleAdmin || role == models.RoleManager {
+		http.Error(w, "Forbidden: Admin and Manager roles do not have personal profile pages.", http.StatusForbidden)
+		return
+	}
+
 	userID := middleware.GetUserID(r)
 	user, err := h.userService.GetByID(userID)
 	if err != nil {

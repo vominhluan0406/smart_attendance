@@ -55,17 +55,8 @@
             <!-- Chart + Top Late -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
                 <!-- Attendance Chart (2/3 width) -->
-                <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                            <i data-lucide="bar-chart-3" class="w-5 h-5 text-indigo-500"></i>
-                            Biểu đồ chấm công
-                        </h2>
-                        <span class="text-xs text-gray-400">14 ngày gần nhất</span>
-                    </div>
-                    <div class="relative" style="height: 300px;">
-                        <canvas id="attendanceChart"></canvas>
-                    </div>
+                <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6" id="chart-section">
+                    {{template "dashboard_chart.html" .}}
                 </div>
 
                 <!-- Top Late (1/3 width) -->
@@ -123,84 +114,9 @@
 {{end}}
 
 {{define "scripts"}}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const chartDataRaw = {{.ChartJSON}};
-    if (!chartDataRaw || chartDataRaw.length === 0) return;
-
-    const labels = chartDataRaw.map(d => {
-        const date = new Date(d.Date);
-        return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-    });
-    const onTimeData = chartDataRaw.map(d => d.OnTime);
-    const lateData = chartDataRaw.map(d => d.Late);
-    const absentData = chartDataRaw.map(d => d.Absent);
-
-    const ctx = document.getElementById('attendanceChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Đúng giờ',
-                    data: onTimeData,
-                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
-                    borderRadius: 4,
-                    barPercentage: 0.7,
-                },
-                {
-                    label: 'Đi trễ',
-                    data: lateData,
-                    backgroundColor: 'rgba(245, 158, 11, 0.8)',
-                    borderRadius: 4,
-                    barPercentage: 0.7,
-                },
-                {
-                    label: 'Vắng',
-                    data: absentData,
-                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                    borderRadius: 4,
-                    barPercentage: 0.7,
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 20,
-                        font: { size: 12 }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    stacked: true,
-                    grid: { display: false },
-                    ticks: { font: { size: 11 } }
-                },
-                y: {
-                    stacked: true,
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1,
-                        font: { size: 11 }
-                    },
-                    grid: { color: 'rgba(0,0,0,0.05)' }
-                }
-            }
-        }
-    });
-});
-
 // Re-init lucide icons after HTMX swaps
-document.body.addEventListener('htmx:afterSwap', function() {
+document.body.addEventListener('htmx:afterSettle', function() {
     if (window.lucide) lucide.createIcons();
 });
 </script>

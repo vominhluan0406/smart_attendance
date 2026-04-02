@@ -12,6 +12,7 @@ import (
 	"github.com/smart-attendance/smart-attendance/internal/middleware"
 	"github.com/smart-attendance/smart-attendance/internal/models"
 	"github.com/smart-attendance/smart-attendance/internal/renderer"
+	"github.com/smart-attendance/smart-attendance/internal/repository"
 	"github.com/smart-attendance/smart-attendance/internal/service"
 )
 
@@ -95,13 +96,27 @@ func (h *AttendanceHandler) AttendancePage(w http.ResponseWriter, r *http.Reques
 // PasswordCheckinPage shows a login form specifically for attendance check-in (shared device).
 func (h *AttendanceHandler) PasswordCheckinPage(w http.ResponseWriter, r *http.Request) {
 	data := userContext(r)
-	role := data["UserRole"].(string)
-
+	role, _ := data["UserRole"].(models.Role)
+	
 	// Strictly only allow non-employees to see the check-in page
-	if role == string(models.RoleEmployee) {
+	if role == models.RoleEmployee {
 		log.Printf("[handler][attendance] blocking employee from password checkin page")
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
+	}
+
+	// Fetch employees of this branch for the dropdown
+	branchID := middleware.GetBranchID(r)
+	if branchID != "" {
+		res, err := h.userService.List(repository.UserListParams{
+			BranchID: branchID,
+			Role:     string(models.RoleEmployee),
+			IsActive: func() *bool { b := true; return &b }(),
+			Limit:    100,
+		})
+		if err == nil {
+			data["Employees"] = res.Users
+		}
 	}
 
 	h.render.Render(w, "password_checkin.html", data)

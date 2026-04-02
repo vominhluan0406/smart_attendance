@@ -25,6 +25,21 @@ var funcMap = template.FuncMap{
 	"subtract": func(a, b int) int {
 		return a - b
 	},
+	"slice": func(s string, start, end int) string {
+		if start < 0 {
+			start = 0
+		}
+		if start > len(s) {
+			return ""
+		}
+		if end > len(s) {
+			end = len(s)
+		}
+		if start > end {
+			return ""
+		}
+		return s[start:end]
+	},
 }
 
 type Renderer struct {

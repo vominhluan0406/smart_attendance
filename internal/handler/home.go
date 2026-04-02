@@ -32,7 +32,7 @@ func (h *HomeHandler) Index(w http.ResponseWriter, r *http.Request) {
 			data["BiometricRequired"] = branch.RequireBiometric
 			data["QREnabled"] = h.branchService.HasMethod(branch, models.MethodQRTOTP)
 			data["FaceEnabled"] = h.branchService.HasMethod(branch, models.MethodFace)
-			data["PasswordEnabled"] = h.branchService.HasMethod(branch, models.MethodPassword) && data["UserRole"] != string(models.RoleEmployee)
+			data["PasswordEnabled"] = h.branchService.HasMethod(branch, models.MethodPassword) && data["UserRole"] != models.RoleEmployee
 			data["WiFiGPSEnabled"] = h.branchService.HasMethod(branch, models.MethodWiFiGPS)
 			data["ClientIP"] = getClientIP(r)
 			

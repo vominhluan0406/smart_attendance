@@ -172,7 +172,17 @@
 
 ---
 
-## Summary
+## BUG-012: Panic in PasswordCheckinPage (Type Assertion)
+
+| Field | Detail |
+|---|---|
+| **Ngày phát hiện** | 2026-04-02 |
+| **Mức độ** | Critical |
+| **Trang** | /attendance/password-checkin |
+| **Triệu chứng** | Server panic: `interface conversion: interface {} is models.Role, not string` |
+| **Nguyên nhân** | `userContext` trả về `models.Role`, nhưng handler ép kiểu (type assertion) sang `string`. Go không cho phép ép kiểu trực tiếp giữa named type và underlying type trong interface assertion. |
+| **Fix** | Cập nhật type assertion sang `models.Role` và sửa logic so sánh trong `HomeHandler`. |
+| **Status** | **FIXED** |
 
 | # | Bug | Severity | Status |
 |---|---|---|---|
@@ -187,3 +197,4 @@
 | BUG-009 | Docker Go version mismatch | Medium | FIXED |
 | BUG-010 | SQLite column naming error | High | FIXED |
 | BUG-011 | WebAuthn flag inconsistency | High | FIXED |
+| BUG-012 | Panic in PasswordCheckinPage | Critical | FIXED |

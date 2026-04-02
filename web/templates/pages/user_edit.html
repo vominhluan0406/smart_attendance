@@ -80,7 +80,7 @@
                         {{ range .User.Credentials }}
                         <tr>
                             <td class="px-4 py-3 text-sm text-gray-500 font-mono">
-                                {{ printf "%x" .ID | slice 0 8 }}...
+                                {{ slice .ID 0 8 }}...
                             </td>
                             <td class="px-4 py-3">
                                 {{ if .IsApproved }}

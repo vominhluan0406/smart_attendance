@@ -38,13 +38,15 @@
                     </a>
                     {{end}}
 
+                    {{if eq .UserRole "employee"}}
                     <a href="/reports/my-history"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
                         <i data-lucide="history" class="w-4 h-4"></i> Lịch sử
                     </a>
+                    {{end}}
 
-                    {{if eq .UserRole "manager"}}
-                    <a href="/reports/branch/{{.UserBranch}}"
+                    {{if or (eq .UserRole "manager") (eq .UserRole "admin")}}
+                    <a href="{{if eq .UserRole "admin"}}/branches{{else}}/reports/branch/{{.UserBranch}}{{end}}"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
                         <i data-lucide="file-text" class="w-4 h-4"></i> Báo cáo
                     </a>
@@ -60,10 +62,17 @@
             </div>
             <div class="flex items-center gap-3">
                 <div class="hidden sm:block text-right mr-2">
+                    {{if eq .UserRole "employee"}}
                     <a href="/profile" class="group">
                         <p class="text-sm font-bold text-gray-900 leading-tight group-hover:text-indigo-600 transition-colors">{{.UserName}}</p>
                         {{if .BranchName}}<p class="text-xs text-gray-400">{{.BranchName}}</p>{{end}}
                     </a>
+                    {{else}}
+                    <div class="cursor-default">
+                        <p class="text-sm font-bold text-gray-900 leading-tight">{{.UserName}}</p>
+                        {{if .BranchName}}<p class="text-xs text-gray-400">{{.BranchName}}</p>{{end}}
+                    </div>
+                    {{end}}
                 </div>
                 <a href="/auth/logout"
                     class="text-sm font-medium text-gray-500 hover:text-gray-700 flex items-center gap-1">
@@ -98,6 +107,7 @@
         <span>QR</span>
     </a>
     {{end}}
+    {{if eq .UserRole "employee"}}
     <a href="/reports/my-history" class="bottom-nav-item">
         <i data-lucide="history"></i>
         <span>Lịch sử</span>
@@ -106,6 +116,7 @@
         <i data-lucide="user"></i>
         <span>Hồ sơ</span>
     </a>
+    {{end}}
 </nav>
 
 <script>

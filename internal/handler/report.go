@@ -37,6 +37,15 @@ func (h *ReportHandler) UserHistoryPage(w http.ResponseWriter, r *http.Request) 
 	userID := middleware.GetUserID(r)
 	page, limit, dateFrom, dateTo, status := h.parseFilters(r)
 
+	// RBAC: Admin and Manager don't have personal history (they only see reports)
+	role := middleware.GetUserRole(r)
+	if role == models.RoleAdmin || role == models.RoleManager {
+		data := userContext(r)
+		data["Error"] = "Forbidden: Admin and Manager roles do not have personal history records."
+		h.render.Render(w, "my_history.html", data)
+		return
+	}
+
 	result, err := h.reportService.GetUserHistory(userID, page, limit, dateFrom, dateTo, status)
 	if err != nil {
 		data := userContext(r)
@@ -57,6 +66,13 @@ func (h *ReportHandler) UserHistoryPage(w http.ResponseWriter, r *http.Request) 
 func (h *ReportHandler) UserHistoryPartial(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	page, limit, dateFrom, dateTo, status := h.parseFilters(r)
+
+	// RBAC: Admin and Manager check
+	role := middleware.GetUserRole(r)
+	if role == models.RoleAdmin || role == models.RoleManager {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 
 	result, err := h.reportService.GetUserHistory(userID, page, limit, dateFrom, dateTo, status)
 	if err != nil {

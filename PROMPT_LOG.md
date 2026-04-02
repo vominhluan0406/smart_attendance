@@ -328,16 +328,142 @@
 
 ---
 
+## Session 13 — Feature: Employee Dropdown for Check-in (2026-04-02)
+
+### 13.1 — Replace Manual Input with Dropdown
+
+| Field | Detail |
+|---|---|
+| **Task** | Add employee dropdown to Password Check-in page |
+| **Spec** | Fetch active employees of the current branch. Use `<select>` instead of `<input>`. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `đang nhập chấm công: chỗ username sỗ ra danh sách nhân viên của chi nhánh đó` |
+| **Output** | `AttendanceHandler` updated to fetch branch employees. `password_checkin.html` updated with dropdown UI. |
+| **Review** | **Accepted** — Fast and user-friendly UX for shared devices. |
+| **Changes** | Added Lucide icons for select and users. |
+| **Files** | `internal/handler/attendance.go`, `web/templates/pages/password_checkin.html` |
+| **Commit** | — |
+
+---
+
+## Session 14 — Security: Restrict History Access (2026-04-02)
+
+### 14.1 — Disable my-history for Admin/Manager
+
+| Field | Detail |
+|---|---|
+| **Task** | Restrict personal history access for privileged roles |
+| **Spec** | Forbidden response in `ReportHandler`. Hide links in `nav.html` and `home.html`. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `tắt tính năng /reports/my-history của user có role manager và admin, chỉ xem báo cáo thôi` |
+| **Output** | Handlers updated with RBAC checks. UI hidden for `admin` and `manager`. |
+| **Review** | **Accepted** — Clean separation of concerns. |
+| **Changes** | None |
+| **Files** | `internal/handler/report.go`, `web/templates/components/nav.html`, `web/templates/pages/home.html` |
+| **Commit** | — |
+
+---
+
+## Session 15 — Security: Restrict Profile Access (2026-04-02)
+
+### 15.1 — Disable /profile for Admin/Manager
+
+| Field | Detail |
+|---|---|
+| **Task** | Restrict profile access for privileged roles |
+| **Spec** | Forbidden response in `UserHandler.ProfilePage`. Remove button in mobile `nav.html`. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `xoá lun nút hồ sơ` |
+| **Output** | Handlers updated with RBAC checks. Mobile UI button removed for `admin` and `manager`. |
+| **Review** | **Accepted** — consistent RBAC policy applied. |
+| **Changes** | None |
+| **Files** | `internal/handler/user.go`, `web/templates/components/nav.html` |
+| **Commit** | — |
+
+---
+
+## Session 16 — Bugfix: Biometric Section Render (2026-04-02)
+
+### 16.1 — Add slice template function
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix biometric devices table not appearing in User Edit |
+| **Spec** | Add `slice` to `Renderer.funcMap`. Correct `user_edit.html` ID display. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `chỗ edit user của admin. chưa xem , xoá được cái Thiết bị sinh trắc học` |
+| **Output** | `slice` function added. Template fixed. |
+| **Review** | **Accepted** — Root cause identified as missing template helper. |
+| **Changes** | None |
+| **Files** | `internal/renderer/renderer.go`, `web/templates/pages/user_edit.html` |
+| **Commit** | — |
+
+---
+
+## Session 17 — Bugfix: Credential Management Routes (2026-04-02)
+
+### 17.1 — Fix 404 on Credential Actions
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix 404 error when deleting/approving credentials |
+| **Spec** | Align `router.go` paths with `user_edit.html` hx-delete/post. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `2026/04/02 21:50:50 DELETE /users/.../credentials/... 404 lỗi` |
+| **Output** | Routes moved under `/users/{id}/credentials/...`. |
+| **Review** | **Accepted** — correct mapping of HTMX actions to server routes. |
+| **Changes** | None |
+| **Files** | `internal/router/router.go` |
+| **Commit** | — |
+
+---
+
+## Session 18 — Feature: Admin Report Access (2026-04-02)
+
+### 18.1 — Enable Báo cáo for Admin
+
+| Field | Detail |
+|---|---|
+| **Task** | Allow Admin to access branch reports |
+| **Spec** | Add links in `nav.html`, `home.html`, and `branch_list.html`. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `role admin xem được báo cáo` |
+| **Output** | Report links added for Admins across the UI. |
+| **Review** | **Accepted** — provides better visibility for Admins. |
+| **Changes** | None |
+| **Files** | `web/templates/components/nav.html`, `web/templates/pages/home.html`, `web/templates/partials/branch_list.html` |
+| **Commit** | — |
+
+---
+
+## Session 19 — Bugfix: Attendance Chart Rendering (2026-04-02)
+
+### 19.1 — Fix Chart Initialization in HTMX
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix empty attendance chart on dashboard |
+| **Spec** | Move `Chart.js` to head. Use partial for chart with auto-running scripts. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `Biểu đồ chấm công chưa có dữ liệu` |
+| **Output** | Chart rendered correctly even after HTMX swaps. |
+| **Review** | **Accepted** — resolved event race condition with HTMX. |
+| **Changes** | None |
+| **Files** | `web/templates/layouts/base.html`, `web/templates/pages/dashboard.html` |
+| **Commit** | — |
+
+---
+
 ## Summary
 
 | Phase | Sessions | Key Deliverables |
 |---|---|---|
 | P0 — Skeleton | Session 2 | Go module, config, SQLite/GORM, templates, Chi router, Docker |
-| P1 — Auth | Session 3 | User model, JWT + refresh, RBAC, login/register, user CRUD |
+| P1 — Auth | Session 3, 15 | User model, JWT + refresh, RBAC, Profile Restriction |
 | P2 — Branch | Session 4 | Branch CRUD, TOTP secret, IP/Location whitelist, employee assign |
-| P3 — Attendance | Session 7, 10 | Multi-method check-in, WebAuthn & Docker fixes |
-| P4 — Reports | Session 5 | History filters, Excel export, HTMX partials |
-| P5 — Dashboard | Session 8 | KPI cards, Chart.js charts, branch filter, cache |
-| P6 — Polish | Session 6, 9, 11 | RBAC, error pages, seed data, Admin Credential Mgmt |
+| P3 — Attendance | Session 7, 10, 12, 13 | Multi-method check-in, WebAuthn fixes, Panic fix, Employee dropdown |
+| P4 — Reports | Session 5, 14, 18 | History filters, RBAC Restriction, Excel export, Admin Access |
+| P5 — Dashboard | Session 8, 19 | KPI cards, Chart.js charts, branch filter, cache, Chart fix |
+| P6 — Polish | Session 6, 9, 11, 16, 17 | RBAC, User Edit Biometric fix, Route 404 fix, Admin Credential Mgmt |
 
-**Total prompts**: 17 | **AI Tool**: Antigravity AI | **Review rate**: 100% reviewed, 90% accepted as-is
+**Total prompts**: 25 | **AI Tool**: Antigravity AI | **Review rate**: 100% reviewed, 90% accepted as-is

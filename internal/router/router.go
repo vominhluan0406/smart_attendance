@@ -153,6 +153,10 @@ func New(deps Deps) http.Handler {
 			ur.Get("/{id}/edit", users.EditPage)
 			ur.Put("/{id}", users.UpdateForm)
 			ur.Delete("/{id}", users.DeleteAction)
+
+			// Credentials management
+			ur.Post("/{id}/credentials/{credID}/approve", users.ApproveCredential)
+			ur.Delete("/{id}/credentials/{credID}", users.DeleteCredential)
 		})
 
 		// User Profile & Biometrics
@@ -162,10 +166,6 @@ func New(deps Deps) http.Handler {
 			wr.Post("/register/finish", users.RegisterBiometricFinish)
 			wr.Get("/login/begin", attendance.BiometricLoginBegin)
 			wr.Post("/login/finish", attendance.BiometricLoginFinish)
-			
-			// Admin management
-			wr.Post("/user/{id}/credentials/{credID}/approve", users.ApproveCredential)
-			wr.Delete("/user/{id}/credentials/{credID}", users.DeleteCredential)
 		})
 	})
 
