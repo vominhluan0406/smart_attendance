@@ -58,8 +58,35 @@
         gpsStatus.innerHTML = '<span class="relative flex h-2 w-2 mr-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span></span> Đang lấy vị trí...';
         gpsStatus.classList.replace('text-gray-400', 'text-blue-600');
 
+        let gpsCompleted = false;
+        // Manual safety timeout for 6 seconds (just after the GPS 5s timeout)
+        setTimeout(() => {
+            if (!gpsCompleted) {
+                handleGPSError({ message: "Hết thời gian chờ (Timeout)" });
+            }
+        }, 6000);
+
+        function handleGPSError(err) {
+            if (gpsCompleted) return;
+            gpsCompleted = true;
+            gpsStatus.innerHTML = '<span class="text-red-500">Lỗi GPS: ' + err.message + '</span>';
+            statusText.innerText = 'Không thể lấy vị trí. Vui lòng bật định vị cao (High Accuracy) và thử lại.';
+            
+            // Show retry button
+            const retryBtn = document.createElement('div');
+            retryBtn.className = 'mt-6';
+            retryBtn.innerHTML = `
+                <button onclick="location.reload()" class="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold shadow-lg hover:bg-emerald-700 transition-all">
+                    Thử lại
+                </button>
+            `;
+            gpsStatus.parentNode.appendChild(retryBtn);
+        }
+
         navigator.geolocation.getCurrentPosition(
             function(pos) {
+                if (gpsCompleted) return;
+                gpsCompleted = true;
                 latField.value = pos.coords.latitude;
                 lngField.value = pos.coords.longitude;
                 
@@ -70,15 +97,16 @@
                 // Submit form
                 document.getElementById('submit-btn').click();
             },
-            function(err) {
-                gpsStatus.innerHTML = '<span class="text-red-500">Lỗi GPS: ' + err.message + '</span>';
-                statusText.innerText = 'Vui lòng bật định vị và thử lại.';
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
+            handleGPSError,
+            { enableHighAccuracy: true, timeout: 5000 }
         );
     }
 
-    // Start when page loads
-    document.addEventListener('DOMContentLoaded', startAutoCheckin);
+    // Start immediately
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startAutoCheckin);
+    } else {
+        startAutoCheckin();
+    }
 </script>
 {{end}}

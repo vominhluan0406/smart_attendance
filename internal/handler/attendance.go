@@ -81,6 +81,8 @@ func (h *AttendanceHandler) AttendancePage(w http.ResponseWriter, r *http.Reques
 			data["IPEnabled"] = h.branchService.HasMethod(branch, models.MethodIP)
 			data["LocationEnabled"] = h.branchService.HasMethod(branch, models.MethodLocation)
 			data["FaceEnabled"] = h.branchService.HasMethod(branch, models.MethodFace)
+			data["PasswordEnabled"] = h.branchService.HasMethod(branch, models.MethodPassword)
+			data["WiFiGPSEnabled"] = h.branchService.HasMethod(branch, models.MethodWiFiGPS)
 		}
 	}
 

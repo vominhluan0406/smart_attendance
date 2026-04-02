@@ -28,13 +28,20 @@
     </div>
 </div>
 <script>
-    // Hide scanner area, show result prominently
-    var scannerWrap = document.querySelector('.shadow-xl');
-    if (scannerWrap) scannerWrap.style.display = 'none';
-    var hint = document.querySelector('p.text-gray-500.text-sm.text-center');
-    if (hint) hint.style.display = 'none';
-    // Scroll to result
-    document.getElementById('checkin-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Only hide scanner UI if we are on the main attendance page
+    var qrReader = document.getElementById('reader');
+    if (qrReader) {
+        var scannerWrap = document.querySelector('.shadow-xl');
+        if (scannerWrap) scannerWrap.classList.add('hidden');
+        var hint = document.querySelector('p.text-gray-500.text-sm.text-center');
+        if (hint) hint.classList.add('hidden');
+    }
+    
+    // Scroll to result if target exists
+    var resultEl = document.getElementById('checkin-result');
+    if (resultEl) {
+        resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     if (window.showToast) showToast("Chấm công thành công!", "success");
 </script>
 {{else}}
@@ -55,10 +62,16 @@
     </div>
 </div>
 <script>
-    var scannerWrap = document.querySelector('.shadow-xl');
-    if (scannerWrap) scannerWrap.style.display = 'none';
-    var hint = document.querySelector('p.text-gray-500.text-sm.text-center');
-    if (hint) hint.style.display = 'none';
-    document.getElementById('checkin-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    var qrReader = document.getElementById('reader');
+    if (qrReader) {
+        var scannerWrap = document.querySelector('.shadow-xl');
+        if (scannerWrap) scannerWrap.classList.add('hidden');
+        var hint = document.querySelector('p.text-gray-500.text-sm.text-center');
+        if (hint) hint.classList.add('hidden');
+    }
+    var resultEl = document.getElementById('checkin-result');
+    if (resultEl) {
+        resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 </script>
 {{end}}
