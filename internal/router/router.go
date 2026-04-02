@@ -118,6 +118,9 @@ func New(deps Deps) http.Handler {
 				// Fallback Password check-in
 				ciRouter.Get("/password", attendance.PasswordCheckinPage)
 				ciRouter.With(middleware.RateLimit(deps.RateLimitPerMin)).Post("/password", attendance.PasswordLogForm)
+
+				// Combined WiFi + GPS check-in
+				ciRouter.Get("/wifi-gps", attendance.WiFiGPSCheckinPage)
 			})
 
 			// Manager redirect

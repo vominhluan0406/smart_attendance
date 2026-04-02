@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	"net"
 	"net/http"
 	"strings"
 
@@ -81,6 +80,8 @@ func (h *AttendanceHandler) AttendancePage(w http.ResponseWriter, r *http.Reques
 			data["IPEnabled"] = h.branchService.HasMethod(branch, models.MethodIP)
 			data["LocationEnabled"] = h.branchService.HasMethod(branch, models.MethodLocation)
 			data["FaceEnabled"] = h.branchService.HasMethod(branch, models.MethodFace)
+			data["PasswordEnabled"] = h.branchService.HasMethod(branch, models.MethodPassword)
+			data["WiFiGPSEnabled"] = h.branchService.HasMethod(branch, models.MethodWiFiGPS)
 		}
 	}
 
@@ -90,7 +91,21 @@ func (h *AttendanceHandler) AttendancePage(w http.ResponseWriter, r *http.Reques
 // PasswordCheckinPage shows a login form specifically for attendance check-in (shared device).
 func (h *AttendanceHandler) PasswordCheckinPage(w http.ResponseWriter, r *http.Request) {
 	data := userContext(r)
+	role := data["UserRole"].(string)
+
+	// Strictly only allow non-employees to see the check-in page
+	if role == string(models.RoleEmployee) {
+		log.Printf("[handler][attendance] blocking employee from password checkin page")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
 	h.render.Render(w, "password_checkin.html", data)
+}
+
+func (h *AttendanceHandler) WiFiGPSCheckinPage(w http.ResponseWriter, r *http.Request) {
+	data := userContext(r)
+	h.render.Render(w, "wifi_gps_checkin.html", data)
 }
 
 // QRDisplayPage shows the live QR code for a specific branch (Manager/Admin only).
@@ -209,13 +224,17 @@ func (h *AttendanceHandler) LogTimeForm(w http.ResponseWriter, r *http.Request) 
 	lat, lng := parseLatLng(r.FormValue("lat"), r.FormValue("lng"))
 
 	input := service.LogTimeInput{
-		UserID:       userID,
-		TOTPCode:     r.FormValue("totp_code"),
-		IP:           getClientIP(r),
-		Lat:          lat,
-		Lng:          lng,
-		FaceVerified: r.FormValue("face_verified") == "1",
+		UserID:          middleware.GetUserID(r),
+		TOTPCode:        r.FormValue("totp_code"),
+		ScannedBranchID: r.FormValue("scanned_branch_id"),
+		Lat:             lat,
+		Lng:             lng,
+		IP:              getClientIP(r),
+		FaceVerified:    r.FormValue("face_verified") == "1",
 	}
+
+	log.Printf("[handler][attendance] LogTimeForm input: User=%s, IP=%s, Lat=%v, Lng=%v, BranchID=%s, TOTP=%s",
+		input.UserID, input.IP, input.Lat, input.Lng, input.ScannedBranchID, input.TOTPCode)
 
 	result, err := h.attendanceService.LogTime(input)
 	if err != nil {
@@ -366,18 +385,4 @@ func translateAttendanceError(err error) string {
 		}
 		return "Có lỗi xảy ra. Vui lòng thử lại."
 	}
-}
-
-func getClientIP(r *http.Request) string {
-	if ip := r.Header.Get("X-Real-Ip"); ip != "" {
-		return ip
-	}
-	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-		return strings.Split(forwarded, ",")[0]
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
 }
