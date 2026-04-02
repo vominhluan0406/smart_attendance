@@ -144,13 +144,18 @@ func RawMigrateTurso(db *gorm.DB) error {
 		}
 	}
 
+	// Update user_credentials with specific biometric fields
+	alterTable(db, "user_credentials", "attestation_type", "TEXT")
+	alterTable(db, "user_credentials", "authenticator_aaguid", "BLOB")
+	alterTable(db, "user_credentials", "sign_count", "INTEGER DEFAULT 0")
+
 	log.Println("[db] background column check (RawMigrate) completed")
 
 	tables := []string{
 		`CREATE TABLE IF NOT EXISTS branches (id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME, name TEXT NOT NULL, address TEXT, lat REAL, lng REAL, radius_m INTEGER DEFAULT 200, totp_secret TEXT, beacon_uuid TEXT, require_biometric BOOLEAN DEFAULT 0, allowed_methods TEXT NOT NULL DEFAULT 'qr_totp,ip,location,password', work_start_time TEXT DEFAULT '08:00', work_end_time TEXT DEFAULT '17:00', is_active INTEGER DEFAULT 1)`,
 		`CREATE TABLE IF NOT EXISTS departments (id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME, branch_id TEXT NOT NULL, name TEXT NOT NULL, code TEXT, manager_id TEXT, is_active INTEGER DEFAULT 1)`,
 		`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME, employee_code TEXT, email TEXT NOT NULL, password_hash TEXT, full_name TEXT NOT NULL, phone TEXT, role TEXT NOT NULL DEFAULT 'employee', branch_id TEXT, department_id TEXT, position TEXT, join_date DATETIME, is_active INTEGER DEFAULT 1, o_auth_provider TEXT, o_auth_id TEXT)`,
-		`CREATE TABLE IF NOT EXISTS user_credentials (id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME, user_id TEXT NOT NULL, credential_id TEXT NOT NULL, public_key TEXT NOT NULL, transport TEXT, counter INTEGER DEFAULT 0)`,
+		`CREATE TABLE IF NOT EXISTS user_credentials (id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME, user_id TEXT NOT NULL, credential_id BLOB NOT NULL, public_key BLOB NOT NULL, attestation_type TEXT, authenticator_aaguid BLOB, sign_count INTEGER DEFAULT 0, transport TEXT)`,
 		`CREATE TABLE IF NOT EXISTS branch_ip_whitelists (id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME, branch_id TEXT NOT NULL, ip_c_id_r TEXT NOT NULL, label TEXT)`,
 		`CREATE TABLE IF NOT EXISTS branch_locations (id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME, branch_id TEXT NOT NULL, label TEXT, lat REAL NOT NULL, lng REAL NOT NULL, radius_m INTEGER DEFAULT 200)`,
 		`CREATE TABLE IF NOT EXISTS work_shifts (id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME, branch_id TEXT NOT NULL, name TEXT NOT NULL, code TEXT, start_time TEXT NOT NULL, end_time TEXT NOT NULL, grace_period_minutes INTEGER DEFAULT 15, late_threshold_minutes INTEGER DEFAULT 0, is_overnight INTEGER DEFAULT 0, break_duration_minutes INTEGER DEFAULT 60, working_days TEXT DEFAULT '1,2,3,4,5', color TEXT DEFAULT '#3B82F6', is_default INTEGER DEFAULT 0, is_active INTEGER DEFAULT 1)`,
