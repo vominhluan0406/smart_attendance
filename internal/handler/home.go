@@ -29,7 +29,9 @@ func (h *HomeHandler) Index(w http.ResponseWriter, r *http.Request) {
 		if branch, err := h.branchService.GetByIDCached(branchID); err == nil {
 			data["QREnabled"] = h.branchService.HasMethod(branch, models.MethodQRTOTP)
 			data["FaceEnabled"] = h.branchService.HasMethod(branch, models.MethodFace)
-			data["PasswordEnabled"] = h.branchService.HasMethod(branch, models.MethodPassword)
+			data["PasswordEnabled"] = h.branchService.HasMethod(branch, models.MethodPassword) && data["UserRole"] != string(models.RoleEmployee)
+			data["WiFiGPSEnabled"] = h.branchService.HasMethod(branch, models.MethodWiFiGPS)
+			log.Printf("[home] Role=%s, Branch=%s, PasswordEnabled=%v", data["UserRole"], branchID, data["PasswordEnabled"])
 		}
 	}
 

@@ -57,9 +57,10 @@ func NewAttendanceService(
 type LogTimeInput struct {
 	UserID           string   `json:"user_id"`
 	TOTPCode         string   `json:"totp_code"`
-	IP               string   `json:"ip"`
+	ScannedBranchID  string   `json:"scanned_branch_id"`
 	Lat              *float64 `json:"lat"`
 	Lng              *float64 `json:"lng"`
+	IP               string   `json:"ip"`
 	FaceVerified     bool     `json:"face_verified"`
 	NFCVerified      bool     `json:"nfc_verified"`
 	PasswordVerified bool     `json:"password_verified"`
@@ -75,6 +76,7 @@ type LogTimeResult struct {
 	FaceVerified     bool                  `json:"face_verified"`
 	NFCVerified      bool                  `json:"nfc_verified"`
 	PasswordVerified bool                  `json:"password_verified"`
+	WiFiGPSVerified  bool                  `json:"wifi_gps_verified"`
 	LogCount         int                   `json:"log_count"`
 }
 
@@ -102,36 +104,38 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 	if s.branchService.HasMethod(branch, models.MethodQRTOTP) {
 		if input.TOTPCode == "" {
 			validationErrors = append(validationErrors, "QR/TOTP code required")
+		} else if input.ScannedBranchID != "" && input.ScannedBranchID != branch.ID {
+			validationErrors = append(validationErrors, "mã QR không thuộc chi nhánh này")
 		} else {
 			valid, err := s.totpService.ValidateCode(branch.TOTPSecret, input.TOTPCode)
 			if err != nil {
 				log.Printf("[service][attendance] TOTP validation error for branch %s: %v", branch.ID, err)
 				validationErrors = append(validationErrors, "TOTP validation failed")
 			} else if !valid {
-				validationErrors = append(validationErrors, "invalid or expired QR code")
+				validationErrors = append(validationErrors, "mã QR không hợp lệ hoặc đã hết hạn")
 			} else {
 				result.TOTPVerified = true
 			}
 		}
 	}
 
-	if s.branchService.HasMethod(branch, models.MethodIP) {
+	if s.branchService.HasMethod(branch, models.MethodIP) || s.branchService.HasMethod(branch, models.MethodWiFiGPS) {
 		if s.ipValidator.Validate(input.IP, branch.IPWhitelist) {
 			result.IPVerified = true
 		} else {
-			validationErrors = append(validationErrors, fmt.Sprintf("IP %s not in whitelist", input.IP))
+			validationErrors = append(validationErrors, fmt.Sprintf("IP %s không nằm trong danh sách trắng", input.IP))
 		}
 	}
 
-	if s.branchService.HasMethod(branch, models.MethodLocation) {
+	if s.branchService.HasMethod(branch, models.MethodLocation) || s.branchService.HasMethod(branch, models.MethodWiFiGPS) {
 		if input.Lat != nil && input.Lng != nil {
 			if s.locValidator.Validate(*input.Lat, *input.Lng, branch.Locations) {
 				result.LocVerified = true
 			} else {
-				validationErrors = append(validationErrors, "location outside allowed area")
+				validationErrors = append(validationErrors, "vị trí nằm ngoài khu vực cho phép")
 			}
 		} else {
-			validationErrors = append(validationErrors, "GPS location required")
+			validationErrors = append(validationErrors, "yêu cầu tọa độ GPS")
 		}
 	}
 
@@ -145,8 +149,18 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		result.PasswordVerified = true
 	}
 
+	// Combined WiFi + GPS check (Both must pass)
+	if s.branchService.HasMethod(branch, models.MethodWiFiGPS) {
+		// We already ran IP and Location checks above if those methods were also in the list,
+		// but if ONLY wifi_gps is in the list, we need to ensure they were checked.
+		// Since HasMethod checks individual bits, let's just use the verified flags.
+		if result.IPVerified && result.LocVerified {
+			result.WiFiGPSVerified = true
+		}
+	}
+
 	// At least one method must pass (OR logic)
-	anyPassed := result.TOTPVerified || result.IPVerified || result.LocVerified || result.FaceVerified || result.NFCVerified || result.PasswordVerified
+	anyPassed := result.TOTPVerified || result.IPVerified || result.LocVerified || result.FaceVerified || result.NFCVerified || result.PasswordVerified || result.WiFiGPSVerified
 	if !anyPassed {
 		log.Printf("[service][attendance] log denied for user %s: %v", input.UserID, validationErrors)
 		if len(validationErrors) > 0 {

@@ -9,6 +9,7 @@ const (
 	MethodLocation CheckInMethod = "location"
 	MethodFace     CheckInMethod = "face"
 	MethodPassword CheckInMethod = "password"
+	MethodWiFiGPS  CheckInMethod = "wifi_gps"
 	MethodNFC      CheckInMethod = "nfc"
 	MethodBLE      CheckInMethod = "ble"
 )

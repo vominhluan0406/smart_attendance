@@ -90,7 +90,21 @@ func (h *AttendanceHandler) AttendancePage(w http.ResponseWriter, r *http.Reques
 // PasswordCheckinPage shows a login form specifically for attendance check-in (shared device).
 func (h *AttendanceHandler) PasswordCheckinPage(w http.ResponseWriter, r *http.Request) {
 	data := userContext(r)
+	role := data["UserRole"].(string)
+
+	// Strictly only allow non-employees to see the check-in page
+	if role == string(models.RoleEmployee) {
+		log.Printf("[handler][attendance] blocking employee from password checkin page")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
 	h.render.Render(w, "password_checkin.html", data)
+}
+
+func (h *AttendanceHandler) WiFiGPSCheckinPage(w http.ResponseWriter, r *http.Request) {
+	data := userContext(r)
+	h.render.Render(w, "wifi_gps_checkin.html", data)
 }
 
 // QRDisplayPage shows the live QR code for a specific branch (Manager/Admin only).
@@ -209,12 +223,13 @@ func (h *AttendanceHandler) LogTimeForm(w http.ResponseWriter, r *http.Request) 
 	lat, lng := parseLatLng(r.FormValue("lat"), r.FormValue("lng"))
 
 	input := service.LogTimeInput{
-		UserID:       userID,
-		TOTPCode:     r.FormValue("totp_code"),
-		IP:           getClientIP(r),
-		Lat:          lat,
-		Lng:          lng,
-		FaceVerified: r.FormValue("face_verified") == "1",
+		UserID:          middleware.GetUserID(r),
+		TOTPCode:        r.FormValue("totp_code"),
+		ScannedBranchID: r.FormValue("scanned_branch_id"),
+		Lat:             lat,
+		Lng:             lng,
+		IP:              getClientIP(r),
+		FaceVerified:    r.FormValue("face_verified") == "1",
 	}
 
 	result, err := h.attendanceService.LogTime(input)

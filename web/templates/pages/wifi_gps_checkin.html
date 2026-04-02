@@ -1,0 +1,84 @@
+{{define "title"}}Smart Attendance — WiFi + GPS Check-in{{end}}
+
+{{define "body"}}
+<div class="min-h-full bg-gray-50 pb-12">
+    {{template "nav" .}}
+
+    <main class="mx-auto max-w-lg px-4 py-12 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 animate-in fade-in zoom-in duration-500">
+            <div class="p-8 text-center" id="status-container">
+                <div class="inline-flex items-center justify-center p-4 bg-emerald-50 rounded-full mb-6">
+                    <i data-lucide="map-pin" class="w-10 h-10 text-emerald-600 animate-pulse"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Đang xác thực...</h2>
+                <p class="text-gray-500 mb-8" id="status-text">Vui lòng cho phép truy cập vị trí để hoàn tất chấm công qua WiFi + GPS.</p>
+
+                <div class="space-y-4">
+                    <div id="gps-status" class="flex items-center justify-center text-sm text-gray-400">
+                        <span class="relative flex h-2 w-2 mr-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-gray-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-gray-400"></span>
+                        </span>
+                        Đang lấy tọa độ GPS...
+                    </div>
+                </div>
+
+                <!-- Hidden form for HTMX submission -->
+                <form id="checkin-form" hx-post="/attendance/log" hx-target="#status-container" hx-swap="outerHTML" class="hidden">
+                    <input type="hidden" name="lat" id="lat">
+                    <input type="hidden" name="lng" id="lng">
+                    <button type="submit" id="submit-btn"></button>
+                </form>
+
+                <div class="mt-8">
+                    <a href="/" class="text-sm font-medium text-emerald-600 hover:text-emerald-700 flex items-center justify-center gap-1">
+                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                        Quay lại trang chủ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+    function startAutoCheckin() {
+        const latField = document.getElementById('lat');
+        const lngField = document.getElementById('lng');
+        const gpsStatus = document.getElementById('gps-status');
+        const statusText = document.getElementById('status-text');
+
+        if (!navigator.geolocation) {
+            gpsStatus.innerHTML = '<span class="text-red-500">Trình duyệt không hỗ trợ GPS</span>';
+            return;
+        }
+
+        gpsStatus.innerHTML = '<span class="relative flex h-2 w-2 mr-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span></span> Đang lấy vị trí...';
+        gpsStatus.classList.replace('text-gray-400', 'text-blue-600');
+
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                latField.value = pos.coords.latitude;
+                lngField.value = pos.coords.longitude;
+                
+                gpsStatus.innerHTML = '<span class="relative flex h-2 w-2 mr-2"><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span> Đã lấy được vị trí';
+                gpsStatus.classList.replace('text-blue-600', 'text-green-600');
+                statusText.innerText = 'Đang gửi yêu cầu xác thực WiFi + GPS...';
+
+                // Submit form
+                document.getElementById('submit-btn').click();
+            },
+            function(err) {
+                gpsStatus.innerHTML = '<span class="text-red-500">Lỗi GPS: ' + err.message + '</span>';
+                statusText.innerText = 'Vui lòng bật định vị và thử lại.';
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    }
+
+    // Start when page loads
+    document.addEventListener('DOMContentLoaded', startAutoCheckin);
+</script>
+{{end}}
