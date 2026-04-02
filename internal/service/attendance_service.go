@@ -64,6 +64,7 @@ type LogTimeInput struct {
 	FaceVerified     bool     `json:"face_verified"`
 	NFCVerified      bool     `json:"nfc_verified"`
 	PasswordVerified bool     `json:"password_verified"`
+	BiometricVerified bool    `json:"biometric_verified"`
 }
 
 // LogTimeResult is returned after a successful time log.
@@ -159,6 +160,10 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		}
 	}
 
+	if branch.RequireBiometric && !input.BiometricVerified {
+		validationErrors = append(validationErrors, "Yêu cầu xác thực vân tay/FaceID")
+	}
+
 	// 3. Final decision: At least one of the ALLOWED methods must have passed verification.
 	// We check each verified flag against whether its corresponding method is actually enabled for the branch.
 	// This ensures that if 'wifi_gps' is the only method, individual IP or Location passes aren't enough.
@@ -211,7 +216,8 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		LocVerified:      result.LocVerified,
 		FaceVerified:     result.FaceVerified,
 		NFCVerified:      result.NFCVerified,
-		PasswordVerified: result.PasswordVerified,
+		PasswordVerified: input.PasswordVerified,
+		BiometricVerified: input.BiometricVerified,
 	}
 	if err := s.logRepo.Create(attLog); err != nil {
 		return nil, fmt.Errorf("create attendance log: %w", err)

@@ -21,7 +21,8 @@
                     <input type="hidden" name="lat" id="lat">
                     <input type="hidden" name="lng" id="lng">
                     <input type="hidden" name="face_verified" id="face_verified" value="0">
-                    <button type="submit" id="submit-btn"></button>
+                    <input type="hidden" name="biometric_verified" id="biometric_verified" value="0">
+                    <button type="submit" id="submit-btn" class="hidden"></button>
                 </form>
             </div>
 
@@ -237,8 +238,21 @@
                         if (sl) sl.classList.add('opacity-0');
                         document.getElementById('scanned_branch_id').value = parts[0];
                         document.getElementById('totp_code').value = parts[1];
-                        readerEl.innerHTML = '<div class="text-center p-12 bg-white h-full flex flex-col items-center justify-center"><div class="inline-flex items-center justify-center p-4 bg-indigo-100 rounded-full mb-6 animate-bounce"><svg class="w-12 h-12 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div><p class="text-xl font-bold text-gray-900">Quét thành công!</p><p class="text-sm text-gray-500 mt-2">Đang xử lý...</p></div>';
-                        document.getElementById('submit-btn').click();
+                        readerEl.innerHTML = '<div class="text-center p-12 bg-white h-full flex flex-col items-center justify-center"><div class="inline-flex items-center justify-center p-4 bg-indigo-100 rounded-full mb-6 animate-bounce"><svg class="w-12 h-12 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div><p class="text-xl font-bold text-gray-900">Quét thành công!</p><p class="text-sm text-gray-500 mt-2">Đang xác thực bảo mật...</p></div>';
+                        
+                        // Check if Biometric is required
+                        if ("{{.BiometricRequired}}" === "true") {
+                            authenticateBiometric(function(success) {
+                                if (success) {
+                                    document.getElementById('biometric_verified').value = "1";
+                                    document.getElementById('submit-btn').click();
+                                } else {
+                                    location.reload(); // Reset on fail
+                                }
+                            });
+                        } else {
+                            document.getElementById('submit-btn').click();
+                        }
                     });
                 }
             },

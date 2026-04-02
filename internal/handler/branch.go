@@ -103,6 +103,7 @@ func (h *BranchHandler) CreateForm(w http.ResponseWriter, r *http.Request) {
 		AllowedMethods: strings.Join(methods, ","),
 		WorkStartTime:  r.FormValue("work_start_time"),
 		WorkEndTime:    r.FormValue("work_end_time"),
+		RequireBiometric: r.FormValue("require_biometric") == "1",
 	}
 
 	if _, err := h.branchService.Create(input); err != nil {
@@ -127,6 +128,7 @@ func (h *BranchHandler) UpdateForm(w http.ResponseWriter, r *http.Request) {
 	lat, lng := parseLatLng(r.FormValue("lat"), r.FormValue("lng"))
 	radiusM, _ := strconv.Atoi(r.FormValue("radius_m"))
 	isActive := r.FormValue("is_active") == "on"
+	requireBiometric := r.FormValue("require_biometric") == "1"
 	methods := r.Form["allowed_methods"]
 	log.Printf("[handler][branch] UpdateForm ID=%s, methods=%v", id, methods)
 
@@ -140,6 +142,7 @@ func (h *BranchHandler) UpdateForm(w http.ResponseWriter, r *http.Request) {
 		WorkStartTime:  r.FormValue("work_start_time"),
 		WorkEndTime:    r.FormValue("work_end_time"),
 		IsActive:       &isActive,
+		RequireBiometric: &requireBiometric,
 	}
 
 	if _, err := h.branchService.Update(id, input); err != nil {

@@ -21,6 +21,7 @@ type AttendanceHandler struct {
 	totpService       *service.TOTPService
 	userService       *service.UserService
 	authService       *service.AuthService
+	webauthnService   *service.WebAuthnService
 	render            *renderer.Renderer
 }
 
@@ -30,6 +31,7 @@ func NewAttendanceHandler(
 	totpService *service.TOTPService,
 	userService *service.UserService,
 	authService *service.AuthService,
+	webauthnService *service.WebAuthnService,
 	render *renderer.Renderer,
 ) *AttendanceHandler {
 	return &AttendanceHandler{
@@ -38,6 +40,7 @@ func NewAttendanceHandler(
 		totpService:       totpService,
 		userService:       userService,
 		authService:       authService,
+		webauthnService:   webauthnService,
 		render:            render,
 	}
 }
@@ -82,6 +85,7 @@ func (h *AttendanceHandler) AttendancePage(w http.ResponseWriter, r *http.Reques
 			data["FaceEnabled"] = h.branchService.HasMethod(branch, models.MethodFace)
 			data["PasswordEnabled"] = h.branchService.HasMethod(branch, models.MethodPassword)
 			data["WiFiGPSEnabled"] = h.branchService.HasMethod(branch, models.MethodWiFiGPS)
+			data["BiometricRequired"] = branch.RequireBiometric
 		}
 	}
 
@@ -105,7 +109,49 @@ func (h *AttendanceHandler) PasswordCheckinPage(w http.ResponseWriter, r *http.R
 
 func (h *AttendanceHandler) WiFiGPSCheckinPage(w http.ResponseWriter, r *http.Request) {
 	data := userContext(r)
+	branchID := middleware.GetBranchID(r)
+	if branchID != "" {
+		if branch, err := h.branchService.GetByIDCached(branchID); err == nil {
+			data["BiometricRequired"] = branch.RequireBiometric
+		}
+	}
+
 	h.render.Render(w, "wifi_gps_checkin.html", data)
+}
+
+func (h *AttendanceHandler) BiometricLoginBegin(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	user, err := h.userService.GetByID(userID)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "User not found"})
+		return
+	}
+
+	options, err := h.webauthnService.BeginLogin(user)
+	if err != nil {
+		log.Printf("[handler][attendance] webauthn login begin failed: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, options)
+}
+
+func (h *AttendanceHandler) BiometricLoginFinish(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	user, err := h.userService.GetByID(userID)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "User not found"})
+		return
+	}
+
+	if err := h.webauthnService.FinishLogin(user, r); err != nil {
+		log.Printf("[handler][attendance] webauthn login finish failed: %v", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "biometric_verified": "1"})
 }
 
 // QRDisplayPage shows the live QR code for a specific branch (Manager/Admin only).
@@ -231,6 +277,7 @@ func (h *AttendanceHandler) LogTimeForm(w http.ResponseWriter, r *http.Request) 
 		Lng:             lng,
 		IP:              getClientIP(r),
 		FaceVerified:    r.FormValue("face_verified") == "1",
+		BiometricVerified: r.FormValue("biometric_verified") == "1",
 	}
 
 	log.Printf("[handler][attendance] LogTimeForm input: User=%s, IP=%s, Lat=%v, Lng=%v, BranchID=%s, TOTP=%s",

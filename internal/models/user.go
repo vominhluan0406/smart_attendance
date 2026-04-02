@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/go-webauthn/webauthn/webauthn"
+)
 
 type Role string
 
@@ -26,5 +30,32 @@ type User struct {
 	OAuthProvider string     `gorm:"type:text" json:"oauth_provider,omitempty"`
 	OAuthID       string     `gorm:"type:text;index" json:"oauth_id,omitempty"`
 
+
 	Department *Department `gorm:"foreignKey:DepartmentID" json:"department,omitempty"`
+
+	Credentials []UserCredential `gorm:"foreignKey:UserID" json:"-"`
+}
+
+func (u *User) WebAuthnID() []byte {
+	return []byte(u.ID)
+}
+
+func (u *User) WebAuthnName() string {
+	return u.Email
+}
+
+func (u *User) WebAuthnDisplayName() string {
+	return u.FullName
+}
+
+func (u *User) WebAuthnIcon() string {
+	return ""
+}
+
+func (u *User) WebAuthnCredentials() []webauthn.Credential {
+	res := make([]webauthn.Credential, len(u.Credentials))
+	for i, c := range u.Credentials {
+		res[i] = c.ToWebAuthn()
+	}
+	return res
 }
