@@ -22,7 +22,7 @@ type Branch struct {
 	Lng            *float64 `gorm:"type:real" json:"lng,omitempty"`
 	RadiusM        int      `gorm:"default:200" json:"radius_m"`
 	TOTPSecret     string   `gorm:"type:text" json:"-"`
-	BeaconUUID     string   `gorm:"type:text" json:"beacon_uuid,omitempty"`
+	BeaconUUID     string   `gorm:"type:text;column:beacon_uuid" json:"beacon_uuid,omitempty"`
 	AllowedMethods string   `gorm:"type:text;not null;default:'qr_totp,ip,location'"`
 	RequireBiometric bool   `gorm:"default:false" json:"require_biometric"`
 	WorkStartTime  string   `gorm:"type:text;not null;default:'08:00'" json:"work_start_time"` // Deprecated: use WorkShift
