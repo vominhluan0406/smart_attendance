@@ -22,4 +22,5 @@ type AttendanceLog struct {
 	FaceVerified     bool      `gorm:"default:false" json:"face_verified"`
 	NFCVerified      bool      `gorm:"default:false" json:"nfc_verified"`
 	PasswordVerified bool      `gorm:"default:false" json:"password_verified"`
+	BiometricVerified bool     `gorm:"default:false" json:"biometric_verified"`
 }

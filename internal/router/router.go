@@ -23,6 +23,7 @@ type Deps struct {
 	ReportService     *service.ReportService
 	DashboardService  *service.DashboardService
 	PermissionService *service.PermissionService
+	WebAuthnService   *service.WebAuthnService
 	Config            *config.Config
 	RateLimitPerMin   int
 }
@@ -41,12 +42,12 @@ func New(deps Deps) http.Handler {
 	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
 	// Handlers
-	home := handler.NewHomeHandler(deps.Render, deps.BranchService)
+	home := handler.NewHomeHandler(deps.Render, deps.BranchService, deps.WebAuthnService, deps.UserService)
 	oauth := handler.NewOAuthHandler(deps.AuthService, deps.Config)
 	auth := handler.NewAuthHandler(deps.AuthService, deps.Render, oauth.IsEnabled())
-	users := handler.NewUserHandler(deps.UserService, deps.AuthService, deps.BranchService, deps.Render)
+	users := handler.NewUserHandler(deps.UserService, deps.AuthService, deps.BranchService, deps.WebAuthnService, deps.Render)
 	branches := handler.NewBranchHandler(deps.BranchService, deps.Render)
-	attendance := handler.NewAttendanceHandler(deps.AttendanceService, deps.BranchService, deps.TOTPService, deps.UserService, deps.AuthService, deps.Render)
+	attendance := handler.NewAttendanceHandler(deps.AttendanceService, deps.BranchService, deps.TOTPService, deps.UserService, deps.AuthService, deps.WebAuthnService, deps.Render)
 	reports := handler.NewReportHandler(deps.ReportService, deps.BranchService, deps.Render)
 	dashboard := handler.NewDashboardHandler(deps.DashboardService, deps.BranchService, deps.Render)
 
@@ -152,6 +153,15 @@ func New(deps Deps) http.Handler {
 			ur.Get("/{id}/edit", users.EditPage)
 			ur.Put("/{id}", users.UpdateForm)
 			ur.Delete("/{id}", users.DeleteAction)
+		})
+
+		// User Profile & Biometrics
+		pr.Get("/profile", users.ProfilePage)
+		pr.Route("/api/webauthn", func(wr chi.Router) {
+			wr.Get("/register/begin", users.RegisterBiometricBegin)
+			wr.Post("/register/finish", users.RegisterBiometricFinish)
+			wr.Get("/login/begin", attendance.BiometricLoginBegin)
+			wr.Post("/login/finish", attendance.BiometricLoginFinish)
 		})
 	})
 

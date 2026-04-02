@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -18,11 +19,12 @@ type UserHandler struct {
 	userService   *service.UserService
 	authService   *service.AuthService
 	branchService *service.BranchService
+	webauthnService *service.WebAuthnService
 	render        *renderer.Renderer
 }
 
-func NewUserHandler(userService *service.UserService, authService *service.AuthService, branchService *service.BranchService, render *renderer.Renderer) *UserHandler {
-	return &UserHandler{userService: userService, authService: authService, branchService: branchService, render: render}
+func NewUserHandler(userService *service.UserService, authService *service.AuthService, branchService *service.BranchService, webauthnService *service.WebAuthnService, render *renderer.Renderer) *UserHandler {
+	return &UserHandler{userService: userService, authService: authService, branchService: branchService, webauthnService: webauthnService, render: render}
 }
 
 // --- HTMX Pages ---
@@ -86,6 +88,54 @@ func (h *UserHandler) EditPage(w http.ResponseWriter, r *http.Request) {
 	data["Branches"] = branches
 	data["CurrentBranch"] = currentBranch
 	h.render.Render(w, "user_edit.html", data)
+}
+
+func (h *UserHandler) ProfilePage(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	user, err := h.userService.GetByID(userID)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	data := userContext(r)
+	data["User"] = user
+	h.render.Render(w, "profile.html", data)
+}
+
+func (h *UserHandler) RegisterBiometricBegin(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	user, err := h.userService.GetByID(userID)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "User not found"})
+		return
+	}
+
+	options, err := h.webauthnService.BeginRegistration(user)
+	if err != nil {
+		log.Printf("[handler][user] webauthn begin failed: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, options)
+}
+
+func (h *UserHandler) RegisterBiometricFinish(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	user, err := h.userService.GetByID(userID)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "User not found"})
+		return
+	}
+
+	if err := h.webauthnService.FinishRegistration(user, r); err != nil {
+		log.Printf("[handler][user] webauthn finish failed: %v", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // --- HTMX Form Handlers ---

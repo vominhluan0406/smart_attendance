@@ -1,0 +1,124 @@
+{{define "title"}}Smart Attendance — Hồ sơ cá nhân{{end}}
+
+{{define "body"}}
+<div class="min-h-full bg-gray-50 pb-12">
+    {{template "nav" .}}
+
+    <main class="mx-auto max-w-lg px-4 py-12 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+            <div class="p-8">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="p-3 bg-indigo-100 rounded-2xl">
+                        <i data-lucide="user" class="w-8 h-8 text-indigo-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">{{.User.FullName}}</h2>
+                        <p class="text-sm text-gray-500">{{.User.Email}}</p>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                        <h3 class="text-sm font-bold text-gray-700 uppercase mb-4 flex items-center gap-2">
+                            <i data-lucide="fingerprint" class="w-4 h-4 text-emerald-600"></i>
+                            Xác thực Sinh trắc học
+                        </h3>
+                        <p class="text-sm text-gray-500 mb-6">
+                            Đăng ký vân tay hoặc khuôn mặt trên thiết bị này để chấm công nhanh hơn và bảo mật hơn.
+                        </p>
+                        
+                        <div id="biometric-status" class="hidden mb-4 p-3 rounded-xl text-sm"></div>
+
+                        <button id="register-biometric" class="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-emerald-700 active:scale-95 transition-all">
+                            <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                            Đăng ký thiết bị mới
+                        </button>
+                    </div>
+
+                    <div class="p-4 border border-indigo-50 rounded-2xl bg-indigo-50/20">
+                        <p class="text-xs text-indigo-400 leading-relaxed text-center">
+                            Lưu ý: Thiết bị của bạn cần hỗ trợ bảo mật sinh trắc học và bạn phải thiết lập sẵn khóa màn hình (PIN, Pattern, hoặc Biometric).
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+    document.getElementById('register-biometric').addEventListener('click', async function() {
+        const statusEl = document.getElementById('biometric-status');
+        const btn = this;
+        
+        statusEl.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'bg-emerald-50', 'text-emerald-700');
+        statusEl.classList.add('bg-blue-50', 'text-blue-700');
+        statusEl.innerText = 'Đang khởi tạo yêu cầu...';
+        btn.disabled = true;
+
+        try {
+            // 1. Get options from server
+            const beginResp = await fetch('/api/webauthn/register/begin');
+            if (!beginResp.ok) throw new Error('Không thể bắt đầu đăng ký');
+            
+            const options = await beginResp.json();
+
+            // 2. Base64 decode some fields as required by WebAuthn
+            options.publicKey.challenge = Uint8Array.from(atob(options.publicKey.challenge), c => c.charCodeAt(0));
+            options.publicKey.user.id = Uint8Array.from(atob(options.publicKey.user.id), c => c.charCodeAt(0));
+            if (options.publicKey.excludeCredentials) {
+                options.publicKey.excludeCredentials.forEach(c => {
+                    c.id = Uint8Array.from(atob(c.id), c => c.charCodeAt(0));
+                });
+            }
+
+            // 3. Create credentials using native browser API
+            const credential = await navigator.credentials.create({
+                publicKey: options.publicKey
+            });
+
+            // 4. Encode result to send back to server
+            const credJson = {
+                id: credential.id,
+                rawId: btoa(String.fromCharCode.apply(null, new Uint8Array(credential.rawId))),
+                type: credential.type,
+                response: {
+                    attestationObject: btoa(String.fromCharCode.apply(null, new Uint8Array(credential.response.attestationObject))),
+                    clientDataJSON: btoa(String.fromCharCode.apply(null, new Uint8Array(credential.response.clientDataJSON)))
+                }
+            };
+
+            // 5. Send back to server
+            const finishResp = await fetch('/api/webauthn/register/finish', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(credJson)
+            });
+
+            if (!finishResp.ok) {
+                const err = await finishResp.json();
+                throw new Error(err.error || 'Đăng ký thất bại');
+            }
+
+            statusEl.classList.replace('bg-blue-50', 'bg-emerald-50');
+            statusEl.classList.replace('text-blue-700', 'text-emerald-700');
+            statusEl.innerText = 'Đăng ký thiết bị thành công!';
+            
+        } catch (err) {
+            console.error('WebAuthn Error:', err);
+            statusEl.classList.replace('bg-blue-50', 'bg-red-50');
+            statusEl.classList.replace('text-blue-700', 'text-red-700');
+            statusEl.innerText = 'Lỗi: ' + err.message;
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    // Helper to convert base64 to buffer
+    function base64ToBuffer(base64) {
+        return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    }
+</script>
+{{end}}

@@ -59,9 +59,11 @@
                 </div>
             </div>
             <div class="flex items-center gap-3">
-                <div class="hidden sm:block text-right">
-                    <p class="text-sm font-bold text-gray-900 leading-tight">{{.UserName}}</p>
-                    {{if .BranchName}}<p class="text-xs text-gray-400">{{.BranchName}}</p>{{end}}
+                <div class="hidden sm:block text-right mr-2">
+                    <a href="/profile" class="group">
+                        <p class="text-sm font-bold text-gray-900 leading-tight group-hover:text-indigo-600 transition-colors">{{.UserName}}</p>
+                        {{if .BranchName}}<p class="text-xs text-gray-400">{{.BranchName}}</p>{{end}}
+                    </a>
                 </div>
                 <a href="/auth/logout"
                     class="text-sm font-medium text-gray-500 hover:text-gray-700 flex items-center gap-1">
@@ -99,6 +101,10 @@
     <a href="/reports/my-history" class="bottom-nav-item">
         <i data-lucide="history"></i>
         <span>Lịch sử</span>
+    </a>
+    <a href="/profile" class="bottom-nav-item">
+        <i data-lucide="user"></i>
+        <span>Hồ sơ</span>
     </a>
 </nav>
 

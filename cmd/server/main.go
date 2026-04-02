@@ -59,6 +59,7 @@ func main() {
 			&models.Permission{},
 			&models.RolePermission{},
 			&models.AttendanceLog{},
+			&models.UserCredential{},
 		); err != nil {
 			log.Fatalf("auto-migrate failed: %v", err)
 		}
@@ -89,6 +90,7 @@ func main() {
 	attendanceLogRepo := repository.NewAttendanceLogRepository(db)
 	shiftRepo := repository.NewShiftRepository(db)
 	permRepo := repository.NewPermissionRepository(db)
+	credRepo := repository.NewUserCredentialRepository(db)
 
 	// Init services
 	authService := service.NewAuthService(userRepo, branchRepo, cfg)
@@ -98,6 +100,12 @@ func main() {
 	ipValidator := service.NewIPValidator()
 	locValidator := service.NewLocationValidator()
 	permissionService := service.NewPermissionService(permRepo, appCache)
+
+	// WebAuthn RPID and Origin from config or default
+	rpID := "localhost" // Should come from config in production
+	origin := "http://localhost:8080"
+	webAuthnService, _ := service.NewWebAuthnService(rpID, origin, credRepo, userRepo, appCache)
+
 	attendanceService := service.NewAttendanceService(attendanceRepo, attendanceLogRepo, shiftRepo, branchService, userService, totpService, ipValidator, locValidator)
 	reportService := service.NewReportService(attendanceRepo)
 	dashboardService := service.NewDashboardService(attendanceRepo, branchRepo, userRepo, appCache, db)
@@ -113,6 +121,7 @@ func main() {
 		ReportService:     reportService,
 		DashboardService:  dashboardService,
 		PermissionService: permissionService,
+		WebAuthnService:   webAuthnService,
 		Config:            cfg,
 		RateLimitPerMin:   cfg.RateLimitPerMin,
 	})

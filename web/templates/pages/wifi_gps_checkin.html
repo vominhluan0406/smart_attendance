@@ -27,6 +27,7 @@
                 <form id="checkin-form" hx-post="/attendance/log" hx-target="#status-container" hx-swap="outerHTML" class="hidden">
                     <input type="hidden" name="lat" id="lat">
                     <input type="hidden" name="lng" id="lng">
+                    <input type="hidden" name="biometric_verified" id="biometric_verified" value="0">
                     <button type="submit" id="submit-btn"></button>
                 </form>
 
@@ -92,10 +93,21 @@
                 
                 gpsStatus.innerHTML = '<span class="relative flex h-2 w-2 mr-2"><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span> Đã lấy được vị trí';
                 gpsStatus.classList.replace('text-blue-600', 'text-green-600');
-                statusText.innerText = 'Đang gửi yêu cầu xác thực WiFi + GPS...';
+                statusText.innerText = 'Đang xác thực bảo mật...';
 
-                // Submit form
-                document.getElementById('submit-btn').click();
+                // Check if Biometric is required
+                if ("{{.BiometricRequired}}" === "true") {
+                    authenticateBiometric(function(success) {
+                        if (success) {
+                            document.getElementById('biometric_verified').value = "1";
+                            document.getElementById('submit-btn').click();
+                        } else {
+                            // Do nothing, alert already shown by authenticateBiometric
+                        }
+                    });
+                } else {
+                    document.getElementById('submit-btn').click();
+                }
             },
             handleGPSError,
             { enableHighAccuracy: true, timeout: 5000 }
@@ -107,6 +119,53 @@
         document.addEventListener('DOMContentLoaded', startAutoCheckin);
     } else {
         startAutoCheckin();
+    }
+    async function authenticateBiometric(callback) {
+        try {
+            const beginResp = await fetch('/api/webauthn/login/begin');
+            if (!beginResp.ok) {
+                const err = await beginResp.json();
+                throw new Error(err.error || 'Vui lòng đăng ký thiết bị sinh trắc học trước trong phần Hồ sơ.');
+            }
+            
+            const options = await beginResp.json();
+            options.publicKey.challenge = Uint8Array.from(atob(options.publicKey.challenge), c => c.charCodeAt(0));
+            if (options.publicKey.allowCredentials) {
+                options.publicKey.allowCredentials.forEach(c => {
+                    c.id = Uint8Array.from(atob(c.id), c => c.charCodeAt(0));
+                });
+            }
+
+            const assertion = await navigator.credentials.get({
+                publicKey: options.publicKey
+            });
+
+            const assertionJson = {
+                id: assertion.id,
+                rawId: btoa(String.fromCharCode.apply(null, new Uint8Array(assertion.rawId))),
+                type: assertion.type,
+                response: {
+                    authenticatorData: btoa(String.fromCharCode.apply(null, new Uint8Array(assertion.response.authenticatorData))),
+                    clientDataJSON: btoa(String.fromCharCode.apply(null, new Uint8Array(assertion.response.clientDataJSON))),
+                    signature: btoa(String.fromCharCode.apply(null, new Uint8Array(assertion.response.signature))),
+                    userHandle: assertion.response.userHandle ? btoa(String.fromCharCode.apply(null, new Uint8Array(assertion.response.userHandle))) : null
+                }
+            };
+
+            const finishResp = await fetch('/api/webauthn/login/finish', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(assertionJson)
+            });
+
+            if (!finishResp.ok) throw new Error('Xác thực thất bại');
+            
+            callback(true);
+        } catch (err) {
+            alert('Lỗi Sinh trắc học: ' + err.message);
+            // Optionally show a retry button here too
+            callback(false);
+        }
     }
 </script>
 {{end}}
