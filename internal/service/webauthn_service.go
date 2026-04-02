@@ -140,6 +140,7 @@ func (s *WebAuthnService) FinishLogin(user *models.User, r *http.Request) error 
 
 	credential, err := s.wa.FinishLogin(user, *sessionData, r)
 	if err != nil {
+		log.Printf("[service][webauthn] login failed for user %s: %v", user.ID, err)
 		return fmt.Errorf("webauthn finish login: %w", err)
 	}
 
@@ -156,4 +157,17 @@ func (s *WebAuthnService) FinishLogin(user *models.User, r *http.Request) error 
 
 	log.Printf("[service][webauthn] verified assertion for user %s", user.ID)
 	return nil
+}
+
+func (s *WebAuthnService) ApproveCredential(id string) error {
+	cred, err := s.credRepo.FindByID(id)
+	if err != nil {
+		return fmt.Errorf("find credential: %w", err)
+	}
+	cred.IsApproved = true
+	return s.credRepo.Update(cred)
+}
+
+func (s *WebAuthnService) DeleteCredential(id string) error {
+	return s.credRepo.Delete(id)
 }

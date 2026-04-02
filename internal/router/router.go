@@ -162,6 +162,10 @@ func New(deps Deps) http.Handler {
 			wr.Post("/register/finish", users.RegisterBiometricFinish)
 			wr.Get("/login/begin", attendance.BiometricLoginBegin)
 			wr.Post("/login/finish", attendance.BiometricLoginFinish)
+			
+			// Admin management
+			wr.Post("/user/{id}/credentials/{credID}/approve", users.ApproveCredential)
+			wr.Delete("/user/{id}/credentials/{credID}", users.DeleteCredential)
 		})
 	})
 

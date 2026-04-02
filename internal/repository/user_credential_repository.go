@@ -29,6 +29,16 @@ func (r *UserCredentialRepository) FindByCredentialID(credID []byte) (*models.Us
 	return &c, err
 }
 
+func (r *UserCredentialRepository) FindByID(id string) (*models.UserCredential, error) {
+	var c models.UserCredential
+	err := r.db.Where("id = ?", id).First(&c).Error
+	return &c, err
+}
+
+func (r *UserCredentialRepository) Delete(id string) error {
+	return r.db.Delete(&models.UserCredential{}, "id = ?", id).Error
+}
+
 func (r *UserCredentialRepository) Update(c *models.UserCredential) error {
 	return r.db.Save(c).Error
 }

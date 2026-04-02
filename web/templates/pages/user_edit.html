@@ -60,6 +60,57 @@
                     <button type="submit" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Save Changes</button>
                 </div>
             </form>
+        <div class="mt-8 bg-white shadow-sm rounded-lg border border-gray-200 p-6 max-w-2xl">
+            <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <i data-lucide="fingerprint" class="w-5 h-5 text-indigo-600"></i>
+                Thiết bị sinh trắc học
+            </h3>
+            
+            {{ if .User.Credentials }}
+            <div class="overflow-hidden border border-gray-100 rounded-xl">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trạng thái</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {{ range .User.Credentials }}
+                        <tr>
+                            <td class="px-4 py-3 text-sm text-gray-500 font-mono">
+                                {{ printf "%x" .ID | slice 0 8 }}...
+                            </td>
+                            <td class="px-4 py-3">
+                                {{ if .IsApproved }}
+                                <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">Active</span>
+                                {{ else }}
+                                <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">Pending</span>
+                                {{ end }}
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <div class="flex justify-end gap-2">
+                                    {{ if not .IsApproved }}
+                                    <button hx-post="/users/{{$.User.ID}}/credentials/{{.ID}}/approve" 
+                                            hx-confirm="Phê duyệt thiết bị này?"
+                                            hx-swap="none"
+                                            class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">Duyệt</button>
+                                    {{ end }}
+                                    <button hx-delete="/users/{{$.User.ID}}/credentials/{{.ID}}" 
+                                            hx-confirm="Xóa thiết bị này? Người dùng sẽ không thể dùng nó để login."
+                                            hx-swap="none"
+                                            class="text-red-600 hover:text-red-900 text-sm font-medium">Xóa</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {{ end }}
+                    </tbody>
+                </table>
+            </div>
+            {{ else }}
+            <p class="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">Người dùng chưa đăng ký thiết bị sinh trắc học nào.</p>
+            {{ end }}
         </div>
     </main>
 </div>

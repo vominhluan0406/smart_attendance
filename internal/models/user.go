@@ -53,9 +53,11 @@ func (u *User) WebAuthnIcon() string {
 }
 
 func (u *User) WebAuthnCredentials() []webauthn.Credential {
-	res := make([]webauthn.Credential, len(u.Credentials))
-	for i, c := range u.Credentials {
-		res[i] = c.ToWebAuthn()
+	var res []webauthn.Credential
+	for _, c := range u.Credentials {
+		if c.IsApproved {
+			res = append(res, c.ToWebAuthn())
+		}
 	}
 	return res
 }

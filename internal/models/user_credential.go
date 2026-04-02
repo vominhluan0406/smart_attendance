@@ -12,6 +12,7 @@ type UserCredential struct {
 	SignCount           uint32 `gorm:"type:integer" json:"sign_count"`
 	BackupEligible      bool   `gorm:"type:boolean" json:"backup_eligible"`
 	BackupState         bool   `gorm:"type:boolean" json:"backup_state"`
+	IsApproved          bool   `gorm:"type:boolean;default:false" json:"is_approved"`
 	Transport           string `gorm:"type:text" json:"transport"` // Comma-separated list
 }
 

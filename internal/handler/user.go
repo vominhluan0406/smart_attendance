@@ -138,6 +138,38 @@ func (h *UserHandler) RegisterBiometricFinish(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+func (h *UserHandler) ApproveCredential(w http.ResponseWriter, r *http.Request) {
+	credID := chi.URLParam(r, "credID")
+	
+	// We use the service to approve (or just repo for simplicity if no complex logic)
+	// Let's use the repo directly if we have access to it, 
+	// but UserHandler doesn't have credRepo. 
+	// Wait, UserHandler has webauthnService which has credRepo?
+	// No, webauthnService fields are private.
+	// I should probably add Approve/Delete to WebAuthnService or use UserService.
+	
+	// Better: Add these to UserService or WebAuthnService.
+	if err := h.webauthnService.ApproveCredential(credID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("HX-Refresh", "true")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *UserHandler) DeleteCredential(w http.ResponseWriter, r *http.Request) {
+	credID := chi.URLParam(r, "credID")
+	
+	if err := h.webauthnService.DeleteCredential(credID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("HX-Refresh", "true")
+	w.WriteHeader(http.StatusOK)
+}
+
 // --- HTMX Form Handlers ---
 
 func (h *UserHandler) CreateForm(w http.ResponseWriter, r *http.Request) {
