@@ -18,7 +18,7 @@
                     </a>
                     {{end}}
 
-                    {{if or (and (eq .UserRole "employee") .QREnabled) (and (eq .UserRole "manager_device") .FaceEnabled)}}
+                    {{if and (eq .UserRole "employee") .QREnabled}}
                     <a href="/attendance"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
                         <i data-lucide="scan-face" class="w-4 h-4"></i> Chấm công
@@ -34,6 +34,12 @@
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
                         <i data-lucide="log-in" class="w-4 h-4"></i> Chấm công mật khẩu
                     </a>
+                    {{if .FaceEnabled}}
+                    <a href="/attendance"
+                        class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
+                        <i data-lucide="scan-face" class="w-4 h-4"></i> FaceID
+                    </a>
+                    {{end}}
                     {{end}}
 
                     {{if eq .UserRole "admin"}}
@@ -111,7 +117,7 @@
         <span>Tổng quan</span>
     </a>
     {{end}}
-    {{if or (and (eq .UserRole "employee") .QREnabled) (and (eq .UserRole "manager_device") .FaceEnabled)}}
+    {{if and (eq .UserRole "employee") .QREnabled}}
     <a href="/attendance" class="bottom-nav-item">
         <i data-lucide="scan-face"></i>
         <span>Chấm công</span>
@@ -126,6 +132,12 @@
         <i data-lucide="log-in"></i>
         <span>Mật khẩu</span>
     </a>
+    {{if .FaceEnabled}}
+    <a href="/attendance" class="bottom-nav-item">
+        <i data-lucide="scan-face"></i>
+        <span>FaceID</span>
+    </a>
+    {{end}}
     {{end}}
     {{if eq .UserRole "manager"}}
     <a href="/reports/branch/{{.UserBranch}}" class="bottom-nav-item">

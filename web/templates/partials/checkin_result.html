@@ -41,20 +41,13 @@
     </div>
 </div>
 <script>
-    // Only hide scanner UI if we are on the main attendance page
-    var qrReader = document.getElementById('reader');
-    if (qrReader) {
-        var scannerWrap = document.querySelector('.shadow-xl');
-        if (scannerWrap) scannerWrap.classList.add('hidden');
-        var hint = document.querySelector('p.text-gray-500.text-sm.text-center');
-        if (hint) hint.classList.add('hidden');
-    }
-    
-    // Scroll to result if target exists
+    // Hide all panels below result
+    ['attendance-panels','checkin-form-card','checking-ui','ui-container'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
     var resultEl = document.getElementById('checkin-result');
-    if (resultEl) {
-        resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    if (resultEl) resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     if (window.showToast) showToast("Chấm công thành công!", "success");
 </script>
 {{else}}
@@ -75,16 +68,11 @@
     </div>
 </div>
 <script>
-    var qrReader = document.getElementById('reader');
-    if (qrReader) {
-        var scannerWrap = document.querySelector('.shadow-xl');
-        if (scannerWrap) scannerWrap.classList.add('hidden');
-        var hint = document.querySelector('p.text-gray-500.text-sm.text-center');
-        if (hint) hint.classList.add('hidden');
-    }
+    ['attendance-panels','checkin-form-card','checking-ui','ui-container'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
     var resultEl = document.getElementById('checkin-result');
-    if (resultEl) {
-        resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    if (resultEl) resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 </script>
 {{end}}

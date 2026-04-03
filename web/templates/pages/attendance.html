@@ -12,6 +12,7 @@
 
             <div id="checkin-result" class="mb-6"></div>
 
+            <div id="attendance-panels">
             <!-- Hidden form (shared by QR scanner and face recognition) -->
             <div class="hidden">
                 <form id="checkin-form" hx-post="/attendance/log" hx-target="#checkin-result"
@@ -97,6 +98,7 @@
                             <svg class="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                         </div>
                         <h3 class="text-sm font-bold text-gray-700 uppercase">Nhận diện khuôn mặt</h3>
+                        <span class="ml-auto text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Demo — chưa kết nối API</span>
                     </div>
 
                     <!-- Camera preview area -->
@@ -112,7 +114,7 @@
 
                     <div id="face-result" class="hidden rounded-xl bg-green-50 p-4 mb-4 text-center">
                         <svg class="w-10 h-10 text-green-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <p class="text-green-800 font-bold">Nhận diện thành công!</p>
+                        <p class="text-green-800 font-bold">Nhận diện thành công! <span class="text-xs text-amber-600">(giả lập)</span></p>
                     </div>
 
                     <button id="face-btn" onclick="window.startFaceRecognition()"
@@ -178,6 +180,7 @@
                 </div>
             </div>
             {{end}}
+            </div><!-- end #attendance-panels -->
         </div>
     </main>
 </div>

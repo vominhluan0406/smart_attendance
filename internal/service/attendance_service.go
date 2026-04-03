@@ -197,7 +197,8 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		}
 	}
 
-	// Face recognition (mock — manager only, always passes if flag is set)
+	// Face recognition (MOCK/DEMO — chưa kết nối Face API thực tế, always passes if flag is set)
+	// TODO: Integrate real face recognition API (e.g., AWS Rekognition, Azure Face API)
 	if s.branchService.HasMethod(branch, models.MethodFace) && input.FaceVerified {
 		result.FaceVerified = true
 	}

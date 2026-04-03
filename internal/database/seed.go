@@ -419,40 +419,86 @@ func seedLeaveTypes(db *gorm.DB) {
 func seedPermissions(db *gorm.DB) {
 	var count int64
 	db.Model(&models.Permission{}).Count(&count)
-	if count > 0 {
-		return
+	if count == 0 {
+		// Fresh DB — create all permissions
+		perms := models.DefaultPermissions()
+		if err := db.Create(&perms).Error; err != nil {
+			log.Printf("[seed] warning: failed to create permissions: %v", err)
+			return
+		}
+		log.Printf("[seed] created %d permissions", len(perms))
+
+		// Build code → ID map
+		permMap := make(map[string]string, len(perms))
+		for _, p := range perms {
+			permMap[p.Code] = p.ID
+		}
+
+		// Create role-permission mappings
+		rolePerms := models.DefaultRolePermissions()
+		var rps []models.RolePermission
+		for role, codes := range rolePerms {
+			for _, code := range codes {
+				if pid, ok := permMap[code]; ok {
+					rps = append(rps, models.RolePermission{Role: role, PermissionID: pid})
+				}
+			}
+		}
+
+		if err := db.Create(&rps).Error; err != nil {
+			log.Printf("[seed] warning: failed to create role permissions: %v", err)
+			return
+		}
+		log.Printf("[seed] created %d role-permission mappings", len(rps))
 	}
 
-	// 1. Create all permissions
-	perms := models.DefaultPermissions()
-	if err := db.Create(&perms).Error; err != nil {
-		log.Printf("[seed] warning: failed to create permissions: %v", err)
-		return
-	}
-	log.Printf("[seed] created %d permissions", len(perms))
+	// Always ensure every role in DefaultRolePermissions has its mappings.
+	// This handles new roles added after initial seed (e.g., manager_device).
+	ensureRolePermissions(db)
+}
 
-	// Build code → ID map
-	permMap := make(map[string]string, len(perms))
-	for _, p := range perms {
+// ensureRolePermissions checks each role's expected permissions and inserts any missing ones.
+func ensureRolePermissions(db *gorm.DB) {
+	// Build code → ID map from DB
+	var allPerms []models.Permission
+	db.Find(&allPerms)
+	permMap := make(map[string]string, len(allPerms))
+	for _, p := range allPerms {
 		permMap[p.Code] = p.ID
 	}
 
-	// 2. Create role-permission mappings
 	rolePerms := models.DefaultRolePermissions()
-	var rps []models.RolePermission
 	for role, codes := range rolePerms {
+		// Get existing permission IDs for this role
+		var existingPermIDs []string
+		db.Model(&models.RolePermission{}).
+			Where("role = ?", role).
+			Pluck("permission_id", &existingPermIDs)
+
+		existingSet := make(map[string]bool, len(existingPermIDs))
+		for _, pid := range existingPermIDs {
+			existingSet[pid] = true
+		}
+
+		// Insert missing
+		var added int
 		for _, code := range codes {
-			if pid, ok := permMap[code]; ok {
-				rps = append(rps, models.RolePermission{Role: role, PermissionID: pid})
+			pid, ok := permMap[code]
+			if !ok {
+				continue
+			}
+			if existingSet[pid] {
+				continue
+			}
+			rp := models.RolePermission{Role: role, PermissionID: pid}
+			if err := db.Create(&rp).Error; err == nil {
+				added++
 			}
 		}
+		if added > 0 {
+			log.Printf("[seed] added %d missing permissions for role %s", added, role)
+		}
 	}
-
-	if err := db.Create(&rps).Error; err != nil {
-		log.Printf("[seed] warning: failed to create role permissions: %v", err)
-		return
-	}
-	log.Printf("[seed] created %d role-permission mappings", len(rps))
 }
 
 func seedHolidays(db *gorm.DB) {

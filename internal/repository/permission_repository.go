@@ -16,11 +16,12 @@ func NewPermissionRepository(db *gorm.DB) *PermissionRepository {
 // FindPermissionsByRole returns all permission codes for a given role.
 func (r *PermissionRepository) FindPermissionsByRole(role models.Role) ([]string, error) {
 	var codes []string
-	err := r.db.Model(&models.RolePermission{}).
-		Select("permissions.code").
-		Joins("JOIN permissions ON permissions.id = role_permissions.permission_id").
-		Where("role_permissions.role = ? AND permissions.is_active = ?", role, true).
-		Pluck("permissions.code", &codes).Error
+	err := r.db.Raw(`
+		SELECT p.code FROM role_permissions rp
+		JOIN permissions p ON p.id = rp.permission_id
+		WHERE rp.role = ? AND p.is_active = 1
+		  AND rp.deleted_at IS NULL AND p.deleted_at IS NULL
+	`, role).Scan(&codes).Error
 	return codes, err
 }
 

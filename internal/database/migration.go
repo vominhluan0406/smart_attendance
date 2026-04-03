@@ -98,67 +98,45 @@ func migrateCreateDefaultShifts(db *gorm.DB) error {
 // migrateManagerDevicePermissions adds role_permissions for the new manager_device role
 // on existing databases that already have permissions seeded.
 func migrateManagerDevicePermissions(db *gorm.DB) error {
-	// Check if permissions table has data at all
-	var permCount int64
-	db.Model(&models.Permission{}).Count(&permCount)
-	if permCount == 0 {
-		return nil // Fresh DB, seedPermissions will handle it
-	}
-
-	// Get expected permission codes for manager_device
+	// Always ensure manager_device has its permissions.
+	// Use raw SQL to avoid GORM soft-delete filters.
 	roleCodes := models.DefaultRolePermissions()[models.RoleManagerDevice]
 	if len(roleCodes) == 0 {
 		return nil
 	}
 
-	// Find which permissions are missing for this role
-	var existingCodes []string
-	db.Raw(`
-		SELECT p.code FROM role_permissions rp
-		JOIN permissions p ON p.id = rp.permission_id
-		WHERE rp.role = ?
-	`, models.RoleManagerDevice).Scan(&existingCodes)
-
-	existingSet := make(map[string]bool, len(existingCodes))
-	for _, c := range existingCodes {
-		existingSet[c] = true
-	}
-
-	var missingCodes []string
 	for _, code := range roleCodes {
-		if !existingSet[code] {
-			missingCodes = append(missingCodes, code)
+		// Check if this specific mapping already exists
+		var count int64
+		db.Raw(`
+			SELECT COUNT(*) FROM role_permissions rp
+			JOIN permissions p ON p.id = rp.permission_id
+			WHERE rp.role = ? AND p.code = ?
+		`, string(models.RoleManagerDevice), code).Scan(&count)
+
+		if count > 0 {
+			continue
 		}
-	}
 
-	log.Printf("[migration] manager_device: expected=%d existing=%d missing=%d codes=%v",
-		len(roleCodes), len(existingCodes), len(missingCodes), missingCodes)
-
-	if len(missingCodes) == 0 {
-		return nil
-	}
-
-	// Find permission IDs by code — use Unscoped to avoid soft-delete filter on Permission
-	var perms []models.Permission
-	if err := db.Where("code IN ? AND is_active = ?", missingCodes, true).Find(&perms).Error; err != nil {
-		log.Printf("[migration] warning: failed to find permissions: %v", err)
-		return err
-	}
-	log.Printf("[migration] found %d permission records for missing codes", len(perms))
-
-	var rps []models.RolePermission
-	for _, p := range perms {
-		rps = append(rps, models.RolePermission{Role: models.RoleManagerDevice, PermissionID: p.ID})
-	}
-
-	if len(rps) > 0 {
-		if err := db.Create(&rps).Error; err != nil {
-			log.Printf("[migration] warning: failed to create manager_device permissions: %v", err)
-			return nil
+		// Find permission ID
+		var permID string
+		db.Raw(`SELECT id FROM permissions WHERE code = ?`, code).Scan(&permID)
+		if permID == "" {
+			log.Printf("[migration] manager_device: permission code %s not found in DB", code)
+			continue
 		}
-		log.Printf("[migration] created %d role-permission mappings for manager_device", len(rps))
-	} else {
-		log.Printf("[migration] WARNING: no permission records found for codes %v — check permissions table", missingCodes)
+
+		// Insert using raw SQL to bypass GORM magic
+		err := db.Exec(`
+			INSERT INTO role_permissions (id, created_at, updated_at, role, permission_id)
+			VALUES (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6))),
+				datetime('now'), datetime('now'), ?, ?)
+		`, string(models.RoleManagerDevice), permID).Error
+		if err != nil {
+			log.Printf("[migration] manager_device: failed to insert %s: %v", code, err)
+		} else {
+			log.Printf("[migration] manager_device: added permission %s", code)
+		}
 	}
 
 	return nil
