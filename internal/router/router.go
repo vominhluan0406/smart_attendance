@@ -65,8 +65,9 @@ func New(deps Deps) http.Handler {
 	r.Route("/auth", func(ar chi.Router) {
 		ar.Get("/login", auth.LoginPage)
 		ar.Post("/login", auth.LoginForm)
-		ar.Get("/register", auth.RegisterPage)
-		ar.Post("/register", auth.RegisterForm)
+		// Public registration disabled - only admin can create users
+		// ar.Get("/register", auth.RegisterPage)
+		// ar.Post("/register", auth.RegisterForm)
 		ar.Get("/logout", auth.Logout)
 
 		// Microsoft OAuth
@@ -181,7 +182,7 @@ func New(deps Deps) http.Handler {
 
 		// Auth API (public)
 		api.Post("/auth/login", auth.APILogin)
-		api.Post("/auth/register", auth.APIRegister)
+		// api.Post("/auth/register", auth.APIRegister)
 		api.Post("/auth/refresh", auth.APIRefresh)
 
 		// Protected API
