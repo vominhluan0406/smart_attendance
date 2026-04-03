@@ -508,16 +508,159 @@
 
 ---
 
+## Session 23 — Bugfix: Export, GPS/WiFi Check-in, Location, Auth (2026-04-02)
+
+### 23.1 — Fix Excel Export
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix Excel export file generation issue |
+| **Spec** | Debug and fix report export functionality returning broken/empty file |
+| **AI Tool** | Manual fix |
+| **Prompt** | — |
+| **Output** | Export file generation corrected |
+| **Review** | **Accepted** — Excel files download correctly |
+| **Changes** | None |
+| **Files** | `internal/service/report_service.go`, `internal/handler/report.go` |
+| **Commit** | `40ec402`, `3023250` |
+
+### 23.2 — Fix Check-in by GPS + WiFi
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix GPS and WiFi-based check-in validation logic |
+| **Spec** | Location check-in failing for valid coordinates within branch radius |
+| **AI Tool** | Manual fix |
+| **Prompt** | — |
+| **Output** | GPS/WiFi check-in validation corrected, location whitelist matching fixed |
+| **Review** | **Accepted** — Employees can check-in by GPS+WiFi successfully |
+| **Changes** | None |
+| **Files** | `internal/service/attendance_service.go`, `internal/handler/attendance.go` |
+| **Commit** | `64333a6`, `e516b49` |
+
+### 23.3 — Fix Authentication Issues
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix authentication/login failures |
+| **Spec** | Auth flow returning errors in certain edge cases |
+| **AI Tool** | Manual fix |
+| **Prompt** | — |
+| **Output** | Authentication logic stabilized |
+| **Review** | **Accepted** |
+| **Changes** | None |
+| **Files** | `internal/service/auth_service.go`, `internal/middleware/auth.go` |
+| **Commit** | `776a7c4`, `b9a3b7a` |
+
+---
+
+## Session 24 — CI/CD Pipeline & PPID Fixes (2026-04-02)
+
+### 24.1 — Add CI/CD Pipeline
+
+| Field | Detail |
+|---|---|
+| **Task** | Add GitHub Actions build pipeline |
+| **Spec** | Automate build verification on push/PR |
+| **AI Tool** | Manual |
+| **Prompt** | — |
+| **Output** | `.github/workflows/build.yml` created with Go build pipeline |
+| **Review** | **Accepted** |
+| **Changes** | None |
+| **Files** | `.github/workflows/build.yml` |
+| **Commit** | `21e7c19` |
+
+### 24.2 — Fix PPID (Process/Auth Issues)
+
+| Field | Detail |
+|---|---|
+| **Task** | Resolve persistent PPID-related authentication errors |
+| **Spec** | Multiple iterations to fix process/session ID handling in auth flow |
+| **AI Tool** | Manual fix |
+| **Prompt** | — |
+| **Output** | PPID handling corrected across auth service and config |
+| **Review** | **Accepted** — after 4 iterations (`ee66dee` → `e2d6441` → `9cb2f38` → `843acd1`) |
+| **Changes** | None |
+| **Files** | `internal/service/auth_service.go`, `internal/config/config.go`, `cmd/server/main.go` |
+| **Commit** | `ee66dee`, `e2d6441`, `9cb2f38`, `9d0627d`, `843acd1` |
+
+---
+
+## Session 25 — Vietnamese Localization & UI Polish (2026-04-03)
+
+### 25.1 — Localize Web Interface to Vietnamese
+
+| Field | Detail |
+|---|---|
+| **Task** | Translate entire web interface to Vietnamese |
+| **Spec** | All user-facing text: page titles, buttons, labels, messages, navigation — Vietnamese |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | Localize web interface to Vietnamese and update check-in result navigation logic |
+| **Output** | All templates updated with Vietnamese labels. Check-in result page navigation improved |
+| **Review** | **Accepted** — consistent Vietnamese UX across all pages |
+| **Changes** | None |
+| **Files** | `web/templates/pages/*.html`, `web/templates/partials/*.html`, `web/templates/components/nav.html` |
+| **Commit** | `13e7c2f` |
+
+### 25.2 — Disable Public Registration
+
+| Field | Detail |
+|---|---|
+| **Task** | Remove public user registration — admin-only user creation |
+| **Spec** | Remove registration route and link from login page |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | Disable public user registration in router and remove link from login page |
+| **Output** | Register route disabled, login page link removed. Users created by admin only |
+| **Review** | **Accepted** — security improvement for enterprise use |
+| **Changes** | None |
+| **Files** | `internal/router/router.go`, `web/templates/pages/login.html`, `web/templates/pages/register.html` |
+| **Commit** | `ce18a9d` |
+
+### 25.3 — Button Spinner & CSS Polish
+
+| Field | Detail |
+|---|---|
+| **Task** | Standardize loading states across all forms and add CSS cache-busting |
+| **Spec** | Reusable btn-spinner component for all HTMX submit buttons. CSS versioning for cache busting |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | Standardize button loading states using a reusable btn-spinner component. Add cache-busting CSS versioning and enhance global loader animations |
+| **Output** | btn-spinner component created and applied to all forms. CSS file versioned with query param for cache invalidation. Loader animations improved |
+| **Review** | **Accepted** — consistent UX feedback on all actions |
+| **Changes** | None |
+| **Files** | `web/templates/layouts/base.html`, `web/static/css/index.css`, `web/templates/pages/*.html` |
+| **Commit** | `296313a`, `543c5d9` |
+
+---
+
+## Session 26 — Feature: Leave Management System (2026-04-03)
+
+### 26.1 — Implement Leave Request & Approval Workflow
+
+| Field | Detail |
+|---|---|
+| **Task** | Implement complete leave management: employee request + manager approval |
+| **Spec** | LeaveType (7 types seeded) → LeaveRequest model (status: pending/approved/rejected/cancelled) → LeaveBalance tracking → LeaveRepository (CRUD, overlap detection) → LeaveService (create, review, sync attendance) → LeaveHandler (4 endpoints) → Templates (my_leave, manage_leave) → Permissions (leave.request, leave.view_own, leave.view_branch, leave.approve) → Route with RBAC (Manager-only for manage/review) |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | Implement leave management system including request submission, approval workflow, and status tracking |
+| **Output** | Complete leave management system: 3 models (LeaveType, LeaveRequest, LeaveBalance), 2 repositories, 1 service with 7 methods (create, list, review, syncAttendance, getTypes), 1 handler with 4 endpoints, 3 templates (my_leave, manage_leave, leave_error partial). 7 leave types seeded (Annual, Sick, Personal, Wedding, Funeral, Maternity, Unpaid). Overlap detection prevents duplicate requests. Approved leaves auto-create attendance records with status "leave". HTMX-powered UI with real-time form validation |
+| **Review** | **Accepted** — Employee can submit leave requests, Manager can approve/reject with notes. Attendance records synced on approval |
+| **Changes** | None |
+| **Files** | `internal/models/leave_request.go`, `internal/models/leave_type.go`, `internal/models/leave_balance.go`, `internal/repository/leave_repository.go`, `internal/repository/leave_type_repository.go`, `internal/service/leave_service.go`, `internal/handler/leave.go`, `internal/router/router.go`, `cmd/server/main.go`, `web/templates/pages/my_leave.html`, `web/templates/pages/manage_leave.html`, `web/templates/partials/leave_error.html`, `web/templates/components/nav.html`, `internal/models/permission.go`, `internal/database/database.go` |
+| **Commit** | `27935e9` |
+
+---
+
 ## Summary
 
 | Phase | Sessions | Key Deliverables |
 |---|---|---|
 | P0 — Skeleton | Session 2 | Go module, config, SQLite/GORM, templates, Chi router, Docker |
-| P1 — Auth | Session 3, 15 | User model, JWT + refresh, RBAC, Profile Restriction |
+| P1 — Auth | Session 3, 15, 25.2 | User model, JWT + refresh, RBAC, Profile Restriction, Disable Registration |
 | P2 — Branch | Session 4 | Branch CRUD, TOTP secret, IP/Location whitelist, employee assign |
-| P3 — Attendance | Session 7, 10, 12, 13 | Multi-method check-in, WebAuthn fixes, Panic fix, Employee dropdown |
-| P4 — Reports | Session 5, 14, 18, 20 | History filters, RBAC Restriction, Excel export, Admin Selection UI |
+| P3 — Attendance | Session 7, 10, 12, 13, 23 | Multi-method check-in, WebAuthn fixes, Panic fix, Employee dropdown, GPS/WiFi fix |
+| P4 — Reports | Session 5, 14, 18, 20, 23.1 | History filters, RBAC Restriction, Excel export, Admin Selection UI, Export fix |
 | P5 — Dashboard | Session 8, 19, 21, 22 | KPI cards, Chart.js charts (removed), branch filter, cache, Chart fix, Beautification |
-| P6 — Polish | Session 6, 9, 11, 16, 17 | RBAC, User Edit Biometric fix, Route 404 fix, Admin Credential Mgmt |
+| P6 — Polish | Session 6, 9, 11, 16, 17, 24, 25 | RBAC, Biometric fix, Route fix, CI/CD Pipeline, PPID fix, Localization, UI Polish |
+| P7 — Leave | Session 26 | Leave request/approval workflow, 7 leave types, attendance sync |
 
-**Total prompts**: 28 | **AI Tool**: Antigravity AI | **Review rate**: 100% reviewed, 90% accepted as-is
+**Total prompts**: 35 | **AI Tools**: Claude Code (Opus), Antigravity AI | **Review rate**: 100% reviewed, 90% accepted as-is
