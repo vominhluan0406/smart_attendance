@@ -1,11 +1,11 @@
-{{define "title"}}Register — Smart Attendance{{end}}
+{{define "title"}}Đăng ký — Smart Attendance{{end}}
 
 {{define "body"}}
 <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-sm">
         <h1 class="text-center text-2xl font-bold text-indigo-600">Smart Attendance</h1>
         <h2 class="mt-4 text-center text-xl font-bold leading-9 tracking-tight text-gray-900">
-            Create a new account
+            Tạo tài khoản mới
         </h2>
     </div>
 
@@ -14,7 +14,7 @@
             <div id="form-message"></div>
 
             <div>
-                <label for="full_name" class="block text-sm font-medium leading-6 text-gray-900">Full Name</label>
+                <label for="full_name" class="block text-sm font-medium leading-6 text-gray-900">Họ và tên</label>
                 <div class="mt-2">
                     <input id="full_name" name="full_name" type="text" required
                            class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
@@ -32,7 +32,7 @@
             </div>
 
             <div>
-                <label for="password" class="block text-sm font-medium leading-6 text-gray-900">Password</label>
+                <label for="password" class="block text-sm font-medium leading-6 text-gray-900">Mật khẩu</label>
                 <div class="mt-2">
                     <input id="password" name="password" type="password" required minlength="6"
                            class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
@@ -40,7 +40,7 @@
             </div>
 
             <div>
-                <label for="password_confirm" class="block text-sm font-medium leading-6 text-gray-900">Confirm Password</label>
+                <label for="password_confirm" class="block text-sm font-medium leading-6 text-gray-900">Xác nhận mật khẩu</label>
                 <div class="mt-2">
                     <input id="password_confirm" name="password_confirm" type="password" required minlength="6"
                            class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
@@ -56,14 +56,14 @@
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                         </svg>
                     </span>
-                    Register
+                    Đăng ký
                 </button>
             </div>
         </form>
 
         <p class="mt-6 text-center text-sm text-gray-500">
-            Already have an account?
-            <a href="/auth/login" class="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">Sign in</a>
+            Đã có tài khoản?
+            <a href="/auth/login" class="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">Đăng nhập</a>
         </p>
     </div>
 </div>

@@ -2,43 +2,43 @@
     <table class="min-w-full divide-y divide-gray-200 responsive-table">
         <thead class="bg-gray-50">
             <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Methods</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên chi nhánh</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Địa chỉ</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phương thức</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
             </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
             {{range .Branches}}
             <tr class="hover:bg-gray-50">
-                <td data-label="Name" class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{.Name}}
+                <td data-label="Tên" class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{.Name}}
                 </td>
-                <td data-label="Address" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{.Address}}</td>
-                <td data-label="Methods" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td data-label="Địa chỉ" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{.Address}}</td>
+                <td data-label="Phương thức" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {{.AllowedMethods}}
                 </td>
-                <td data-label="Status" class="px-6 py-4 whitespace-nowrap">
+                <td data-label="Trạng thái" class="px-6 py-4 whitespace-nowrap">
                     {{if .IsActive}}
                     <span
-                        class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Active</span>
+                        class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Hoạt động</span>
                     {{else}}
                     <span
-                        class="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">Disabled</span>
+                        class="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">Tắt</span>
                     {{end}}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <a href="/reports/branch/{{.ID}}"
-                        class="text-emerald-600 hover:text-emerald-900 mr-3 btn-mobile">Report</a>
+                        class="text-emerald-600 hover:text-emerald-900 mr-3 btn-mobile">Báo cáo</a>
                     <a href="/branches/{{.ID}}/edit"
-                        class="text-indigo-600 hover:text-indigo-900 mr-3 btn-mobile">Edit</a>
-                    <button hx-delete="/branches/{{.ID}}" hx-confirm="Delete this branch?" hx-target="closest tr"
-                        hx-swap="outerHTML swap:0.5s" class="text-red-600 hover:text-red-900 btn-mobile">Delete</button>
+                        class="text-indigo-600 hover:text-indigo-900 mr-3 btn-mobile">Sửa</a>
+                    <button hx-delete="/branches/{{.ID}}" hx-confirm="Xóa chi nhánh này?" hx-target="closest tr"
+                        hx-swap="outerHTML swap:0.5s" class="text-red-600 hover:text-red-900 btn-mobile">Xóa</button>
                 </td>
             </tr>
             {{else}}
             <tr>
-                <td colspan="5" class="px-6 py-12 text-center text-sm text-gray-500">No branches found</td>
+                <td colspan="5" class="px-6 py-12 text-center text-sm text-gray-500">Không tìm thấy chi nhánh</td>
             </tr>
             {{end}}
         </tbody>
@@ -52,11 +52,11 @@
         <div class="flex space-x-2">
             {{if .HasPrevPage}}
             <a hx-get="/branches?page={{.PrevPage}}" hx-target="#branch-table" hx-swap="innerHTML"
-                class="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Previous</a>
+                class="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Trước</a>
             {{end}}
             {{if .HasNextPage}}
             <a hx-get="/branches?page={{.NextPage}}" hx-target="#branch-table" hx-swap="innerHTML"
-                class="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Next</a>
+                class="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Sau</a>
             {{end}}
         </div>
     </div>

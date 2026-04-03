@@ -14,7 +14,7 @@
                     {{if or (eq .UserRole "admin") (eq .UserRole "manager")}}
                     <a href="/dashboard"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
-                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Tổng quan
                     </a>
                     {{end}}
                     {{if or (and (eq .UserRole "employee") .QREnabled) (and (eq .UserRole "manager") .FaceEnabled)}}
@@ -34,7 +34,7 @@
                     {{if eq .UserRole "admin"}}
                     <a href="/branches"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
-                        <i data-lucide="map-pin" class="w-4 h-4"></i> Branches
+                        <i data-lucide="map-pin" class="w-4 h-4"></i> Chi nhánh
                     </a>
                     {{end}}
 
@@ -55,7 +55,7 @@
                     {{if eq .UserRole "admin"}}
                     <a href="/users"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
-                        <i data-lucide="users" class="w-4 h-4"></i> Users
+                        <i data-lucide="users" class="w-4 h-4"></i> Nhân viên
                     </a>
                     {{end}}
                 </div>
@@ -76,7 +76,7 @@
                 </div>
                 <a href="/auth/logout"
                     class="text-sm font-medium text-gray-500 hover:text-gray-700 flex items-center gap-1">
-                    <i data-lucide="log-out" class="w-4 h-4"></i> <span class="hidden sm:inline">Logout</span>
+                    <i data-lucide="log-out" class="w-4 h-4"></i> <span class="hidden sm:inline">Đăng xuất</span>
                 </a>
             </div>
         </div>
@@ -87,12 +87,12 @@
 <nav class="sm:hidden bottom-nav">
     <a href="/" class="bottom-nav-item">
         <i data-lucide="home"></i>
-        <span>Home</span>
+        <span>Trang chủ</span>
     </a>
     {{if or (eq .UserRole "admin") (eq .UserRole "manager")}}
     <a href="/dashboard" class="bottom-nav-item">
         <i data-lucide="layout-dashboard"></i>
-        <span>Dashboard</span>
+        <span>Tổng quan</span>
     </a>
     {{end}}
     {{if or (and (eq .UserRole "employee") .QREnabled) (and (eq .UserRole "manager") .FaceEnabled)}}

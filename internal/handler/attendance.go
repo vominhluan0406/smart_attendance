@@ -145,7 +145,7 @@ func (h *AttendanceHandler) BiometricLoginBegin(w http.ResponseWriter, r *http.R
 	options, err := h.webauthnService.BeginLogin(user)
 	if err != nil {
 		log.Printf("[handler][attendance] webauthn login begin failed: %v", err)
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 

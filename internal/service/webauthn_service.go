@@ -88,6 +88,7 @@ func (s *WebAuthnService) FinishRegistration(user *models.User, r *http.Request)
 		SignCount:           credential.Authenticator.SignCount,
 		BackupEligible:      credential.Flags.BackupEligible,
 		BackupState:         credential.Flags.BackupState,
+		IsApproved:          true, // Default to true for self-registrations
 	}
 
 	if err := s.credRepo.Create(newCred); err != nil {
@@ -106,9 +107,21 @@ func (s *WebAuthnService) BeginLogin(user *models.User) (*protocol.CredentialAss
 		return nil, fmt.Errorf("find credentials: %w", err)
 	}
 	if len(creds) == 0 {
-		return nil, fmt.Errorf("no biometric devices registered")
+		return nil, fmt.Errorf("không có thiết bị sinh trắc học nào được đăng ký")
 	}
-	user.Credentials = creds
+	
+	// Check for approved credentials
+	var approvedCreds []models.UserCredential
+	for _, c := range creds {
+		if c.IsApproved {
+			approvedCreds = append(approvedCreds, c)
+		}
+	}
+	if len(approvedCreds) == 0 {
+		return nil, fmt.Errorf("thiết bị sinh trắc học đang chờ phê duyệt hoặc không khả dụng")
+	}
+
+	user.Credentials = approvedCreds
 
 	options, sessionData, err := s.wa.BeginLogin(user)
 	if err != nil {

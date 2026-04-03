@@ -1,12 +1,12 @@
-{{define "title"}}Create Branch — Smart Attendance{{end}}
+{{define "title"}}Thêm chi nhánh — Smart Attendance{{end}}
 
 {{define "body"}}
 <div class="min-h-full">
     {{template "nav" .}}
     <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div class="mb-6">
-            <a href="/branches" class="text-sm text-indigo-600 hover:text-indigo-500">&larr; Back to Branches</a>
-            <h1 class="mt-2 text-2xl font-bold text-gray-900">Create Branch</h1>
+            <a href="/branches" class="text-sm text-indigo-600 hover:text-indigo-500">&larr; Quay lại danh sách</a>
+            <h1 class="mt-2 text-2xl font-bold text-gray-900">Thêm chi nhánh mới</h1>
         </div>
 
         <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6 max-w-3xl">
@@ -15,25 +15,25 @@
 
                 <!-- Basic Info -->
                 <fieldset>
-                    <legend class="text-lg font-semibold text-gray-900 mb-4">Basic Information</legend>
+                    <legend class="text-lg font-semibold text-gray-900 mb-4">Thông tin cơ bản</legend>
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div>
-                            <label for="name" class="block text-sm font-medium text-gray-700">Branch Name</label>
+                            <label for="name" class="block text-sm font-medium text-gray-700">Tên chi nhánh</label>
                             <input type="text" name="name" id="name" required
                                    class="mt-1 block w-full rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
                         </div>
                         <div>
-                            <label for="address" class="block text-sm font-medium text-gray-700">Address</label>
+                            <label for="address" class="block text-sm font-medium text-gray-700">Địa chỉ</label>
                             <input type="text" name="address" id="address"
                                    class="mt-1 block w-full rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
                         </div>
                         <div>
-                            <label for="work_start_time" class="block text-sm font-medium text-gray-700">Work Start</label>
+                            <label for="work_start_time" class="block text-sm font-medium text-gray-700">Giờ bắt đầu</label>
                             <input type="time" name="work_start_time" id="work_start_time" value="08:00"
                                    class="mt-1 block w-full rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
                         </div>
                         <div>
-                            <label for="work_end_time" class="block text-sm font-medium text-gray-700">Work End</label>
+                            <label for="work_end_time" class="block text-sm font-medium text-gray-700">Giờ nghỉ</label>
                             <input type="time" name="work_end_time" id="work_end_time" value="17:00"
                                    class="mt-1 block w-full rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
                         </div>
@@ -42,11 +42,11 @@
 
                 <!-- Check-in Methods -->
                 <fieldset>
-                    <legend class="text-lg font-semibold text-gray-900 mb-4">Allowed Check-in Methods</legend>
+                    <legend class="text-lg font-semibold text-gray-900 mb-4">Phương thức chấm công</legend>
                     <div class="space-y-3">
                         <label class="flex items-center">
                             <input type="checkbox" name="allowed_methods" value="qr_totp" checked class="h-4 w-4 rounded border-gray-300 text-indigo-600">
-                            <span class="ml-2 text-sm text-gray-700">QR Code (TOTP — refreshes every 15s)</span>
+                            <span class="ml-2 text-sm text-gray-700">Mã QR (TOTP — làm mới mỗi 15 giây)</span>
                         </label>
                         <label class="flex items-center">
                             <input type="checkbox" name="allowed_methods" value="wifi_gps" class="h-4 w-4 rounded border-gray-300 text-indigo-600">
@@ -75,20 +75,20 @@
 
                 <!-- Location -->
                 <fieldset>
-                    <legend class="text-lg font-semibold text-gray-900 mb-4">Default Location (GPS Center)</legend>
+                    <legend class="text-lg font-semibold text-gray-900 mb-4">Vị trí mặc định (Trung tâm GPS)</legend>
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
                         <div>
-                            <label for="lat" class="block text-sm font-medium text-gray-700">Latitude</label>
+                            <label for="lat" class="block text-sm font-medium text-gray-700">Vĩ độ (Lat)</label>
                             <input type="number" step="any" name="lat" id="lat" placeholder="10.762622"
                                    class="mt-1 block w-full rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
                         </div>
                         <div>
-                            <label for="lng" class="block text-sm font-medium text-gray-700">Longitude</label>
+                            <label for="lng" class="block text-sm font-medium text-gray-700">Kinh độ (Lng)</label>
                             <input type="number" step="any" name="lng" id="lng" placeholder="106.660172"
                                    class="mt-1 block w-full rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
                         </div>
                         <div>
-                            <label for="radius_m" class="block text-sm font-medium text-gray-700">Radius (meters)</label>
+                            <label for="radius_m" class="block text-sm font-medium text-gray-700">Bán kính (mét)</label>
                             <input type="number" name="radius_m" id="radius_m" value="200" min="10"
                                    class="mt-1 block w-full rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
                         </div>
@@ -96,8 +96,8 @@
                 </fieldset>
 
                 <div class="flex justify-end gap-3">
-                    <a href="/branches" class="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Cancel</a>
-                    <button type="submit" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Create Branch</button>
+                    <a href="/branches" class="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Hủy</a>
+                    <button type="submit" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Tạo chi nhánh</button>
                 </div>
             </form>
         </div>

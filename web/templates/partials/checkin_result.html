@@ -16,14 +16,27 @@
         </div>
 
         <div class="mt-8 w-full space-y-3">
-            <a href="/attendance"
+            <a href="/"
                 class="inline-flex w-full items-center justify-center rounded-xl bg-green-600 px-4 py-4 text-base font-bold text-white shadow-sm hover:bg-green-700 transition-all">
                 Xong
             </a>
+            
+            {{if .TOTP}}
             <a href="/attendance"
                 class="inline-flex w-full items-center justify-center rounded-xl bg-white border border-green-200 px-4 py-3 text-sm font-bold text-green-700 hover:bg-green-50 transition-all">
                 Quét thêm
             </a>
+            {{else if or .IP .Location}}
+            <a href="/attendance/wifi-gps"
+                class="inline-flex w-full items-center justify-center rounded-xl bg-white border border-green-200 px-4 py-3 text-sm font-bold text-green-700 hover:bg-green-50 transition-all">
+                Chấm công lại
+            </a>
+            {{else}}
+            <a href="/attendance"
+                class="inline-flex w-full items-center justify-center rounded-xl bg-white border border-green-200 px-4 py-3 text-sm font-bold text-green-700 hover:bg-green-50 transition-all">
+                Tiếp tục
+            </a>
+            {{end}}
         </div>
     </div>
 </div>
