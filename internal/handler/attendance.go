@@ -49,8 +49,8 @@ func NewAttendanceHandler(
 // ManagerQRRedirect redirects the manager to their branch's QR code page.
 func (h *AttendanceHandler) ManagerQRRedirect(w http.ResponseWriter, r *http.Request) {
 	role := middleware.GetUserRole(r)
-	if role != "manager" && role != "admin" {
-		http.Error(w, "Forbidden: Only Manager/Admin can view this page.", http.StatusForbidden)
+	if role != models.RoleManagerDevice && role != models.RoleAdmin {
+		http.Error(w, "Forbidden: Only Manager Máy/Admin can view this page.", http.StatusForbidden)
 		return
 	}
 
@@ -98,9 +98,9 @@ func (h *AttendanceHandler) PasswordCheckinPage(w http.ResponseWriter, r *http.R
 	data := userContext(r)
 	role, _ := data["UserRole"].(models.Role)
 	
-	// Strictly only allow non-employees to see the check-in page
-	if role == models.RoleEmployee {
-		log.Printf("[handler][attendance] blocking employee from password checkin page")
+	// Only manager_device and admin can use password check-in kiosk
+	if role != models.RoleManagerDevice && role != models.RoleAdmin {
+		log.Printf("[handler][attendance] blocking role %s from password checkin page", role)
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
@@ -173,7 +173,7 @@ func (h *AttendanceHandler) BiometricLoginFinish(w http.ResponseWriter, r *http.
 func (h *AttendanceHandler) QRDisplayPage(w http.ResponseWriter, r *http.Request) {
 	branchID := chi.URLParam(r, "branchID")
 
-	if middleware.GetUserRole(r) == models.RoleManager {
+	if middleware.GetUserRole(r) == models.RoleManagerDevice {
 		if middleware.GetBranchID(r) != branchID {
 			http.Error(w, "Forbidden: You can only view QR for your own branch.", http.StatusForbidden)
 			return
@@ -209,7 +209,7 @@ func (h *AttendanceHandler) QRDisplayPage(w http.ResponseWriter, r *http.Request
 func (h *AttendanceHandler) QRCodePartial(w http.ResponseWriter, r *http.Request) {
 	branchID := chi.URLParam(r, "branchID")
 
-	if middleware.GetUserRole(r) == models.RoleManager {
+	if middleware.GetUserRole(r) == models.RoleManagerDevice {
 		if middleware.GetBranchID(r) != branchID {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
@@ -239,7 +239,7 @@ func (h *AttendanceHandler) QRCodePartial(w http.ResponseWriter, r *http.Request
 func (h *AttendanceHandler) QRImage(w http.ResponseWriter, r *http.Request) {
 	branchID := chi.URLParam(r, "branchID")
 
-	if middleware.GetUserRole(r) == models.RoleManager {
+	if middleware.GetUserRole(r) == models.RoleManagerDevice {
 		if middleware.GetBranchID(r) != branchID {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return

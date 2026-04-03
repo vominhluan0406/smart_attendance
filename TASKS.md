@@ -102,6 +102,38 @@
 | 7.3 | Admin: Approve/Reject/Delete user credentials UI & Handlers | `feature/admin-credentials` | L | 1.8, P3 | DONE |
 | 7.4 | Logic: Hide biometric registration if already registered/approved | `feature/ui-polish` | S | 7.3 | DONE |
 
+## Phase 7.5 — Leave Management
+
+| # | Task | Branch | Size | Depends | Status |
+|---|------|--------|------|---------|--------|
+| 7.5.1 | Models: LeaveType (7 types), LeaveRequest (status workflow), LeaveBalance (yearly tracking) | `feature/leave-management` | M | 0.4 | DONE |
+| 7.5.2 | Repository: LeaveRepository (CRUD, overlap detection, branch filter), LeaveTypeRepository | `feature/leave-management` | M | 7.5.1 | DONE |
+| 7.5.3 | Service: LeaveService (create, review, syncAttendance, getTypes, overlap check) | `feature/leave-management` | L | 7.5.2 | DONE |
+| 7.5.4 | Handler: LeaveHandler (MyLeavePage, SubmitRequest, ManageLeavePage, ReviewAction) | `feature/leave-management` | M | 7.5.3 | DONE |
+| 7.5.5 | Templates: my_leave.html (employee form + history), manage_leave.html (manager approval), leave_error.html | `feature/leave-management` | M | 7.5.4 | DONE |
+| 7.5.6 | Permissions: leave.request, leave.view_own, leave.view_branch, leave.approve | `feature/leave-management` | S | 7.5.4, 1.5 | DONE |
+| 7.5.7 | Bugfix: syncAttendance nil-pointer safety, proper error logging | `fix/leave-sync` | M | 7.5.3 | DONE |
+| 7.5.8 | Bugfix: Leave records in reports (WorkDate fallback, ORDER BY fix, Excel export fix) | `fix/leave-reports` | M | 7.5.3, P4 | DONE |
+
+## Phase 8 — Anti-Fraud System
+
+| # | Task | Branch | Size | Depends | Status |
+|---|------|--------|------|---------|--------|
+| 8.1 | Models: FraudAlert (alert type, severity, details JSON), UserDevice (fingerprint, trust), UserSession (token hash, revoke) | `feature/anti-fraud` | M | 0.4 | DONE |
+| 8.2 | Repositories: FraudAlertRepository, UserDeviceRepository, UserSessionRepository | `feature/anti-fraud` | M | 8.1 | DONE |
+| 8.3 | Service: AntiFraudService — GPS accuracy check (reject <10m / >150m) | `feature/anti-fraud` | S | 8.2 | DONE |
+| 8.4 | Service: AntiFraudService — TOTP single-use nonce (cache 30s, reject reuse) | `feature/anti-fraud` | S | 8.2 | DONE |
+| 8.5 | Middleware: RateLimitByUser (3 req / 5min / user, separate from IP rate limit) | `feature/anti-fraud` | S | 1.4 | DONE |
+| 8.6 | Service: AntiFraudService — Impossible travel detection (haversine speed > 150km/h) | `feature/anti-fraud` | M | 8.2, 3.5 | DONE |
+| 8.7 | Service: AntiFraudService — Device fingerprinting + binding (SHA-256 browser fingerprint) | `feature/anti-fraud` | M | 8.2 | DONE |
+| 8.8 | Service: AntiFraudService — IP-Location cross-check (GPS vs branch >500km warning) | `feature/anti-fraud` | S | 8.2, 3.5 | DONE |
+| 8.9 | Service: WebAuthn sign count validation (clone detection in FinishLogin) | `feature/anti-fraud` | S | P7 | DONE |
+| 8.10 | Service: AntiFraudService — Check-in time anomaly detection (z-score > 3.0 flag) | `feature/anti-fraud` | M | 8.2 | DONE |
+| 8.11 | Service: AuthService — Concurrent session detection (max 3, auto-revoke oldest) | `feature/anti-fraud` | M | 8.2, 1.3 | DONE |
+| 8.12 | Integration: Wire anti-fraud pipeline into AttendanceService.LogTime() (pre + post checks) | `feature/anti-fraud` | L | 8.3–8.11, 3.6 | DONE |
+| 8.13 | Frontend: Hidden inputs (accuracy, device_fingerprint), JS fingerprinting in base layout | `feature/anti-fraud` | M | 8.12 | DONE |
+| 8.14 | Handler: Error translations for anti-fraud rejections (Vietnamese messages) | `feature/anti-fraud` | S | 8.12 | DONE |
+
 ---
 
 ## Dependency Graph (Critical Path)
@@ -111,6 +143,9 @@ P0 (Skeleton) ──→ P1 (Auth) ──→ P2 (Branch) ──→ P3 (Attendance
                                                      │                                       │
                                                      ▼                                       ▼
                                                P7 (WebAuthn) ──────────────────────────→ P6 (Polish)
+                                                     │
+                                                     ▼
+                                               P7.5 (Leave) ──→ P8 (Anti-Fraud)
 ```
 
 **Critical path**: P0 → P1 → P2 → P3 → P4 → P5 → P6
@@ -118,6 +153,8 @@ P0 (Skeleton) ──→ P1 (Auth) ──→ P2 (Branch) ──→ P3 (Attendance
 **Parallelizable**:
 - P2 (Branch) và P1.8 (User CRUD) có thể song song sau khi P1.5 (RBAC) done
 - P4 (Reports) và P5 (Dashboard) có thể song song sau P3
+- P7.5 (Leave) có thể song song sau P3
+- P8 (Anti-Fraud) phụ thuộc P3 + P7 (WebAuthn)
 - P6.4 (README) có thể viết dần xuyên suốt
 - Docker (0.7) có thể setup sớm, test lại cuối
 
@@ -125,8 +162,8 @@ P0 (Skeleton) ──→ P1 (Auth) ──→ P2 (Branch) ──→ P3 (Attendance
 
 | Tiêu chí | Tỷ trọng | Tasks liên quan |
 |---|---|---|
-| Tính năng & UX | 25% | P1–P5 (all features), 6.1 (responsive) |
-| Kiến trúc & khả năng mở rộng | 20% | 0.4 (DB setup), 2.6/4.6/5.5 (cache), 6.3 (seed 5K) |
+| Tính năng & UX | 25% | P1–P5 (all features), 6.1 (responsive), P7.5 (Leave) |
+| Kiến trúc & khả năng mở rộng | 20% | 0.4 (DB setup), 2.6/4.6/5.5 (cache), 6.3 (seed 5K), P8 (Anti-Fraud) |
 | Git Flow & Docker | 15% | 0.7 (Docker), 6.5 (verify), all branches + PRs |
 | AI IDE workflow & Prompt Log | 15% | 6.6 (PROMPT_LOG.md), CLAUDE.md |
-| Sáng tạo & khác biệt | 25% | 3.3 (QR TOTP 15s), 3.4 (IP whitelist), 3.5 (location whitelist), 3.11 (live QR display), HTMX approach, Go single binary |
+| Sáng tạo & khác biệt | 25% | 3.3 (QR TOTP 15s), 3.4 (IP whitelist), 3.5 (location whitelist), 3.11 (live QR display), HTMX approach, Go single binary, **P8 (9-layer anti-fraud system)** |

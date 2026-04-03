@@ -650,6 +650,67 @@
 
 ---
 
+## Session 27 — Bugfix: Leave & Report Integration (2026-04-03)
+
+### 27.1 — Fix Leave Repository Ambiguous Column
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix SQLite ambiguous column error in leave repository |
+| **Spec** | `ORDER BY created_at DESC` fails when JOIN users table — both have `created_at` |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | Fix SQLite error: ambiguous column name: created_at |
+| **Output** | Added `leave_requests.` prefix to `ORDER BY` clause |
+| **Review** | **Accepted** |
+| **Files** | `internal/repository/leave_repository.go` |
+| **Commit** | — |
+
+### 27.2 — Fix Leave Records Not Showing in Reports
+
+| Field | Detail |
+|---|---|
+| **Task** | Leave records (nghỉ phép) not appearing in branch report and Excel export |
+| **Spec** | 3 issues: (1) Template uses `CheckInAt` for date column — nil for leave records; (2) Excel export same issue; (3) `ORDER BY check_in_at DESC` pushes NULL records to end |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | Trang reports và file báo cáo chưa thấy ngày nghỉ của nhân viên |
+| **Output** | Fixed 3 issues: template uses `WorkDate` fallback, Excel uses `WorkDate`, query orders by `work_date DESC, check_in_at DESC` |
+| **Review** | **Accepted** |
+| **Files** | `web/templates/partials/history_list.html`, `internal/repository/attendance_repository.go`, `internal/service/report_service.go` |
+| **Commit** | — |
+
+### 27.3 — Fix syncAttendance Silent Failures
+
+| Field | Detail |
+|---|---|
+| **Task** | Leave approval not creating attendance records — `syncAttendance` fails silently |
+| **Spec** | No error logging, potential nil pointer panic on `leave.User.BranchID`, no fallback for missing relations |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | vẫn chưa hiện (leave records in report) |
+| **Output** | Rewrote `syncAttendance` with: nil-safe branch resolution, fallback DB query, proper error logging per date, resolved leave type name safely |
+| **Review** | **Accepted** — comprehensive error handling added |
+| **Files** | `internal/service/leave_service.go` |
+| **Commit** | — |
+
+---
+
+## Session 28 — Feature: Anti-Fraud System (9 Features) (2026-04-03)
+
+### 28.1 — Implement 9 Anti-Fraud Detection Features
+
+| Field | Detail |
+|---|---|
+| **Task** | Implement comprehensive anti-fraud system: GPS accuracy check, TOTP single-use nonce, rate limit per user, impossible travel detection, device fingerprinting, IP-location cross-check, WebAuthn sign count validation, anomaly detection, concurrent session detection |
+| **Spec** | (1) GPS accuracy reject <10m/>150m (2) TOTP nonce cache 30s (3) Rate limit 3/5min per user (4) Haversine speed >150km/h reject (5) SHA-256 device fingerprint binding (6) IP vs GPS >500km warning (7) WebAuthn sign count clone detection (8) Z-score >3.0 anomaly flag (9) Max 3 sessions per user with auto-revoke oldest |
+| **AI Tool** | Claude Code (Opus) |
+| **Prompt** | Implement từ 1 đến 9 (anti-fraud features for attendance system) |
+| **Output** | New service `AntiFraudService` with 9 detection methods. 3 new models (`UserDevice`, `UserSession`, `FraudAlert`). 3 new repositories. Updated `AttendanceService.LogTime()` with pre-check pipeline (GPS accuracy → TOTP nonce → impossible travel → device check) and post-check pipeline (IP-location cross-check → anomaly detection). Updated `AuthService` with session management (create/revoke/validate). Updated `WebAuthnService.FinishLogin()` with sign count validation. New `RateLimitByUser` middleware. Frontend: hidden inputs for `accuracy` + `device_fingerprint`, JS device fingerprinting via SubtleCrypto SHA-256 in base layout. 30+ files created/modified |
+| **Review** | **Accepted** — `go build ./...` passes clean |
+| **Changes** | None |
+| **Files** | `internal/service/antifraud_service.go`, `internal/models/fraud_alert.go`, `internal/models/user_device.go`, `internal/models/user_session.go`, `internal/repository/fraud_alert_repository.go`, `internal/repository/user_device_repository.go`, `internal/repository/user_session_repository.go`, `internal/repository/attendance_log_repository.go`, `internal/models/attendance_log.go`, `internal/service/attendance_service.go`, `internal/service/auth_service.go`, `internal/service/webauthn_service.go`, `internal/middleware/ratelimit.go`, `internal/handler/attendance.go`, `internal/handler/common.go`, `internal/router/router.go`, `cmd/server/main.go`, `web/templates/layouts/base.html`, `web/templates/pages/attendance.html`, `web/templates/pages/wifi_gps_checkin.html` |
+| **Commit** | — |
+
+---
+
 ## Summary
 
 | Phase | Sessions | Key Deliverables |
@@ -658,9 +719,10 @@
 | P1 — Auth | Session 3, 15, 25.2 | User model, JWT + refresh, RBAC, Profile Restriction, Disable Registration |
 | P2 — Branch | Session 4 | Branch CRUD, TOTP secret, IP/Location whitelist, employee assign |
 | P3 — Attendance | Session 7, 10, 12, 13, 23 | Multi-method check-in, WebAuthn fixes, Panic fix, Employee dropdown, GPS/WiFi fix |
-| P4 — Reports | Session 5, 14, 18, 20, 23.1 | History filters, RBAC Restriction, Excel export, Admin Selection UI, Export fix |
+| P4 — Reports | Session 5, 14, 18, 20, 23.1, 27 | History filters, RBAC Restriction, Excel export, Admin Selection UI, Export fix, Leave in reports |
 | P5 — Dashboard | Session 8, 19, 21, 22 | KPI cards, Chart.js charts (removed), branch filter, cache, Chart fix, Beautification |
 | P6 — Polish | Session 6, 9, 11, 16, 17, 24, 25 | RBAC, Biometric fix, Route fix, CI/CD Pipeline, PPID fix, Localization, UI Polish |
-| P7 — Leave | Session 26 | Leave request/approval workflow, 7 leave types, attendance sync |
+| P7 — Leave | Session 26, 27 | Leave request/approval workflow, 7 leave types, attendance sync, report integration |
+| P8 — Anti-Fraud | Session 28 | 9-layer anti-fraud system, device fingerprinting, anomaly detection, concurrent sessions |
 
-**Total prompts**: 35 | **AI Tools**: Claude Code (Opus), Antigravity AI | **Review rate**: 100% reviewed, 90% accepted as-is
+**Total prompts**: 39 | **AI Tools**: Claude Code (Opus), Antigravity AI | **Review rate**: 100% reviewed, 90% accepted as-is

@@ -35,6 +35,7 @@
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                             <option value="employee" {{if eq (printf "%s" .User.Role) "employee"}}selected{{end}}>Nhân viên</option>
                             <option value="manager" {{if eq (printf "%s" .User.Role) "manager"}}selected{{end}}>Quản lý</option>
+                            <option value="manager_device" {{if eq (printf "%s" .User.Role) "manager_device"}}selected{{end}}>Manager Máy</option>
                             <option value="admin" {{if eq (printf "%s" .User.Role) "admin"}}selected{{end}}>Quản trị viên</option>
                         </select>
                     </div>

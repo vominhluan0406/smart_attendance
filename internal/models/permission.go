@@ -158,6 +158,12 @@ func DefaultRolePermissions() map[Role][]string {
 			PermLeaveViewBranch, PermLeaveApprove,
 			PermOvertimeViewBranch, PermOvertimeApprove,
 		},
+		RoleManagerDevice: {
+			// Minimal kiosk permissions — QR display + password check-in only
+			PermAttendanceCheckIn, PermAttendanceCheckOut,
+			PermAttendanceViewBranch,
+			PermBranchView,
+		},
 		RoleAdmin: {
 			// All permissions
 			PermAttendanceCheckIn, PermAttendanceCheckOut, PermAttendanceViewOwn,

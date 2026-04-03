@@ -1,8 +1,11 @@
 package database
 
 import (
+	"fmt"
 	"log"
 
+	"github.com/smart-attendance/smart-attendance/internal/models"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -13,6 +16,12 @@ func RunMigrations(db *gorm.DB) error {
 		return err
 	}
 	if err := migrateCreateDefaultShifts(db); err != nil {
+		return err
+	}
+	if err := migrateManagerDevicePermissions(db); err != nil {
+		return err
+	}
+	if err := migrateCreateManagerDeviceUsers(db); err != nil {
 		return err
 	}
 	return nil
@@ -81,6 +90,125 @@ func migrateCreateDefaultShifts(db *gorm.DB) error {
 			continue
 		}
 		log.Printf("[migration] created default shift for branch: %s (%s-%s)", b.Name, startTime, endTime)
+	}
+
+	return nil
+}
+
+// migrateManagerDevicePermissions adds role_permissions for the new manager_device role
+// on existing databases that already have permissions seeded.
+func migrateManagerDevicePermissions(db *gorm.DB) error {
+	// Check if permissions table has data at all
+	var permCount int64
+	db.Model(&models.Permission{}).Count(&permCount)
+	if permCount == 0 {
+		return nil // Fresh DB, seedPermissions will handle it
+	}
+
+	// Get expected permission codes for manager_device
+	roleCodes := models.DefaultRolePermissions()[models.RoleManagerDevice]
+	if len(roleCodes) == 0 {
+		return nil
+	}
+
+	// Find which permissions are missing for this role
+	var existingCodes []string
+	db.Raw(`
+		SELECT p.code FROM role_permissions rp
+		JOIN permissions p ON p.id = rp.permission_id
+		WHERE rp.role = ?
+	`, models.RoleManagerDevice).Scan(&existingCodes)
+
+	existingSet := make(map[string]bool, len(existingCodes))
+	for _, c := range existingCodes {
+		existingSet[c] = true
+	}
+
+	var missingCodes []string
+	for _, code := range roleCodes {
+		if !existingSet[code] {
+			missingCodes = append(missingCodes, code)
+		}
+	}
+
+	log.Printf("[migration] manager_device: expected=%d existing=%d missing=%d codes=%v",
+		len(roleCodes), len(existingCodes), len(missingCodes), missingCodes)
+
+	if len(missingCodes) == 0 {
+		return nil
+	}
+
+	// Find permission IDs by code — use Unscoped to avoid soft-delete filter on Permission
+	var perms []models.Permission
+	if err := db.Where("code IN ? AND is_active = ?", missingCodes, true).Find(&perms).Error; err != nil {
+		log.Printf("[migration] warning: failed to find permissions: %v", err)
+		return err
+	}
+	log.Printf("[migration] found %d permission records for missing codes", len(perms))
+
+	var rps []models.RolePermission
+	for _, p := range perms {
+		rps = append(rps, models.RolePermission{Role: models.RoleManagerDevice, PermissionID: p.ID})
+	}
+
+	if len(rps) > 0 {
+		if err := db.Create(&rps).Error; err != nil {
+			log.Printf("[migration] warning: failed to create manager_device permissions: %v", err)
+			return nil
+		}
+		log.Printf("[migration] created %d role-permission mappings for manager_device", len(rps))
+	} else {
+		log.Printf("[migration] WARNING: no permission records found for codes %v — check permissions table", missingCodes)
+	}
+
+	return nil
+}
+
+// migrateCreateManagerDeviceUsers creates manager_device (kiosk) accounts
+// for each branch that doesn't already have one.
+func migrateCreateManagerDeviceUsers(db *gorm.DB) error {
+	// Check if any manager_device users exist
+	var count int64
+	db.Model(&models.User{}).Where("role = ?", models.RoleManagerDevice).Count(&count)
+	if count > 0 {
+		return nil // Already has device accounts
+	}
+
+	// Get all branches
+	type branchInfo struct {
+		ID   string
+		Name string
+	}
+	var branches []branchInfo
+	if err := db.Raw("SELECT id, name FROM branches WHERE deleted_at IS NULL").Scan(&branches).Error; err != nil {
+		return nil
+	}
+	if len(branches) == 0 {
+		return nil
+	}
+
+	pw, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+	if err != nil {
+		return nil
+	}
+
+	for i, b := range branches {
+		email := fmt.Sprintf("device.%d@demo.com", i+1)
+		user := &models.User{
+			EmployeeCode: fmt.Sprintf("DEV%03d", i+1),
+			Email:        email,
+			PasswordHash: string(pw),
+			FullName:     fmt.Sprintf("Kiosk %s", b.Name),
+			Role:         models.RoleManagerDevice,
+			BranchID:     &b.ID,
+			Position:     "Kiosk Device",
+			IsActive:     true,
+		}
+		if err := db.Create(user).Error; err != nil {
+			log.Printf("[migration] warning: failed to create device user for branch %s: %v", b.Name, err)
+			continue
+		}
+		log.Printf("[migration] created manager_device user: %s (branch: %s)", email, b.Name)
 	}
 
 	return nil

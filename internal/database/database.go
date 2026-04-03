@@ -137,9 +137,21 @@ func SafeMigrate(db *gorm.DB, targetModels ...interface{}) error {
 
 	for _, table := range tables {
 		for _, col := range columns {
-			// We use raw SQL for simplicity and speed here to ensure they exist
-			// SQLite handles ADD COLUMN safely if not using NOT NULL without default
 			_ = db.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s INTEGER DEFAULT 0", table, col))
+		}
+	}
+
+	// [MIGRATION] Anti-fraud columns for attendance_logs
+	antifraudLogCols := []struct{ name, def string }{
+		{"accuracy_m", "REAL DEFAULT NULL"},
+		{"device_fingerprint", "TEXT DEFAULT ''"},
+		{"anomaly_flag", "INTEGER DEFAULT 0"},
+		{"anomaly_score", "REAL DEFAULT 0"},
+	}
+	for _, c := range antifraudLogCols {
+		res := db.Exec(fmt.Sprintf("ALTER TABLE attendance_logs ADD COLUMN %s %s", c.name, c.def))
+		if res.Error == nil {
+			log.Printf("[database] added column attendance_logs.%s", c.name)
 		}
 	}
 
@@ -176,6 +188,17 @@ func RawMigrateTurso(db *gorm.DB) error {
 	alterTable(db, "user_credentials", "backup_state", "BOOLEAN DEFAULT 0")
 	alterTable(db, "user_credentials", "is_approved", "BOOLEAN DEFAULT 0")
 
+	// Anti-fraud columns for attendance_logs
+	antifraudCols := []struct{ name, def string }{
+		{"accuracy_m", "REAL DEFAULT NULL"},
+		{"device_fingerprint", "TEXT DEFAULT ''"},
+		{"anomaly_flag", "INTEGER DEFAULT 0"},
+		{"anomaly_score", "REAL DEFAULT 0"},
+	}
+	for _, c := range antifraudCols {
+		alterTable(db, "attendance_logs", c.name, c.def)
+	}
+
 	// [MIGRATION] One-time update for existing credentials to prevent "Backup Eligible flag inconsistency"
 	_ = db.Exec("UPDATE user_credentials SET backup_eligible = 1 WHERE backup_eligible = 0")
 	// Also mark existing credentials as approved if they exist
@@ -201,6 +224,9 @@ func RawMigrateTurso(db *gorm.DB) error {
 		`CREATE TABLE IF NOT EXISTS overtime_requests (id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME, user_id TEXT NOT NULL, work_date TEXT NOT NULL, planned_start TEXT NOT NULL, planned_end TEXT NOT NULL, planned_hours REAL, reason TEXT, status TEXT NOT NULL DEFAULT 'pending', reviewer_id TEXT, reviewed_at DATETIME, reviewer_note TEXT)`,
 		`CREATE TABLE IF NOT EXISTS permissions (id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME, code TEXT NOT NULL, name TEXT NOT NULL, description TEXT, module TEXT NOT NULL, is_active INTEGER DEFAULT 1)`,
 		`CREATE TABLE IF NOT EXISTS role_permissions (id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME, role TEXT NOT NULL, permission_id TEXT NOT NULL)`,
+		`CREATE TABLE IF NOT EXISTS user_devices (id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME, user_id TEXT NOT NULL, fingerprint_hash TEXT NOT NULL, user_agent TEXT, device_name TEXT, last_seen_at DATETIME, is_trusted INTEGER DEFAULT 0, is_blocked INTEGER DEFAULT 0)`,
+		`CREATE TABLE IF NOT EXISTS user_sessions (id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME, user_id TEXT NOT NULL, token_hash TEXT NOT NULL, ip_address TEXT, user_agent TEXT, expires_at DATETIME NOT NULL, is_revoked INTEGER DEFAULT 0, last_active_at DATETIME)`,
+		`CREATE TABLE IF NOT EXISTS fraud_alerts (id TEXT PRIMARY KEY, created_at DATETIME, updated_at DATETIME, deleted_at DATETIME, user_id TEXT NOT NULL, branch_id TEXT, alert_type TEXT NOT NULL, severity TEXT NOT NULL DEFAULT 'warning', description TEXT, details TEXT, ip_address TEXT, lat REAL, lng REAL, is_reviewed INTEGER DEFAULT 0, reviewed_at DATETIME, reviewed_by TEXT)`,
 	}
 
 	indexes := []string{

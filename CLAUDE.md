@@ -48,6 +48,8 @@ smart_attendance/
 │   │   ├── auth.go
 │   │   ├── branch.go
 │   │   ├── attendance.go
+│   │   ├── antifraud.go     # Anti-fraud detection (9 checks)
+│   │   ├── leave.go
 │   │   ├── report.go
 │   │   └── dashboard.go
 │   ├── repository/          # Data access layer (GORM queries)
@@ -83,7 +85,17 @@ smart_attendance/
   - **IP Whitelist**: Mỗi chi nhánh cấu hình danh sách IP được phép (mạng nội bộ công ty). Request check-in phải từ IP trong whitelist.
   - **Location Whitelist**: Mỗi chi nhánh cấu hình tọa độ (lat, lng) + bán kính. GPS của nhân viên phải nằm trong vùng cho phép (haversine distance).
   - **Biometric (WebAuthn)**: Nhân viên sử dụng Passkeys (FaceID/TouchID/Windows Hello) để điểm danh. Yêu cầu admin phê duyệt thiết bị trước khi sử dụng.
-- Chống gian lận: TOTP expire 15s, IP verify, GPS geofencing, detect mock location, Biometric hardware-backed security
+- **Chống gian lận (Anti-Fraud System)** — 9 lớp bảo vệ:
+  1. **GPS Accuracy Check**: Reject GPS accuracy < 10m (fake GPS) hoặc > 150m (tín hiệu yếu)
+  2. **TOTP Single-Use Nonce**: Mỗi mã QR chỉ dùng 1 lần trong 30s, chặn chụp ảnh/chia sẻ QR
+  3. **Rate Limit per User**: Giới hạn 3 check-in / 5 phút / user (ngoài rate limit IP)
+  4. **Impossible Travel Detection**: Phát hiện di chuyển > 150km/h giữa 2 lần check-in
+  5. **Device Fingerprinting**: Thu thập fingerprint thiết bị (SHA-256), bind với user, alert thiết bị mới
+  6. **IP-Location Cross-Check**: So sánh vị trí IP vs GPS, phát hiện VPN (warning)
+  7. **WebAuthn Sign Count**: Detect authenticator bị clone qua sign count không tăng
+  8. **Anomaly Detection**: Z-score trên thời gian check-in 30 ngày, flag nếu > 3.0 standard deviation
+  9. **Concurrent Session**: Giới hạn 3 session / user, tự revoke session cũ nhất
+- Hệ thống `FraudAlert` ghi nhận mọi cảnh báo gian lận cho admin review
 - Mỗi nhân viên chỉ check-in được tại chi nhánh được gán
 - Hỗ trợ check-in bằng 1 hoặc kết hợp nhiều phương thức (configurable per branch)
 
@@ -107,7 +119,16 @@ smart_attendance/
 - Lọc theo chi nhánh / phòng ban
 - Xuất báo cáo
 
-### 5. Authorization (Phân quyền)
+### 5. Leave Management (Quản lý nghỉ phép)
+- **Employee**: đăng ký nghỉ phép qua form (loại phép, ngày, lý do)
+- **Manager**: duyệt/từ chối đơn phép của nhân viên chi nhánh
+- 7 loại phép: Nghỉ phép năm, Nghỉ ốm, Nghỉ việc riêng, Nghỉ cưới, Nghỉ tang, Nghỉ thai sản, Nghỉ không lương
+- Kiểm tra trùng lịch (overlap detection)
+- Tự động tạo attendance record (status: "leave") khi phép được duyệt
+- Leave balance tracking theo năm
+- HTMX-powered UI: form đăng ký, bảng quản lý, filter theo trạng thái
+
+### 6. Authorization (Phân quyền)
 - **Admin**: Toàn hệ thống - quản lý tất cả chi nhánh, nhân viên, báo cáo
 - **Manager**: Quản lý chi nhánh được gán - xem báo cáo chi nhánh
 - **Employee**: Xem thông tin cá nhân, check-in/check-out

@@ -151,7 +151,7 @@ func seedAllData(db *gorm.DB, pw string) error {
 	log.Printf("[seed] created %d shifts", len(branchIDs)*len(shiftDefs))
 
 	// ============================================================
-	// 4. Users (1 admin + 3 managers + 15 employees = 19 users)
+	// 4. Users (1 admin + 3 managers + 3 manager_devices + 15 employees = 22 users)
 	// ============================================================
 	joinDate := time.Date(2025, 6, 1, 0, 0, 0, 0, time.Local)
 
@@ -187,6 +187,26 @@ func seedAllData(db *gorm.DB, pw string) error {
 		}
 		db.Create(user)
 		managerIDs = append(managerIDs, user.ID)
+	}
+
+	// Manager Devices (1 per branch — kiosk accounts for QR display + password check-in)
+	deviceDefs := []struct {
+		Code  string
+		Email string
+		Name  string
+	}{
+		{"DEV001", "device.hcm@demo.com", "Kiosk HCM"},
+		{"DEV002", "device.hn@demo.com", "Kiosk Hà Nội"},
+		{"DEV003", "device.dn@demo.com", "Kiosk Đà Nẵng"},
+	}
+	for i, d := range deviceDefs {
+		user := &models.User{
+			EmployeeCode: d.Code, Email: d.Email, PasswordHash: pw,
+			FullName: d.Name,
+			Role: models.RoleManagerDevice, BranchID: &branchIDs[i],
+			Position: "Kiosk Device", JoinDate: &joinDate, IsActive: true,
+		}
+		db.Create(user)
 	}
 
 	// Set managers on departments
@@ -229,9 +249,10 @@ func seedAllData(db *gorm.DB, pw string) error {
 			allEmployeeIDs = append(allEmployeeIDs, user.ID)
 		}
 	}
-	log.Printf("[seed] created 19 users (1 admin, 3 managers, 15 employees)")
+	log.Printf("[seed] created 22 users (1 admin, 3 managers, 3 manager_devices, 15 employees)")
 	log.Printf("[seed] login: admin@smartattendance.com / password123")
-	log.Printf("[seed] login: manager.hcm@demo.com / password123")
+	log.Printf("[seed] login: manager.hcm@demo.com / password123 (Quản lý)")
+	log.Printf("[seed] login: device.hcm@demo.com / password123 (Manager Máy)")
 	log.Printf("[seed] login: emp1.hcm@demo.com / password123")
 
 	// ============================================================

@@ -49,11 +49,11 @@ func (h *ReportHandler) UserHistoryPage(w http.ResponseWriter, r *http.Request) 
 	userID := middleware.GetUserID(r)
 	page, limit, dateFrom, dateTo, status := h.parseFilters(r)
 
-	// RBAC: Admin and Manager don't have personal history (they only see reports)
+	// RBAC: Admin, Manager, and Manager Device don't have personal history
 	role := middleware.GetUserRole(r)
-	if role == models.RoleAdmin || role == models.RoleManager {
+	if role == models.RoleAdmin || role == models.RoleManager || role == models.RoleManagerDevice {
 		data := userContext(r)
-		data["Error"] = "Forbidden: Admin and Manager roles do not have personal history records."
+		data["Error"] = "Chức năng này chỉ dành cho nhân viên."
 		h.render.Render(w, "my_history.html", data)
 		return
 	}
@@ -79,9 +79,9 @@ func (h *ReportHandler) UserHistoryPartial(w http.ResponseWriter, r *http.Reques
 	userID := middleware.GetUserID(r)
 	page, limit, dateFrom, dateTo, status := h.parseFilters(r)
 
-	// RBAC: Admin and Manager check
+	// RBAC: Admin, Manager, Manager Device check
 	role := middleware.GetUserRole(r)
-	if role == models.RoleAdmin || role == models.RoleManager {
+	if role == models.RoleAdmin || role == models.RoleManager || role == models.RoleManagerDevice {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}

@@ -74,6 +74,7 @@ func (s *PermissionService) UpdateRolePermissions(role models.Role, permissionID
 func (s *PermissionService) InvalidateAll() {
 	s.cache.Delete(s.cacheKey(models.RoleAdmin))
 	s.cache.Delete(s.cacheKey(models.RoleManager))
+	s.cache.Delete(s.cacheKey(models.RoleManagerDevice))
 	s.cache.Delete(s.cacheKey(models.RoleEmployee))
 }
 

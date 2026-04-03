@@ -9,9 +9,10 @@ import (
 type Role string
 
 const (
-	RoleAdmin    Role = "admin"
-	RoleManager  Role = "manager"
-	RoleEmployee Role = "employee"
+	RoleAdmin         Role = "admin"
+	RoleManager       Role = "manager"        // Manager Người — dashboard, reports, leave approval
+	RoleManagerDevice Role = "manager_device"  // Manager Máy — QR display, password check-in kiosk
+	RoleEmployee      Role = "employee"
 )
 
 type User struct {

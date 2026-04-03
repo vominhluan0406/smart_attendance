@@ -91,10 +91,10 @@ func (h *UserHandler) EditPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) ProfilePage(w http.ResponseWriter, r *http.Request) {
-	// RBAC: Admin and Manager don't have personal profiles (managed via admin UI)
+	// RBAC: Admin, Manager, Manager Device don't have personal profiles
 	role := middleware.GetUserRole(r)
-	if role == models.RoleAdmin || role == models.RoleManager {
-		http.Error(w, "Forbidden: Admin and Manager roles do not have personal profile pages.", http.StatusForbidden)
+	if role == models.RoleAdmin || role == models.RoleManager || role == models.RoleManagerDevice {
+		http.Error(w, "Chức năng này chỉ dành cho nhân viên.", http.StatusForbidden)
 		return
 	}
 
