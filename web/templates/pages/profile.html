@@ -31,7 +31,8 @@
                         <div id="biometric-status" class="hidden mb-4 p-3 rounded-xl text-sm"></div>
 
                         <button id="register-biometric" class="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-emerald-700 active:scale-95 transition-all">
-                            <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                            <span class="btn-spinner"></span>
+                            <i data-lucide="plus-circle" class="w-5 h-5 btn-icon"></i>
                             Đăng ký thiết bị mới
                         </button>
                         {{ else }}
@@ -64,6 +65,7 @@
         statusEl.classList.add('bg-blue-50', 'text-blue-700');
         statusEl.innerText = 'Đang khởi tạo yêu cầu...';
         btn.disabled = true;
+        btn.classList.add('htmx-request');
 
         try {
             // 1. Get options from server
@@ -120,6 +122,7 @@
             statusEl.innerText = 'Lỗi: ' + err.message;
         } finally {
             btn.disabled = false;
+            btn.classList.remove('htmx-request');
         }
     });
 

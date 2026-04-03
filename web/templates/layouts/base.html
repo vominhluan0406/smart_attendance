@@ -24,22 +24,10 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-    <style>
-        .htmx-indicator {
-            display: none;
-        }
-
-        .htmx-request .htmx-indicator {
-            display: inline-block;
-        }
-
-        .htmx-request.htmx-indicator {
-            display: inline-block;
-        }
-    </style>
 </head>
 
-<body class="h-full pb-16 sm:pb-0 font-sans" hx-boost="true">
+<body class="h-full pb-16 sm:pb-0 font-sans" hx-boost="true" hx-indicator="#global-loader">
+    <div id="global-loader"></div>
     {{template "toast" .}}
     {{block "body" .}}{{end}}
 
