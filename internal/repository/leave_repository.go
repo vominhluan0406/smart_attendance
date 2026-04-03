@@ -75,7 +75,7 @@ func (r *LeaveRepository) List(params LeaveListParams) (*LeaveListResult, error)
 	var records []models.LeaveRequest
 	offset := (params.Page - 1) * params.Limit
 	err := query.Preload("User").Preload("LeaveType").Preload("Reviewer").
-		Offset(offset).Limit(params.Limit).Order("created_at DESC").
+		Offset(offset).Limit(params.Limit).Order("leave_requests.created_at DESC").
 		Find(&records).Error
 
 	return &LeaveListResult{

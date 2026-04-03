@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/smart-attendance/smart-attendance/internal/models"
@@ -121,36 +122,73 @@ func (s *LeaveService) ReviewRequest(reviewerID, requestID string, status models
 }
 
 func (s *LeaveService) syncAttendance(leave *models.LeaveRequest) {
-	start, _ := time.Parse("2006-01-02", leave.StartDate)
-	end, _ := time.Parse("2006-01-02", leave.EndDate)
+	start, err := time.Parse("2006-01-02", leave.StartDate)
+	if err != nil {
+		log.Printf("[service][leave] ERROR syncAttendance parse start_date: %v", err)
+		return
+	}
+	end, err := time.Parse("2006-01-02", leave.EndDate)
+	if err != nil {
+		log.Printf("[service][leave] ERROR syncAttendance parse end_date: %v", err)
+		return
+	}
+
+	// Resolve branch ID from user
+	var branchID string
+	if leave.User != nil && leave.User.BranchID != nil {
+		branchID = *leave.User.BranchID
+	} else {
+		// Fallback: fetch user from DB
+		user, err := s.userRepo.FindByID(leave.UserID)
+		if err != nil || user.BranchID == nil {
+			log.Printf("[service][leave] ERROR syncAttendance: user %s has no branch_id", leave.UserID)
+			return
+		}
+		branchID = *user.BranchID
+	}
+
+	// Resolve leave type name
+	leaveTypeName := "Nghỉ phép"
+	if leave.LeaveType != nil {
+		leaveTypeName = leave.LeaveType.Name
+	}
+
+	log.Printf("[service][leave] syncAttendance: user=%s branch=%s dates=%s~%s type=%s",
+		leave.UserID, branchID, leave.StartDate, leave.EndDate, leaveTypeName)
 
 	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
 		dateStr := d.Format("2006-01-02")
-		// Use a temporary attendance record to check/create
 		existing, err := s.attendanceRepo.FindTodayByUserAndDate(leave.UserID, dateStr)
 		if err == nil && existing != nil {
-			// If already has check-in, maybe keep it but add note?
-			// For now, if it's "absent" or empty, change to "leave"
 			if existing.Status == models.StatusAbsent || existing.CheckInAt == nil {
 				existing.Status = models.StatusLeave
 				if existing.Note != "" {
 					existing.Note += " | "
 				}
-				existing.Note += fmt.Sprintf("Nghỉ phép: %s", leave.LeaveType.Name)
-				s.attendanceRepo.Update(existing)
+				existing.Note += fmt.Sprintf("Nghỉ phép: %s", leaveTypeName)
+				if err := s.attendanceRepo.Update(existing); err != nil {
+					log.Printf("[service][leave] ERROR syncAttendance update %s: %v", dateStr, err)
+				} else {
+					log.Printf("[service][leave] syncAttendance updated existing record %s -> leave", dateStr)
+				}
+			} else {
+				log.Printf("[service][leave] syncAttendance skip %s: already has status=%s", dateStr, existing.Status)
 			}
 			continue
 		}
 
-		// Create new leave attendance record
 		att := &models.Attendance{
 			UserID:   leave.UserID,
-			BranchID: *leave.User.BranchID,
+			BranchID: branchID,
 			WorkDate: dateStr,
 			Status:   models.StatusLeave,
-			Note:     fmt.Sprintf("Nghỉ phép: %s", leave.LeaveType.Name),
+			Note:     fmt.Sprintf("Nghỉ phép: %s", leaveTypeName),
 		}
-		s.attendanceRepo.Create(att)
+		if err := s.attendanceRepo.Create(att); err != nil {
+			log.Printf("[service][leave] ERROR syncAttendance create %s: %v", dateStr, err)
+		} else {
+			log.Printf("[service][leave] syncAttendance created leave record for %s", dateStr)
+		}
 	}
 }
 

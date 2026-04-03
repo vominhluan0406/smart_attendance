@@ -30,6 +30,7 @@ type AttendanceService struct {
 	ipValidator    *IPValidator
 	locValidator   *LocationValidator
 	leaveRepo      *repository.LeaveRepository
+	antiFraud      *AntiFraudService
 }
 
 func NewAttendanceService(
@@ -42,6 +43,7 @@ func NewAttendanceService(
 	ipValidator *IPValidator,
 	locValidator *LocationValidator,
 	leaveRepo *repository.LeaveRepository,
+	antiFraud *AntiFraudService,
 ) *AttendanceService {
 	return &AttendanceService{
 		attendanceRepo: attendanceRepo,
@@ -53,27 +55,31 @@ func NewAttendanceService(
 		ipValidator:    ipValidator,
 		locValidator:   locValidator,
 		leaveRepo:      leaveRepo,
+		antiFraud:      antiFraud,
 	}
 }
 
 // LogTimeInput is the input for each QR scan / time log.
 type LogTimeInput struct {
-	UserID           string   `json:"user_id"`
-	TOTPCode         string   `json:"totp_code"`
-	ScannedBranchID  string   `json:"scanned_branch_id"`
-	Lat              *float64 `json:"lat"`
-	Lng              *float64 `json:"lng"`
-	IP               string   `json:"ip"`
-	FaceVerified     bool     `json:"face_verified"`
-	NFCVerified      bool     `json:"nfc_verified"`
-	PasswordVerified bool     `json:"password_verified"`
-	BiometricVerified bool    `json:"biometric_verified"`
+	UserID            string   `json:"user_id"`
+	TOTPCode          string   `json:"totp_code"`
+	ScannedBranchID   string   `json:"scanned_branch_id"`
+	Lat               *float64 `json:"lat"`
+	Lng               *float64 `json:"lng"`
+	AccuracyM         *float64 `json:"accuracy_m"`
+	IP                string   `json:"ip"`
+	UserAgent         string   `json:"user_agent"`
+	DeviceFingerprint string   `json:"device_fingerprint"`
+	FaceVerified      bool     `json:"face_verified"`
+	NFCVerified       bool     `json:"nfc_verified"`
+	PasswordVerified  bool     `json:"password_verified"`
+	BiometricVerified bool     `json:"biometric_verified"`
 }
 
 // LogTimeResult is returned after a successful time log.
 type LogTimeResult struct {
-	Log          *models.AttendanceLog `json:"log"`
-	Attendance   *models.Attendance    `json:"attendance"`
+	Log              *models.AttendanceLog `json:"log"`
+	Attendance       *models.Attendance    `json:"attendance"`
 	TOTPVerified     bool                  `json:"totp_verified"`
 	IPVerified       bool                  `json:"ip_verified"`
 	LocVerified      bool                  `json:"loc_verified"`
@@ -82,6 +88,9 @@ type LogTimeResult struct {
 	PasswordVerified bool                  `json:"password_verified"`
 	WiFiGPSVerified  bool                  `json:"wifi_gps_verified"`
 	LogCount         int                   `json:"log_count"`
+	NewDevice        bool                  `json:"new_device"`
+	AnomalyFlag      bool                  `json:"anomaly_flag"`
+	AnomalyScore     float64               `json:"anomaly_score"`
 }
 
 // LogTime records a time scan (replaces separate CheckIn/CheckOut).
@@ -101,7 +110,52 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		return nil, ErrBranchNotFound
 	}
 
-	// 2. Validate methods (same as before)
+	// === ANTI-FRAUD PRE-CHECKS ===
+
+	// [Feature 1] GPS Accuracy Check — reject fake GPS
+	if input.Lat != nil && input.Lng != nil {
+		if err := s.antiFraud.ValidateGPSAccuracy(input.AccuracyM); err != nil {
+			s.antiFraud.CreateAlert(input.UserID, branch.ID, models.FraudGPSAccuracy, "warning",
+				fmt.Sprintf("GPS accuracy: %.1fm", safeFloat(input.AccuracyM)),
+				map[string]interface{}{"accuracy": safeFloat(input.AccuracyM)}, input.IP, input.Lat, input.Lng)
+			return nil, err
+		}
+	}
+
+	// [Feature 2] TOTP Single-Use Nonce — prevent QR screenshot relay
+	if input.TOTPCode != "" {
+		if err := s.antiFraud.CheckTOTPNonce(branch.ID, input.TOTPCode); err != nil {
+			s.antiFraud.CreateAlert(input.UserID, branch.ID, models.FraudTOTPReuse, "critical",
+				"TOTP code reused", map[string]interface{}{"code": input.TOTPCode}, input.IP, input.Lat, input.Lng)
+			return nil, err
+		}
+	}
+
+	// [Feature 4] Impossible Travel Detection
+	if input.Lat != nil && input.Lng != nil {
+		now0 := timezone.Now()
+		if err := s.antiFraud.CheckImpossibleTravel(input.UserID, *input.Lat, *input.Lng, now0); err != nil {
+			s.antiFraud.CreateAlert(input.UserID, branch.ID, models.FraudImpossibleTravel, "critical",
+				"Impossible travel detected", map[string]interface{}{"lat": *input.Lat, "lng": *input.Lng}, input.IP, input.Lat, input.Lng)
+			return nil, err
+		}
+	}
+
+	// [Feature 5] Device Fingerprinting — detect buddy punching
+	if input.DeviceFingerprint != "" {
+		isNew, err := s.antiFraud.CheckDevice(input.UserID, input.DeviceFingerprint, input.UserAgent)
+		if err != nil {
+			return nil, err // Device blocked
+		}
+		if isNew {
+			s.antiFraud.CreateAlert(input.UserID, branch.ID, models.FraudNewDevice, "warning",
+				"New device detected", map[string]interface{}{"ua": input.UserAgent}, input.IP, input.Lat, input.Lng)
+		}
+	}
+
+	// === STANDARD METHOD VALIDATION ===
+
+	// 2. Validate methods
 	result := &LogTimeResult{}
 	var validationErrors []string
 
@@ -155,9 +209,6 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 
 	// Combined WiFi + GPS check (Both must pass)
 	if s.branchService.HasMethod(branch, models.MethodWiFiGPS) {
-		// We already ran IP and Location checks above if those methods were also in the list,
-		// but if ONLY wifi_gps is in the list, we need to ensure they were checked.
-		// Since HasMethod checks individual bits, let's just use the verified flags.
 		if result.IPVerified && result.LocVerified {
 			result.WiFiGPSVerified = true
 		}
@@ -167,9 +218,7 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		validationErrors = append(validationErrors, "Yêu cầu xác thực vân tay/FaceID")
 	}
 
-	// 3. Final decision: At least one of the ALLOWED methods must have passed verification.
-	// We check each verified flag against whether its corresponding method is actually enabled for the branch.
-	// This ensures that if 'wifi_gps' is the only method, individual IP or Location passes aren't enough.
+	// 3. Final decision
 	anyPassed := (result.TOTPVerified && s.branchService.HasMethod(branch, models.MethodQRTOTP)) ||
 		(result.IPVerified && s.branchService.HasMethod(branch, models.MethodIP)) ||
 		(result.LocVerified && s.branchService.HasMethod(branch, models.MethodLocation)) ||
@@ -187,7 +236,24 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		return nil, ErrMethodRequired
 	}
 
-	// 3. Resolve shift
+	// [Feature 2] Mark TOTP code as used after successful validation
+	if result.TOTPVerified {
+		s.antiFraud.MarkTOTPUsed(branch.ID, input.TOTPCode)
+	}
+
+	// [Feature 6] IP-Location Cross-Check — detect VPN
+	if input.Lat != nil && input.Lng != nil && len(branch.Locations) > 0 {
+		branchLoc := branch.Locations[0]
+		if err := s.antiFraud.CheckIPLocationConsistency(input.IP, *input.Lat, *input.Lng, branchLoc.Lat, branchLoc.Lng); err != nil {
+			s.antiFraud.CreateAlert(input.UserID, branch.ID, models.FraudIPLocationMismatch, "warning",
+				"IP-GPS location mismatch", map[string]interface{}{"ip": input.IP, "lat": *input.Lat, "lng": *input.Lng},
+				input.IP, input.Lat, input.Lng)
+			// Warning only — don't block
+			log.Printf("[service][attendance] IP-location mismatch for user %s (warning only)", input.UserID)
+		}
+	}
+
+	// 4. Resolve shift
 	now := timezone.Now()
 	workDate := now.Format("2006-01-02")
 	method := buildMethodStr(result)
@@ -203,24 +269,38 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		workStartTime = shift.StartTime
 	}
 
-	// 4. Create AttendanceLog
+	// [Feature 8] Anomaly Detection — flag suspicious check-in times
+	anomalyFlag, anomalyScore := s.antiFraud.CheckTimeAnomaly(input.UserID, now)
+	if anomalyFlag {
+		s.antiFraud.CreateAlert(input.UserID, branch.ID, models.FraudAnomalyTime, "warning",
+			fmt.Sprintf("Unusual check-in time (z-score: %.1f)", anomalyScore),
+			map[string]interface{}{"time": now.Format("15:04"), "zscore": anomalyScore}, input.IP, input.Lat, input.Lng)
+	}
+	result.AnomalyFlag = anomalyFlag
+	result.AnomalyScore = anomalyScore
+
+	// 5. Create AttendanceLog
 	attLog := &models.AttendanceLog{
-		UserID:       input.UserID,
-		BranchID:     *user.BranchID,
-		ShiftID:      shiftID,
-		WorkDate:     workDate,
-		LoggedAt:     now,
-		Method:       method,
-		IPAddress:    input.IP,
-		Lat:          input.Lat,
-		Lng:          input.Lng,
-		TOTPVerified:     result.TOTPVerified,
-		IPVerified:       result.IPVerified,
-		LocVerified:      result.LocVerified,
-		FaceVerified:     result.FaceVerified,
-		NFCVerified:      result.NFCVerified,
-		PasswordVerified: input.PasswordVerified,
+		UserID:            input.UserID,
+		BranchID:          *user.BranchID,
+		ShiftID:           shiftID,
+		WorkDate:          workDate,
+		LoggedAt:          now,
+		Method:            method,
+		IPAddress:         input.IP,
+		Lat:               input.Lat,
+		Lng:               input.Lng,
+		AccuracyM:         input.AccuracyM,
+		DeviceFingerprint: input.DeviceFingerprint,
+		TOTPVerified:      result.TOTPVerified,
+		IPVerified:        result.IPVerified,
+		LocVerified:       result.LocVerified,
+		FaceVerified:      result.FaceVerified,
+		NFCVerified:       result.NFCVerified,
+		PasswordVerified:  input.PasswordVerified,
 		BiometricVerified: input.BiometricVerified,
+		AnomalyFlag:       anomalyFlag,
+		AnomalyScore:      anomalyScore,
 	}
 	if err := s.logRepo.Create(attLog); err != nil {
 		return nil, fmt.Errorf("create attendance log: %w", err)
@@ -368,4 +448,11 @@ func buildMethodStr(result *LogTimeResult) string {
 		s += "password"
 	}
 	return s
+}
+
+func safeFloat(f *float64) float64 {
+	if f == nil {
+		return 0
+	}
+	return *f
 }

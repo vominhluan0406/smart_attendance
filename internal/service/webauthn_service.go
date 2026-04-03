@@ -157,10 +157,20 @@ func (s *WebAuthnService) FinishLogin(user *models.User, r *http.Request) error 
 		return fmt.Errorf("webauthn finish login: %w", err)
 	}
 
-	// Update sign count
+	// [Feature 7] Validate sign count to detect cloned authenticators
 	for i := range user.Credentials {
 		if string(user.Credentials[i].CredentialID) == string(credential.ID) {
-			user.Credentials[i].SignCount = credential.Authenticator.SignCount
+			storedCount := user.Credentials[i].SignCount
+			newCount := credential.Authenticator.SignCount
+
+			// If new sign count > 0 but <= stored, authenticator may be cloned
+			if newCount > 0 && newCount <= storedCount {
+				log.Printf("[service][webauthn] CLONE DETECTED: user=%s stored_count=%d received_count=%d",
+					user.ID, storedCount, newCount)
+				return fmt.Errorf("phát hiện authenticator bị sao chép (sign count không tăng)")
+			}
+
+			user.Credentials[i].SignCount = newCount
 			user.Credentials[i].BackupEligible = credential.Flags.BackupEligible
 			user.Credentials[i].BackupState = credential.Flags.BackupState
 			s.credRepo.Update(&user.Credentials[i])

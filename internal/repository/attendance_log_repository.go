@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"fmt"
+
 	"github.com/smart-attendance/smart-attendance/internal/models"
 	"gorm.io/gorm"
 )
@@ -34,3 +36,33 @@ func (r *AttendanceLogRepository) CountTodayLogs(userID, workDate string) (int64
 		Count(&count).Error
 	return count, err
 }
+
+// FindLastWithLocation returns the most recent log for a user that has GPS coordinates.
+func (r *AttendanceLogRepository) FindLastWithLocation(userID string) (*models.AttendanceLog, error) {
+	var log models.AttendanceLog
+	err := r.db.Where("user_id = ? AND lat IS NOT NULL AND lng IS NOT NULL", userID).
+		Order("logged_at DESC").First(&log).Error
+	if err != nil {
+		return nil, err
+	}
+	return &log, nil
+}
+
+// FindRecentFirstLogs returns the first log of each day for the last N days (for anomaly detection).
+func (r *AttendanceLogRepository) FindRecentFirstLogs(userID string, days int) ([]models.AttendanceLog, error) {
+	var logs []models.AttendanceLog
+	// Get the earliest log per work_date for the last N days
+	err := r.db.Raw(`
+		SELECT al.* FROM attendance_logs al
+		INNER JOIN (
+			SELECT work_date, MIN(logged_at) as min_logged_at
+			FROM attendance_logs
+			WHERE user_id = ? AND work_date >= date('now', ?)
+			GROUP BY work_date
+		) sub ON al.work_date = sub.work_date AND al.logged_at = sub.min_logged_at
+		WHERE al.user_id = ?
+		ORDER BY al.work_date DESC
+	`, userID, fmt.Sprintf("-%d days", days), userID).Scan(&logs).Error
+	return logs, err
+}
+

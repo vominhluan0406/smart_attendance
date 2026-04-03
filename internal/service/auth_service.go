@@ -1,11 +1,14 @@
 package service
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/smart-attendance/smart-attendance/internal/cache"
 	"github.com/smart-attendance/smart-attendance/internal/config"
 	"github.com/smart-attendance/smart-attendance/internal/models"
 	"github.com/smart-attendance/smart-attendance/internal/repository"
@@ -37,14 +40,30 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+const MaxSessionsPerUser = 3
+
 type AuthService struct {
-	userRepo   *repository.UserRepository
-	branchRepo *repository.BranchRepository
-	cfg        *config.Config
+	userRepo    *repository.UserRepository
+	branchRepo  *repository.BranchRepository
+	sessionRepo *repository.UserSessionRepository
+	cache       *cache.Cache
+	cfg         *config.Config
 }
 
-func NewAuthService(userRepo *repository.UserRepository, branchRepo *repository.BranchRepository, cfg *config.Config) *AuthService {
-	return &AuthService{userRepo: userRepo, branchRepo: branchRepo, cfg: cfg}
+func NewAuthService(
+	userRepo *repository.UserRepository,
+	branchRepo *repository.BranchRepository,
+	sessionRepo *repository.UserSessionRepository,
+	appCache *cache.Cache,
+	cfg *config.Config,
+) *AuthService {
+	return &AuthService{
+		userRepo:    userRepo,
+		branchRepo:  branchRepo,
+		sessionRepo: sessionRepo,
+		cache:       appCache,
+		cfg:         cfg,
+	}
 }
 
 func (s *AuthService) resolveBranchName(user *models.User) string {
@@ -268,7 +287,7 @@ func (s *AuthService) generateTokenPair(user *models.User, branchName string) (*
 	if err != nil {
 		return nil, fmt.Errorf("sign access token: %w", err)
 	}
- 
+
 	// Refresh token
 	refreshClaims := &Claims{
 		UserID:     user.ID,
@@ -288,9 +307,79 @@ func (s *AuthService) generateTokenPair(user *models.User, branchName string) (*
 		return nil, fmt.Errorf("sign refresh token: %w", err)
 	}
 
+	// [Feature 9] Concurrent Session Detection — enforce max sessions
+	if s.sessionRepo != nil {
+		tokenHash := hashToken(accessToken)
+		expiresAt := now.Add(time.Duration(s.cfg.JWTExpireMinutes) * time.Minute)
+
+		// Check current active sessions
+		count, _ := s.sessionRepo.CountActiveSessions(user.ID)
+		if count >= MaxSessionsPerUser {
+			// Revoke oldest session to make room
+			if err := s.sessionRepo.RevokeOldest(user.ID); err != nil {
+				log.Printf("[service][auth] WARNING: failed to revoke oldest session for user %s: %v", user.ID, err)
+			} else {
+				log.Printf("[service][auth] revoked oldest session for user %s (had %d active)", user.ID, count)
+			}
+		}
+
+		// Create new session record
+		session := &models.UserSession{
+			UserID:       user.ID,
+			TokenHash:    tokenHash,
+			ExpiresAt:    expiresAt,
+			LastActiveAt: now,
+		}
+		if err := s.sessionRepo.Create(session); err != nil {
+			log.Printf("[service][auth] WARNING: failed to create session record: %v", err)
+		}
+
+		// Cache the token hash as valid
+		s.cache.Set("session:"+tokenHash, true, time.Duration(s.cfg.JWTExpireMinutes)*time.Minute)
+	}
+
 	return &TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    s.cfg.JWTExpireMinutes * 60,
 	}, nil
+}
+
+// RevokeSession marks a session as revoked (called on logout).
+func (s *AuthService) RevokeSession(tokenString string) {
+	if s.sessionRepo == nil {
+		return
+	}
+	hash := hashToken(tokenString)
+	s.sessionRepo.RevokeByTokenHash(hash)
+	s.cache.Delete("session:" + hash)
+}
+
+// IsSessionValid checks if a token's session is still active (not revoked).
+func (s *AuthService) IsSessionValid(tokenString string) bool {
+	if s.sessionRepo == nil {
+		return true
+	}
+	hash := hashToken(tokenString)
+
+	// Check cache first
+	if _, found := s.cache.Get("session:" + hash); found {
+		return true
+	}
+
+	// Fallback to DB
+	session, err := s.sessionRepo.FindByTokenHash(hash)
+	if err != nil || session == nil {
+		return false
+	}
+
+	// Re-cache and update last active
+	s.cache.Set("session:"+hash, true, 5*time.Minute)
+	s.sessionRepo.UpdateLastActive(hash)
+	return true
+}
+
+func hashToken(token string) string {
+	h := sha256.Sum256([]byte(token))
+	return fmt.Sprintf("%x", h)
 }

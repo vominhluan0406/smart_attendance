@@ -41,6 +41,16 @@ func parseLatLng(latStr, lngStr string) (*float64, *float64) {
 	return lat, lng
 }
 
+func parseOptionalFloat(s string) *float64 {
+	if s == "" {
+		return nil
+	}
+	if v, err := strconv.ParseFloat(s, 64); err == nil {
+		return &v
+	}
+	return nil
+}
+
 func getClientIP(r *http.Request) string {
 	if ip := r.Header.Get("X-Real-Ip"); ip != "" {
 		return ip

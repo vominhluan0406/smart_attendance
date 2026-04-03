@@ -134,8 +134,12 @@ func (s *ReportService) generateExcel(records []models.Attendance) ([]byte, erro
 			f.SetCellValue(sheetName, fmt.Sprintf("C%d", row), r.BranchID)
 		}
 
-		if r.CheckInAt != nil {
+		if r.WorkDate != "" {
+			f.SetCellValue(sheetName, fmt.Sprintf("D%d", row), r.WorkDate)
+		} else if r.CheckInAt != nil {
 			f.SetCellValue(sheetName, fmt.Sprintf("D%d", row), r.CheckInAt.Format("2006-01-02"))
+		}
+		if r.CheckInAt != nil {
 			f.SetCellValue(sheetName, fmt.Sprintf("E%d", row), r.CheckInAt.Format("15:04:05"))
 		}
 		

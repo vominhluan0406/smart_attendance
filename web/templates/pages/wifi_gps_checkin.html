@@ -27,6 +27,8 @@
                 <form id="checkin-form" hx-post="/attendance/log" hx-target="#status-container" hx-swap="outerHTML" class="hidden">
                     <input type="hidden" name="lat" id="lat">
                     <input type="hidden" name="lng" id="lng">
+                    <input type="hidden" name="accuracy" id="accuracy">
+                    <input type="hidden" name="device_fingerprint" id="device_fingerprint">
                     <input type="hidden" name="biometric_verified" id="biometric_verified" value="0">
                     <button type="submit" id="submit-btn"></button>
                 </form>
@@ -90,8 +92,10 @@
                 gpsCompleted = true;
                 latField.value = pos.coords.latitude;
                 lngField.value = pos.coords.longitude;
-                
-                gpsStatus.innerHTML = '<span class="relative flex h-2 w-2 mr-2"><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span> Đã lấy được vị trí';
+                var accField = document.getElementById('accuracy');
+                if (accField) accField.value = pos.coords.accuracy;
+
+                gpsStatus.innerHTML = '<span class="relative flex h-2 w-2 mr-2"><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span> Đã lấy được vị trí (±' + Math.round(pos.coords.accuracy) + 'm)';
                 gpsStatus.classList.replace('text-blue-600', 'text-green-600');
                 statusText.innerText = 'Đang xác thực bảo mật...';
 

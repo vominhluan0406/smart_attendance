@@ -16,7 +16,7 @@
             {{ range .Result.Records }}
             <tr>
                 <td data-label="Ngày" class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {{ if .CheckInAt }}{{ .CheckInAt.Format "02/01/2006" }}{{ end }}
+                    {{ if .WorkDate }}{{ .WorkDate }}{{ else if .CheckInAt }}{{ .CheckInAt.Format "02/01/2006" }}{{ end }}
                 </td>
                 <td data-label="Nhân viên" class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {{ if .User }}{{ .User.FullName }}{{ else }}{{ .UserID }}{{ end }}

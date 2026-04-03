@@ -21,6 +21,10 @@ type AttendanceLog struct {
 	LocVerified      bool      `gorm:"default:false" json:"loc_verified"`
 	FaceVerified     bool      `gorm:"default:false" json:"face_verified"`
 	NFCVerified      bool      `gorm:"default:false" json:"nfc_verified"`
-	PasswordVerified bool      `gorm:"default:false" json:"password_verified"`
+	PasswordVerified  bool     `gorm:"default:false" json:"password_verified"`
 	BiometricVerified bool     `gorm:"default:false" json:"biometric_verified"`
+	AccuracyM         *float64 `gorm:"type:real" json:"accuracy_m,omitempty"`
+	DeviceFingerprint string   `gorm:"type:text" json:"device_fingerprint,omitempty"`
+	AnomalyFlag       bool     `gorm:"default:false" json:"anomaly_flag"`
+	AnomalyScore      float64  `gorm:"default:0" json:"anomaly_score"`
 }

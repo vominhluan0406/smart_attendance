@@ -80,6 +80,28 @@
             if (window.initQRScanner) window.initQRScanner();
         });
     </script>
+    <!-- Device fingerprinting for anti-fraud -->
+    <script>
+    (function() {
+        var fp = [
+            navigator.userAgent,
+            screen.width + 'x' + screen.height,
+            screen.colorDepth,
+            Intl.DateTimeFormat().resolvedOptions().timeZone,
+            navigator.language,
+            navigator.hardwareConcurrency || 0,
+            navigator.platform
+        ].join('|');
+        // SHA-256 hash
+        if (crypto.subtle) {
+            crypto.subtle.digest('SHA-256', new TextEncoder().encode(fp)).then(function(buf) {
+                var hash = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+                document.querySelectorAll('input[name="device_fingerprint"]').forEach(function(el){el.value=hash});
+                window.__deviceFP = hash;
+            });
+        }
+    })();
+    </script>
     {{block "scripts" .}}{{end}}
 </body>
 

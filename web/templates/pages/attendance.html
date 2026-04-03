@@ -20,6 +20,8 @@
                     <input type="hidden" name="scanned_branch_id" id="scanned_branch_id">
                     <input type="hidden" name="lat" id="lat">
                     <input type="hidden" name="lng" id="lng">
+                    <input type="hidden" name="accuracy" id="accuracy">
+                    <input type="hidden" name="device_fingerprint" id="device_fingerprint">
                     <input type="hidden" name="face_verified" id="face_verified" value="0">
                     <input type="hidden" name="biometric_verified" id="biometric_verified" value="0">
                     <button type="submit" id="submit-btn" class="hidden"></button>
@@ -204,9 +206,11 @@
                 function(pos) {
                     latField.value = pos.coords.latitude;
                     lngField.value = pos.coords.longitude;
+                    var accField = document.getElementById('accuracy');
+                    if (accField) accField.value = pos.coords.accuracy;
                     var s = document.getElementById('location-status');
                     if (s) {
-                        s.innerHTML = '<span class="relative flex h-2 w-2 mr-2"><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span> GPS: ' + pos.coords.latitude.toFixed(6) + ', ' + pos.coords.longitude.toFixed(6);
+                        s.innerHTML = '<span class="relative flex h-2 w-2 mr-2"><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span> GPS: ' + pos.coords.latitude.toFixed(6) + ', ' + pos.coords.longitude.toFixed(6) + ' (±' + Math.round(pos.coords.accuracy) + 'm)';
                         s.className = s.className.replace('text-gray-400', 'text-green-600');
                     }
                 },

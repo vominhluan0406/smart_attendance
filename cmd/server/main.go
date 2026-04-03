@@ -60,6 +60,9 @@ func main() {
 			&models.RolePermission{},
 			&models.AttendanceLog{},
 			&models.UserCredential{},
+			&models.UserDevice{},
+			&models.UserSession{},
+			&models.FraudAlert{},
 		); err != nil {
 			log.Fatalf("auto-migrate failed: %v", err)
 		}
@@ -93,15 +96,19 @@ func main() {
 	credRepo := repository.NewUserCredentialRepository(db)
 	leaveRepo := repository.NewLeaveRepository(db)
 	leaveTypeRepo := repository.NewLeaveTypeRepository(db)
+	deviceRepo := repository.NewUserDeviceRepository(db)
+	sessionRepo := repository.NewUserSessionRepository(db)
+	fraudAlertRepo := repository.NewFraudAlertRepository(db)
 
 	// Init services
-	authService := service.NewAuthService(userRepo, branchRepo, cfg)
+	authService := service.NewAuthService(userRepo, branchRepo, sessionRepo, appCache, cfg)
 	userService := service.NewUserService(userRepo)
 	branchService := service.NewBranchService(branchRepo, userRepo, appCache)
 	totpService := service.NewTOTPService()
 	ipValidator := service.NewIPValidator()
 	locValidator := service.NewLocationValidator()
 	permissionService := service.NewPermissionService(permRepo, appCache)
+	antiFraudService := service.NewAntiFraudService(appCache, attendanceLogRepo, deviceRepo, fraudAlertRepo)
 
 	// WebAuthn RPID and Origin from config
 	webAuthnService, err := service.NewWebAuthnService(cfg.WebAuthnRPID, cfg.WebAuthnOrigin, credRepo, userRepo, appCache)
@@ -110,7 +117,7 @@ func main() {
 	}
 
 	leaveService := service.NewLeaveService(leaveRepo, leaveTypeRepo, attendanceRepo, userRepo)
-	attendanceService := service.NewAttendanceService(attendanceRepo, attendanceLogRepo, shiftRepo, branchService, userService, totpService, ipValidator, locValidator, leaveRepo)
+	attendanceService := service.NewAttendanceService(attendanceRepo, attendanceLogRepo, shiftRepo, branchService, userService, totpService, ipValidator, locValidator, leaveRepo, antiFraudService)
 	reportService := service.NewReportService(attendanceRepo)
 	dashboardService := service.NewDashboardService(attendanceRepo, branchRepo, userRepo, leaveRepo, appCache, db)
 

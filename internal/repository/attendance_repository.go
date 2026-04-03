@@ -118,7 +118,7 @@ func (r *AttendanceRepository) List(params AttendanceListParams) (*AttendanceLis
 	var records []models.Attendance
 	offset := (params.Page - 1) * params.Limit
 	if err := query.Preload("User").Preload("Branch").
-		Offset(offset).Limit(params.Limit).Order("check_in_at DESC").
+		Offset(offset).Limit(params.Limit).Order("work_date DESC, check_in_at DESC").
 		Find(&records).Error; err != nil {
 		return nil, err
 	}

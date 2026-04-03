@@ -123,11 +123,11 @@ func New(deps Deps) http.Handler {
 			ar.Group(func(ciRouter chi.Router) {
 				ciRouter.Use(requirePerm(models.PermAttendanceCheckIn))
 				ciRouter.Get("/", attendance.AttendancePage)
-				ciRouter.With(middleware.RateLimit(deps.RateLimitPerMin)).Post("/log", attendance.LogTimeForm)
-				
+				ciRouter.With(middleware.RateLimit(deps.RateLimitPerMin), middleware.RateLimitByUser(3)).Post("/log", attendance.LogTimeForm)
+
 				// Fallback Password check-in
 				ciRouter.Get("/password", attendance.PasswordCheckinPage)
-				ciRouter.With(middleware.RateLimit(deps.RateLimitPerMin)).Post("/password", attendance.PasswordLogForm)
+				ciRouter.With(middleware.RateLimit(deps.RateLimitPerMin), middleware.RateLimitByUser(3)).Post("/password", attendance.PasswordLogForm)
 
 				// Combined WiFi + GPS check-in
 				ciRouter.Get("/wifi-gps", attendance.WiFiGPSCheckinPage)
@@ -213,6 +213,7 @@ func New(deps Deps) http.Handler {
 			// Attendance API
 			pa.Route("/attendance", func(aa chi.Router) {
 				aa.Use(middleware.RateLimit(deps.RateLimitPerMin))
+				aa.Use(middleware.RateLimitByUser(3))
 				aa.Use(requirePerm(models.PermAttendanceCheckIn))
 				aa.Post("/log", attendance.APILogTime)
 				aa.Get("/status", attendance.APIStatus)

@@ -283,20 +283,24 @@ func (h *AttendanceHandler) LogTimeForm(w http.ResponseWriter, r *http.Request) 
 
 	userID := middleware.GetUserID(r)
 	lat, lng := parseLatLng(r.FormValue("lat"), r.FormValue("lng"))
+	accuracy := parseOptionalFloat(r.FormValue("accuracy"))
 
 	input := service.LogTimeInput{
-		UserID:          middleware.GetUserID(r),
-		TOTPCode:        r.FormValue("totp_code"),
-		ScannedBranchID: r.FormValue("scanned_branch_id"),
-		Lat:             lat,
-		Lng:             lng,
-		IP:              getClientIP(r),
-		FaceVerified:    r.FormValue("face_verified") == "1",
+		UserID:            userID,
+		TOTPCode:          r.FormValue("totp_code"),
+		ScannedBranchID:   r.FormValue("scanned_branch_id"),
+		Lat:               lat,
+		Lng:               lng,
+		AccuracyM:         accuracy,
+		IP:                getClientIP(r),
+		UserAgent:         r.UserAgent(),
+		DeviceFingerprint: r.FormValue("device_fingerprint"),
+		FaceVerified:      r.FormValue("face_verified") == "1",
 		BiometricVerified: r.FormValue("biometric_verified") == "1",
 	}
 
-	log.Printf("[handler][attendance] LogTimeForm input: User=%s, IP=%s, Lat=%v, Lng=%v, BranchID=%s, TOTP=%s",
-		input.UserID, input.IP, input.Lat, input.Lng, input.ScannedBranchID, input.TOTPCode)
+	log.Printf("[handler][attendance] LogTimeForm input: User=%s, IP=%s, Lat=%v, Lng=%v, Acc=%v, BranchID=%s, TOTP=%s",
+		input.UserID, input.IP, input.Lat, input.Lng, input.AccuracyM, input.ScannedBranchID, input.TOTPCode)
 
 	result, err := h.attendanceService.LogTime(input)
 	if err != nil {
@@ -340,9 +344,11 @@ func (h *AttendanceHandler) PasswordLogForm(w http.ResponseWriter, r *http.Reque
 	}
 
 	input := service.LogTimeInput{
-		UserID:           user.ID,
-		IP:               getClientIP(r),
-		PasswordVerified: true,
+		UserID:            user.ID,
+		IP:                getClientIP(r),
+		UserAgent:         r.UserAgent(),
+		DeviceFingerprint: r.FormValue("device_fingerprint"),
+		PasswordVerified:  true,
 	}
 
 	result, err := h.attendanceService.LogTime(input)
@@ -376,6 +382,7 @@ func (h *AttendanceHandler) APILogTime(w http.ResponseWriter, r *http.Request) {
 	}
 	input.UserID = middleware.GetUserID(r)
 	input.IP = getClientIP(r)
+	input.UserAgent = r.UserAgent()
 
 	result, err := h.attendanceService.LogTime(input)
 	if err != nil {
@@ -431,6 +438,16 @@ func translateAttendanceError(err error) string {
 		return "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại."
 	case errors.Is(err, service.ErrBranchNotFound):
 		return "Chi nhánh không tồn tại. Vui lòng liên hệ quản lý."
+	case errors.Is(err, service.ErrGPSAccuracyTooLow):
+		return "Phát hiện giả mạo GPS. Vui lòng tắt ứng dụng fake GPS."
+	case errors.Is(err, service.ErrGPSAccuracyTooHigh):
+		return "Tín hiệu GPS yếu. Vui lòng ra khu vực thoáng và thử lại."
+	case errors.Is(err, service.ErrTOTPAlreadyUsed):
+		return "Mã QR đã được sử dụng. Vui lòng đợi mã mới (15 giây)."
+	case errors.Is(err, service.ErrImpossibleTravel):
+		return "Phát hiện di chuyển bất thường. Vui lòng thử lại sau."
+	case errors.Is(err, service.ErrDeviceBlocked):
+		return "Thiết bị này đã bị chặn. Vui lòng liên hệ quản lý."
 	default:
 		msg := err.Error()
 		if strings.Contains(msg, "invalid or expired QR") {
