@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 var funcMap = template.FuncMap{
@@ -39,6 +40,9 @@ var funcMap = template.FuncMap{
 			return ""
 		}
 		return s[start:end]
+	},
+	"now": func() time.Time {
+		return time.Now()
 	},
 }
 
