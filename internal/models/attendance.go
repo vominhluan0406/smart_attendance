@@ -8,6 +8,7 @@ const (
 	StatusOnTime AttendanceStatus = "on_time"
 	StatusLate   AttendanceStatus = "late"
 	StatusAbsent AttendanceStatus = "absent"
+	StatusLeave  AttendanceStatus = "leave"
 )
 
 type Attendance struct {

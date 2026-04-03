@@ -29,6 +29,7 @@ type AttendanceService struct {
 	totpService    *TOTPService
 	ipValidator    *IPValidator
 	locValidator   *LocationValidator
+	leaveRepo      *repository.LeaveRepository
 }
 
 func NewAttendanceService(
@@ -40,6 +41,7 @@ func NewAttendanceService(
 	totpService *TOTPService,
 	ipValidator *IPValidator,
 	locValidator *LocationValidator,
+	leaveRepo *repository.LeaveRepository,
 ) *AttendanceService {
 	return &AttendanceService{
 		attendanceRepo: attendanceRepo,
@@ -50,6 +52,7 @@ func NewAttendanceService(
 		totpService:    totpService,
 		ipValidator:    ipValidator,
 		locValidator:   locValidator,
+		leaveRepo:      leaveRepo,
 	}
 }
 

@@ -36,9 +36,12 @@ func (r *AttendanceRepository) FindByID(id string) (*models.Attendance, error) {
 // Uses composite index (user_id, work_date) for fast lookup.
 func (r *AttendanceRepository) FindTodayByUser(userID string) (*models.Attendance, error) {
 	today := timezone.Now().Format("2006-01-02")
+	return r.FindTodayByUserAndDate(userID, today)
+}
 
+func (r *AttendanceRepository) FindTodayByUserAndDate(userID string, dateStr string) (*models.Attendance, error) {
 	var att models.Attendance
-	err := r.db.Where("user_id = ? AND work_date = ?", userID, today).
+	err := r.db.Where("user_id = ? AND work_date = ?", userID, dateStr).
 		First(&att).Error
 	if err != nil {
 		return nil, err

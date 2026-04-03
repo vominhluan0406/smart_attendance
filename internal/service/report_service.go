@@ -143,7 +143,18 @@ func (s *ReportService) generateExcel(records []models.Attendance) ([]byte, erro
 			f.SetCellValue(sheetName, fmt.Sprintf("F%d", row), r.CheckOutAt.Format("15:04:05"))
 		}
 
-		f.SetCellValue(sheetName, fmt.Sprintf("G%d", row), string(r.Status))
+		statusStr := string(r.Status)
+		switch r.Status {
+		case models.StatusOnTime:
+			statusStr = "Đúng giờ"
+		case models.StatusLate:
+			statusStr = "Đi trễ"
+		case models.StatusAbsent:
+			statusStr = "Vắng mặt"
+		case models.StatusLeave:
+			statusStr = "Nghỉ phép"
+		}
+		f.SetCellValue(sheetName, fmt.Sprintf("G%d", row), statusStr)
 		f.SetCellValue(sheetName, fmt.Sprintf("H%d", row), r.Method)
 		f.SetCellValue(sheetName, fmt.Sprintf("I%d", row), r.Note)
 	}

@@ -43,12 +43,23 @@
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
                         <i data-lucide="history" class="w-4 h-4"></i> Lịch sử
                     </a>
+                    <a href="/leave/my"
+                        class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
+                        <i data-lucide="calendar-off" class="w-4 h-4"></i> Nghỉ phép
+                    </a>
                     {{end}}
 
                     {{if or (eq .UserRole "manager") (eq .UserRole "admin")}}
                     <a href="{{if eq .UserRole "admin"}}/reports{{else}}/reports/branch/{{.UserBranch}}{{end}}"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
                         <i data-lucide="file-text" class="w-4 h-4"></i> Báo cáo
+                    </a>
+                    {{end}}
+
+                    {{if eq .UserRole "manager"}}
+                    <a href="/leave/manage"
+                        class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
+                        <i data-lucide="clipboard-check" class="w-4 h-4"></i> Duyệt nghỉ
                     </a>
                     {{end}}
 
@@ -111,6 +122,10 @@
     <a href="/reports/my-history" class="bottom-nav-item">
         <i data-lucide="history"></i>
         <span>Lịch sử</span>
+    </a>
+    <a href="/leave/my" class="bottom-nav-item">
+        <i data-lucide="calendar-off"></i>
+        <span>Nghỉ phép</span>
     </a>
     <a href="/profile" class="bottom-nav-item">
         <i data-lucide="user"></i>

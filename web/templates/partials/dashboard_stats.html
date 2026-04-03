@@ -1,4 +1,4 @@
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
     <!-- Total Employees -->
     <div
         class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 hover-lift transition-all relative overflow-hidden group">
@@ -57,8 +57,7 @@
             </div>
             <div class="flex flex-col items-end">
                 <span
-                    class="px-2 py-1 rounded-lg bg-violet-50 text-[10px] font-bold text-violet-600 uppercase tracking-wider mb-1">Tỷ
-                    lệ đúng giờ</span>
+                    class="px-2 py-1 rounded-lg bg-violet-50 text-[10px] font-bold text-violet-600 uppercase tracking-wider mb-1">Tỷ lệ</span>
                 <span
                     class="text-sm font-black {{if ge .Stats.OnTimeRate 80.0}}text-emerald-600{{else if ge .Stats.OnTimeRate 60.0}}text-amber-600{{else}}text-rose-600{{end}}">
                     {{printf "%.0f" .Stats.OnTimeRate}}%
@@ -86,12 +85,31 @@
                     class="w-6 h-6 text-rose-600 group-hover:text-white transition-colors"></i>
             </div>
             <span
-                class="px-2 py-1 rounded-lg bg-rose-50 text-[10px] font-bold text-rose-600 uppercase tracking-wider">Cảnh
-                báo</span>
+                class="px-2 py-1 rounded-lg bg-rose-50 text-[10px] font-bold text-rose-600 uppercase tracking-wider text-right">Đi trễ</span>
         </div>
         <div class="relative z-10">
             <p class="text-3xl font-black text-gray-900 tracking-tight">{{.Stats.TodayLate}}</p>
-            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Đi trễ</p>
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Muộn tháng này</p>
+        </div>
+    </div>
+
+    <!-- Leave -->
+    <div
+        class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 hover-lift transition-all relative overflow-hidden group">
+        <div class="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <i data-lucide="calendar-off" class="w-24 h-24 text-indigo-400"></i>
+        </div>
+        <div class="flex items-center justify-between mb-4 relative z-10">
+            <div class="p-3 bg-amber-50 rounded-2xl group-hover:bg-amber-600 transition-colors">
+                <i data-lucide="calendar-off"
+                    class="w-6 h-6 text-amber-600 group-hover:text-white transition-colors"></i>
+            </div>
+            <span
+                class="px-2 py-1 rounded-lg bg-amber-50 text-[10px] font-bold text-amber-600 uppercase tracking-wider">Nghỉ phép</span>
+        </div>
+        <div class="relative z-10">
+            <p class="text-3xl font-black text-gray-900 tracking-tight">{{.Stats.TodayLeave}}</p>
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Vắng có phép</p>
         </div>
     </div>
 </div>

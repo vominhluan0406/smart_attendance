@@ -16,6 +16,7 @@ type DashboardStats struct {
 	TodayOnTime      int64
 	TodayLate        int64
 	TodayAbsent      int64
+	TodayLeave       int64
 	OnTimeRate       float64
 	CheckedInRate    float64
 }

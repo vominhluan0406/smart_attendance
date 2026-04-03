@@ -91,6 +91,8 @@ func main() {
 	shiftRepo := repository.NewShiftRepository(db)
 	permRepo := repository.NewPermissionRepository(db)
 	credRepo := repository.NewUserCredentialRepository(db)
+	leaveRepo := repository.NewLeaveRepository(db)
+	leaveTypeRepo := repository.NewLeaveTypeRepository(db)
 
 	// Init services
 	authService := service.NewAuthService(userRepo, branchRepo, cfg)
@@ -107,9 +109,10 @@ func main() {
 		log.Fatalf("Failed to initialize WebAuthnService: %v", err)
 	}
 
-	attendanceService := service.NewAttendanceService(attendanceRepo, attendanceLogRepo, shiftRepo, branchService, userService, totpService, ipValidator, locValidator)
+	leaveService := service.NewLeaveService(leaveRepo, leaveTypeRepo, attendanceRepo, userRepo)
+	attendanceService := service.NewAttendanceService(attendanceRepo, attendanceLogRepo, shiftRepo, branchService, userService, totpService, ipValidator, locValidator, leaveRepo)
 	reportService := service.NewReportService(attendanceRepo)
-	dashboardService := service.NewDashboardService(attendanceRepo, branchRepo, userRepo, appCache, db)
+	dashboardService := service.NewDashboardService(attendanceRepo, branchRepo, userRepo, leaveRepo, appCache, db)
 
 	// Setup router
 	handler := router.New(router.Deps{
@@ -123,6 +126,7 @@ func main() {
 		DashboardService:  dashboardService,
 		PermissionService: permissionService,
 		WebAuthnService:   webAuthnService,
+		LeaveService:      leaveService,
 		Config:            cfg,
 		RateLimitPerMin:   cfg.RateLimitPerMin,
 	})

@@ -24,6 +24,7 @@ type Deps struct {
 	DashboardService  *service.DashboardService
 	PermissionService *service.PermissionService
 	WebAuthnService   *service.WebAuthnService
+	LeaveService      *service.LeaveService
 	Config            *config.Config
 	RateLimitPerMin   int
 }
@@ -50,6 +51,7 @@ func New(deps Deps) http.Handler {
 	attendance := handler.NewAttendanceHandler(deps.AttendanceService, deps.BranchService, deps.TOTPService, deps.UserService, deps.AuthService, deps.WebAuthnService, deps.Render)
 	reports := handler.NewReportHandler(deps.ReportService, deps.BranchService, deps.Render)
 	dashboard := handler.NewDashboardHandler(deps.DashboardService, deps.BranchService, deps.Render)
+	leave := handler.NewLeaveHandler(deps.LeaveService, deps.Render)
 
 	// Permission-based middleware helpers
 	ps := deps.PermissionService
@@ -138,6 +140,18 @@ func New(deps Deps) http.Handler {
 			ar.Get("/qr/{branchID}", attendance.QRDisplayPage)
 			ar.Get("/qr/{branchID}/partial", attendance.QRCodePartial)
 			ar.Get("/qr/{branchID}/image", attendance.QRImage)
+		})
+
+		// Leave management
+		pr.Route("/leave", func(lr chi.Router) {
+			lr.Get("/my", leave.MyLeavePage)
+			lr.Post("/my", leave.SubmitRequest)
+
+			lr.Group(func(mgrLr chi.Router) {
+				mgrLr.Use(middleware.RequireRoles(models.RoleManager))
+				mgrLr.Get("/manage", leave.ManageLeavePage)
+				mgrLr.Post("/manage/{id}/review", leave.ReviewAction)
+			})
 		})
 
 		// Branch management (requires branch.manage)

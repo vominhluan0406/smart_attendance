@@ -16,6 +16,7 @@ type DashboardService struct {
 	attendanceRepo *repository.AttendanceRepository
 	branchRepo     *repository.BranchRepository
 	userRepo       *repository.UserRepository
+	leaveRepo      *repository.LeaveRepository
 	cache          *cache.Cache
 	db             *gorm.DB
 }
@@ -24,6 +25,7 @@ func NewDashboardService(
 	attendanceRepo *repository.AttendanceRepository,
 	branchRepo *repository.BranchRepository,
 	userRepo *repository.UserRepository,
+	leaveRepo *repository.LeaveRepository,
 	cache *cache.Cache,
 	db *gorm.DB,
 ) *DashboardService {
@@ -31,6 +33,7 @@ func NewDashboardService(
 		attendanceRepo: attendanceRepo,
 		branchRepo:     branchRepo,
 		userRepo:       userRepo,
+		leaveRepo:      leaveRepo,
 		cache:          cache,
 		db:             db,
 	}
@@ -98,6 +101,18 @@ func (s *DashboardService) GetStats(branchID string) (*repository.DashboardStats
 		return nil, err
 	}
 	stats.TodayAbsent = absent
+
+	// Today's leave
+	today := timezone.Now().Format("2006-01-02")
+	leaveCountQuery := s.db.Model(&models.LeaveRequest{}).
+		Where("status = ? AND start_date <= ? AND end_date >= ?", models.LeaveStatusApproved, today, today)
+	if branchID != "" {
+		leaveCountQuery = leaveCountQuery.Joins("JOIN users ON users.id = leave_requests.user_id").
+			Where("users.branch_id = ?", branchID)
+	}
+	var leaveCount int64
+	leaveCountQuery.Count(&leaveCount)
+	stats.TodayLeave = leaveCount
 
 	// Rates
 	if todayTotal > 0 {
