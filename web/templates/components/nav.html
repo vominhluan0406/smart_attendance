@@ -26,14 +26,18 @@
                     {{end}}
 
                     {{if eq .UserRole "manager_device"}}
+                    {{if .QREnabled}}
                     <a href="/attendance/qr-manager"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
                         <i data-lucide="qr-code" class="w-4 h-4"></i> Mã QR
                     </a>
+                    {{end}}
+                    {{if .PasswordEnabled}}
                     <a href="/attendance/password"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
                         <i data-lucide="log-in" class="w-4 h-4"></i> Chấm công mật khẩu
                     </a>
+                    {{end}}
                     {{if .FaceEnabled}}
                     <a href="/attendance"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
@@ -117,6 +121,16 @@
         <span>Tổng quan</span>
     </a>
     {{end}}
+    {{if eq .UserRole "admin"}}
+    <a href="/branches" class="bottom-nav-item">
+        <i data-lucide="map-pin"></i>
+        <span>Chi nhánh</span>
+    </a>
+    <a href="/users" class="bottom-nav-item">
+        <i data-lucide="users"></i>
+        <span>Nhân viên</span>
+    </a>
+    {{end}}
     {{if and (eq .UserRole "employee") .QREnabled}}
     <a href="/attendance" class="bottom-nav-item">
         <i data-lucide="scan-face"></i>
@@ -124,14 +138,18 @@
     </a>
     {{end}}
     {{if eq .UserRole "manager_device"}}
+    {{if .QREnabled}}
     <a href="/attendance/qr-manager" class="bottom-nav-item">
         <i data-lucide="qr-code"></i>
         <span>QR</span>
     </a>
+    {{end}}
+    {{if .PasswordEnabled}}
     <a href="/attendance/password" class="bottom-nav-item">
         <i data-lucide="log-in"></i>
         <span>Mật khẩu</span>
     </a>
+    {{end}}
     {{if .FaceEnabled}}
     <a href="/attendance" class="bottom-nav-item">
         <i data-lucide="scan-face"></i>

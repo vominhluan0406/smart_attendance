@@ -51,7 +51,7 @@ func New(deps Deps) http.Handler {
 	attendance := handler.NewAttendanceHandler(deps.AttendanceService, deps.BranchService, deps.TOTPService, deps.UserService, deps.AuthService, deps.WebAuthnService, deps.Render)
 	reports := handler.NewReportHandler(deps.ReportService, deps.BranchService, deps.Render)
 	dashboard := handler.NewDashboardHandler(deps.DashboardService, deps.BranchService, deps.Render)
-	leave := handler.NewLeaveHandler(deps.LeaveService, deps.Render)
+	leave := handler.NewLeaveHandler(deps.LeaveService, deps.BranchService, deps.Render)
 
 	// Permission-based middleware helpers
 	ps := deps.PermissionService

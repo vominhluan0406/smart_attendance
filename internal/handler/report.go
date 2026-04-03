@@ -29,6 +29,7 @@ func (h *ReportHandler) AdminReportPage(w http.ResponseWriter, r *http.Request) 
 
 	data := userContext(r)
 	data["Branches"] = branches
+	injectBranchFlags(data, r, h.branchService)
 	h.render.Render(w, "report_branches.html", data)
 }
 
@@ -71,6 +72,7 @@ func (h *ReportHandler) UserHistoryPage(w http.ResponseWriter, r *http.Request) 
 	data["DateFrom"] = r.URL.Query().Get("date_from")
 	data["DateTo"] = r.URL.Query().Get("date_to")
 	data["Status"] = status
+	injectBranchFlags(data, r, h.branchService)
 	h.render.Render(w, "my_history.html", data)
 }
 
@@ -134,6 +136,7 @@ func (h *ReportHandler) BranchReportPage(w http.ResponseWriter, r *http.Request)
 	data["DateFrom"] = r.URL.Query().Get("date_from")
 	data["DateTo"] = r.URL.Query().Get("date_to")
 	data["Status"] = status
+	injectBranchFlags(data, r, h.branchService)
 	h.render.Render(w, "branch_report.html", data)
 }
 

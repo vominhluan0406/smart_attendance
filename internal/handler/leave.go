@@ -13,14 +13,16 @@ import (
 )
 
 type LeaveHandler struct {
-	leaveService *service.LeaveService
-	render       *renderer.Renderer
+	leaveService  *service.LeaveService
+	branchService *service.BranchService
+	render        *renderer.Renderer
 }
 
-func NewLeaveHandler(leaveService *service.LeaveService, render *renderer.Renderer) *LeaveHandler {
+func NewLeaveHandler(leaveService *service.LeaveService, branchService *service.BranchService, render *renderer.Renderer) *LeaveHandler {
 	return &LeaveHandler{
-		leaveService: leaveService,
-		render:       render,
+		leaveService:  leaveService,
+		branchService: branchService,
+		render:        render,
 	}
 }
 
@@ -50,6 +52,7 @@ func (h *LeaveHandler) MyLeavePage(w http.ResponseWriter, r *http.Request) {
 	data["Success"] = r.URL.Query().Get("success") == "true"
 	data["Error"] = r.URL.Query().Get("error")
 
+	injectBranchFlags(data, r, h.branchService)
 	h.render.Render(w, "my_leave.html", data)
 }
 
@@ -104,6 +107,7 @@ func (h *LeaveHandler) ManageLeavePage(w http.ResponseWriter, r *http.Request) {
 	data["HasNextPage"] = int64(page*20) < result.Total
 	data["HasPrevPage"] = page > 1
 
+	injectBranchFlags(data, r, h.branchService)
 	h.render.Render(w, "manage_leave.html", data)
 }
 

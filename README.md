@@ -1,49 +1,31 @@
 # Smart Attendance — Chấm Công Thông Minh
 
 Hệ thống chấm công thông minh cho doanh nghiệp quy mô **100 chi nhánh**, **5.000 nhân viên**.
-Xác thực đa phương thức: QR/TOTP, IP Whitelist, GPS Geofencing. Chống gian lận (fake GPS, VPN).
+Xác thực đa phương thức: QR/TOTP, IP Whitelist, GPS Geofencing, WebAuthn Biometric, Password Kiosk.
+Hệ thống chống gian lận 9 lớp (fake GPS, VPN, chấm hộ, clone device).
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
 | Backend | Go 1.22+, Chi router, GORM |
-| Database | SQLite (WAL mode, pure-Go driver) |
+| Database | SQLite (WAL mode) / Turso (libSQL remote) |
 | Cache | go-cache (in-memory, TTL 5 min) |
 | Frontend | HTMX 2.0 + Go html/template + Tailwind CSS |
-| Charts | Chart.js 4.x |
-| Auth | JWT + Refresh Token + Microsoft OAuth2 |
-| Icons | Lucide Icons |
+| Auth | JWT + Refresh Token + WebAuthn (Passkeys) + Microsoft OAuth2 |
+| Anti-Fraud | 9-layer detection (GPS accuracy, TOTP nonce, impossible travel, device fingerprint, anomaly detection...) |
 | Deploy | Docker multi-stage build (~15MB image) |
 
 ## Quick Start
 
-### Prerequisites
-
-- Go 1.22+ (no CGO required)
-- Docker & Docker Compose (optional)
-
 ### Run locally
 
 ```bash
-# 1. Clone & setup
 git clone <repo-url> && cd smart_attendance
 cp .env.example .env
-
-# 2. Run server
 go run cmd/server/main.go
-
-# 3. Open browser
-# http://localhost:8080
+# Open http://localhost:8080
 ```
-
-### Default credentials
-
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@smartattendance.com | password123 |
-| Manager | manager@smartattendance.com | password123 |
-| Employee | employee@smartattendance.com | password123 |
 
 ### Run with Docker
 
@@ -58,34 +40,202 @@ docker-compose up --build
 go run cmd/seed/main.go
 ```
 
+---
+
+## Screenshots
+
+| Dashboard (Admin/Manager) | Chấm công QR (Employee) | Mã QR chi nhánh (Kiosk) |
+|:---:|:---:|:---:|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Check-in](docs/screenshots/checkin-qr.png) | ![QR Display](docs/screenshots/qr-display.png) |
+
+| Quản lý chi nhánh (Admin) | Duyệt nghỉ phép (Manager) | Báo cáo + Export Excel |
+|:---:|:---:|:---:|
+| ![Branch](docs/screenshots/branch-edit.png) | ![Leave](docs/screenshots/leave-manage.png) | ![Report](docs/screenshots/report.png) |
+
+| Chấm công mật khẩu (Kiosk) | Nghỉ phép (Employee) | Quản lý nhân viên (Admin) |
+|:---:|:---:|:---:|
+| ![Password](docs/screenshots/checkin-password.png) | ![My Leave](docs/screenshots/my-leave.png) | ![Users](docs/screenshots/users.png) |
+
+> Chụp screenshots và lưu vào `docs/screenshots/` với tên file tương ứng.
+
+---
+
+## Demo Accounts
+
+Hệ thống seed sẵn 22 users (1 admin, 3 managers, 3 kiosk devices, 15 employees) trên 3 chi nhánh.
+
+| Role | Email | Password | Mô tả |
+|------|-------|----------|-------|
+| **Admin** | `admin@smartattendance.com` | `password123` | Quản trị toàn hệ thống |
+| **Quản lý (HCM)** | `manager.hcm@demo.com` | `password123` | Quản lý chi nhánh HCM |
+| **Quản lý (HN)** | `manager.hn@demo.com` | `password123` | Quản lý chi nhánh Hà Nội |
+| **Quản lý (ĐN)** | `manager.dn@demo.com` | `password123` | Quản lý chi nhánh Đà Nẵng |
+| **Kiosk HCM** | `device.hcm@demo.com` | `password123` | Manager Máy — hiển thị QR, chấm công mật khẩu |
+| **Kiosk HN** | `device.hn@demo.com` | `password123` | Manager Máy — hiển thị QR, chấm công mật khẩu |
+| **Nhân viên** | `emp1.hcm@demo.com` | `password123` | Nhân viên chi nhánh HCM |
+
+---
+
+## Hướng Dẫn Demo Từng Chức Năng
+
+### 1. Admin — Quản trị hệ thống
+
+> Login: `admin@smartattendance.com` / `password123`
+
+| Chức năng | Cách truy cập | Mô tả |
+|---|---|---|
+| **Dashboard** | Trang chủ > "Tổng quan" | Xem KPI: tổng NV, check-in hôm nay, tỷ lệ đúng giờ, top trễ |
+| **Quản lý chi nhánh** | Nav > "Chi nhánh" | Tạo/sửa/xóa chi nhánh, cấu hình phương thức chấm công |
+| **Cấu hình IP/GPS** | Chi nhánh > Sửa | Thêm/xóa IP whitelist (CIDR), vị trí GPS (lat, lng, radius) |
+| **Quản lý nhân viên** | Nav > "Nhân viên" | Tạo user, gán role (Employee/Manager/Manager Máy), gán chi nhánh |
+| **Xem báo cáo** | Nav > "Báo cáo" > Chọn chi nhánh | Xem chấm công theo ngày, filter trạng thái, export Excel |
+
+**Demo thử:**
+1. Vào "Chi nhánh" > Sửa 1 chi nhánh > Bật/tắt phương thức chấm công (QR, WiFi+GPS, FaceID, Password)
+2. Vào "Nhân viên" > Tạo mới > Chọn role "Manager Máy" > Gán chi nhánh
+3. Vào "Báo cáo" > Chọn chi nhánh > Xem danh sách > "Xuất Excel"
+
+### 2. Quản lý (Manager) — Giám sát chi nhánh
+
+> Login: `manager.hcm@demo.com` / `password123`
+
+| Chức năng | Cách truy cập | Mô tả |
+|---|---|---|
+| **Dashboard** | Trang chủ > "Tổng quan" | Xem thống kê chi nhánh mình |
+| **Báo cáo chi nhánh** | Nav > "Báo cáo" | Xem chấm công NV, filter ngày/trạng thái, export Excel |
+| **Duyệt nghỉ phép** | Nav > "Duyệt nghỉ" | Xem đơn pending, Approve/Reject với ghi chú |
+
+**Demo thử:**
+1. Vào "Báo cáo" > Xem danh sách chấm công > Filter "Trễ" > "Xuất Excel"
+2. Vào "Duyệt nghỉ" > Tab "Chờ duyệt" > Nhấn nút Approve (tick xanh) hoặc Reject (X đỏ)
+
+### 3. Manager Máy (Kiosk Device) — Thiết bị chấm công
+
+> Login: `device.hcm@demo.com` / `password123`
+
+| Chức năng | Cách truy cập | Mô tả |
+|---|---|---|
+| **Hiển thị mã QR** | Nav > "Mã QR" | QR code auto-refresh mỗi 15 giây, đặt màn hình tại chi nhánh |
+| **Chấm công mật khẩu** | Nav > "Chấm công mật khẩu" | Chọn NV từ dropdown, nhập mật khẩu, chấm công |
+| **Chấm công FaceID** | Nav > "FaceID" *(nếu admin bật)* | Mở camera nhận diện khuôn mặt (demo giả lập) |
+
+**Demo thử:**
+1. Vào "Mã QR" > Thấy QR code + countdown timer 15s + danh sách check-in gần đây
+2. Vào "Chấm công mật khẩu" > Chọn nhân viên > Nhập `password123` > "Xác nhận Chấm công"
+3. Thấy thông báo "Chấm công thành công!" > Nhấn "Xong" về trang chủ
+
+### 4. Nhân viên (Employee) — Chấm công hàng ngày
+
+> Login: `emp1.hcm@demo.com` / `password123`
+
+| Chức năng | Cách truy cập | Mô tả |
+|---|---|---|
+| **Quét QR chấm công** | Nav > "Chấm công" | Mở camera > Quét mã QR tại chi nhánh > Tự động gửi |
+| **Chấm công WiFi+GPS** | Trang chủ > "Chấm công WiFi+GPS" | Tự lấy IP + GPS > Xác thực vị trí |
+| **Xem lịch sử** | Nav > "Lịch sử" | Xem chấm công cá nhân, filter ngày/trạng thái |
+| **Đăng ký nghỉ phép** | Nav > "Nghỉ phép" | Chọn loại phép, ngày, lý do > Gửi đơn > Chờ duyệt |
+| **Hồ sơ cá nhân** | Nav > "Hồ sơ" | Xem thông tin, đăng ký WebAuthn/Passkey |
+
+**Demo thử:**
+1. Vào "Nghỉ phép" > Chọn "Nghỉ phép năm" > Ngày mai > Lý do "Việc gia đình" > "Gửi yêu cầu"
+2. Đăng nhập `manager.hcm@demo.com` > "Duyệt nghỉ" > Approve đơn vừa tạo
+3. Quay lại `emp1.hcm@demo.com` > "Lịch sử" > Thấy ngày nghỉ status "Nghỉ phép"
+
+### 5. Hệ thống chống gian lận (Anti-Fraud)
+
+Hệ thống tự động phát hiện và cảnh báo các hành vi gian lận:
+
+| Lớp | Cơ chế | Hành vi chặn |
+|---|---|---|
+| 1 | GPS Accuracy Check | Reject GPS accuracy < 10m (fake GPS) hoặc > 150m |
+| 2 | TOTP Single-Use | Mỗi mã QR chỉ dùng 1 lần trong 30s — chặn chụp ảnh chia sẻ |
+| 3 | Rate Limit / User | Max 3 check-in / 5 phút / user |
+| 4 | Impossible Travel | Di chuyển > 150km/h giữa 2 lần check-in |
+| 5 | Device Fingerprint | Bind thiết bị với user, alert khi device lạ |
+| 6 | IP-Location Cross | So sánh IP vs GPS > 500km — phát hiện VPN |
+| 7 | WebAuthn Sign Count | Detect authenticator bị clone |
+| 8 | Anomaly Detection | Z-score > 3.0 trên pattern check-in 30 ngày |
+| 9 | Concurrent Session | Max 3 session/user, auto-revoke oldest |
+
+Tất cả cảnh báo được ghi vào bảng `fraud_alerts` để admin review.
+
+---
+
+## Hệ thống phân quyền (4 Roles)
+
+| Role | Tên | Quyền |
+|---|---|---|
+| **admin** | Quản trị viên | Toàn quyền: quản lý chi nhánh, nhân viên, báo cáo, dashboard |
+| **manager** | Quản lý | Xem dashboard + báo cáo chi nhánh, duyệt nghỉ phép, export Excel |
+| **manager_device** | Manager Máy | Hiển thị QR, chấm công bằng mật khẩu/FaceID (dùng cho kiosk) |
+| **employee** | Nhân viên | Chấm công (QR/GPS/WiFi), xem lịch sử, đăng ký nghỉ phép |
+
+---
+
+## Database Schema
+
+Hệ thống sử dụng **22 tables** trên SQLite (WAL mode), chia thành 6 nhóm:
+
+```
+ CORE (3)                    BRANCH CONFIG (3)              ATTENDANCE (4)
+┌──────────┐                ┌──────────────────┐           ┌──────────────────┐
+│ branches │──┐             │ branch_ip_       │           │   attendances    │
+│ users    │  ├──► 1:N ───► │   whitelists     │           │ (1 rec/user/day) │
+│departments│  │             │ branch_locations │           │   attendance_    │
+└──────────┘  │             │ work_shifts      │           │     logs         │
+              │             └──────────────────┘           │ (N scans/day)    │
+              │                                            │ attendance_adj.  │
+              │  LEAVE (5)           SECURITY (6)          │ user_shift_asgn. │
+              │ ┌──────────────┐    ┌──────────────────┐   └──────────────────┘
+              ├►│ leave_types  │    │ user_credentials │
+              │ │ leave_requests│   │ user_devices     │   RBAC (2)
+              │ │ leave_balances│   │ user_sessions    │   ┌──────────────────┐
+              │ │ overtime_req.│    │ fraud_alerts     │   │ permissions      │
+              │ │ holidays     │    └──────────────────┘   │ role_permissions │
+              │ └──────────────┘                           └──────────────────┘
+              │
+              │  GAMIFICATION (2)
+              └►┌──────────────┐
+                │ user_streaks │
+                │ user_badges  │
+                └──────────────┘
+```
+
+> Chi tiết ERD, mô tả từng table, indexes: **[docs/DATABASE.md](docs/DATABASE.md)**
+
+---
+
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                    Browser / Mobile                   │
-│         HTMX + Tailwind CSS + Chart.js               │
-└─────────────────────┬───────────────────────────────┘
-                      │ HTTP/HTMX/JSON
-┌─────────────────────▼───────────────────────────────┐
-│                   Chi Router                         │
-│  ┌──────────┬──────────┬───────────┬──────────────┐ │
-│  │  Logger  │ Recovery │ RateLimit │  JWT + RBAC  │ │
-│  └──────────┴──────────┴───────────┴──────────────┘ │
-├─────────────────────────────────────────────────────┤
-│                  Handler Layer                       │
-│  Auth │ Users │ Branches │ Attendance │ Dashboard    │
-│  Reports │ OAuth │ Error Pages                       │
-├─────────────────────────────────────────────────────┤
-│                  Service Layer                       │
-│  AuthService │ UserService │ BranchService           │
-│  AttendanceService │ DashboardService │ ReportService│
-│  TOTPService │ IPValidator │ LocationValidator        │
-├─────────────────────────────────────────────────────┤
-│                 Repository Layer                     │
-│  UserRepo │ BranchRepo │ AttendanceRepo              │
-├─────────────────────────────────────────────────────┤
-│              SQLite (WAL mode) + go-cache            │
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                      Browser / Mobile                         │
+│            HTMX + Tailwind CSS + Chart.js + Lucide            │
+└──────────────────────┬───────────────────────────────────────┘
+                       │ HTTP / HTMX / JSON
+┌──────────────────────▼───────────────────────────────────────┐
+│                      Chi Router                               │
+│  ┌────────┬──────────┬───────────┬──────────┬──────────────┐ │
+│  │ Logger │ Recovery │ RateLimit │ RateLimit│  JWT + RBAC  │ │
+│  │        │          │  (per IP) │(per User)│ + Permission │ │
+│  └────────┴──────────┴───────────┴──────────┴──────────────┘ │
+├──────────────────────────────────────────────────────────────┤
+│                     Handler Layer                             │
+│  Auth │ Users │ Branches │ Attendance │ Dashboard │ Reports   │
+│  Leave │ Home │ OAuth │ Error Pages                           │
+├──────────────────────────────────────────────────────────────┤
+│                     Service Layer                             │
+│  AuthService │ UserService │ BranchService │ LeaveService     │
+│  AttendanceService │ DashboardService │ ReportService         │
+│  AntiFraudService │ TOTPService │ IPValidator │ LocationValid. │
+│  PermissionService │ WebAuthnService                          │
+├──────────────────────────────────────────────────────────────┤
+│                    Repository Layer                            │
+│  UserRepo │ BranchRepo │ AttendanceRepo │ AttendanceLogRepo   │
+│  LeaveRepo │ FraudAlertRepo │ UserDeviceRepo │ SessionRepo    │
+├──────────────────────────────────────────────────────────────┤
+│           SQLite (WAL) / Turso (libSQL)  +  go-cache          │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ## Project Structure
@@ -93,77 +243,33 @@ go run cmd/seed/main.go
 ```
 smart_attendance/
 ├── cmd/
-│   ├── server/main.go       # Entry point
-│   └── seed/main.go         # Large dataset seeder (100 branches, 5K users)
+│   ├── server/main.go          # Entry point
+│   └── seed/main.go            # Large dataset seeder (100 branches, 5K users)
 ├── internal/
-│   ├── config/              # Environment configuration
-│   ├── database/            # SQLite connection, migration, seed
-│   ├── models/              # GORM models (User, Branch, Attendance)
-│   ├── repository/          # Data access layer (queries, aggregations)
-│   ├── service/             # Business logic (auth, attendance, dashboard)
-│   ├── handler/             # HTTP handlers (HTMX pages + JSON API)
-│   ├── middleware/          # JWT auth, RBAC, rate limit, recovery, logger
-│   ├── cache/               # In-memory cache wrapper (go-cache)
-│   ├── renderer/            # Go template renderer (pages + partials)
-│   └── validator/           # Input validation helpers
+│   ├── config/                 # Environment configuration
+│   ├── database/               # DB connection, migration, seed
+│   ├── models/                 # 22 GORM models
+│   ├── repository/             # Data access layer
+│   ├── service/                # Business logic + anti-fraud
+│   ├── handler/                # HTTP handlers (HTMX + JSON API)
+│   ├── middleware/             # JWT, RBAC, rate limit (IP + user)
+│   ├── cache/                  # In-memory cache wrapper
+│   └── renderer/               # Go template renderer
 ├── web/
 │   ├── templates/
-│   │   ├── layouts/         # base.html (Tailwind + HTMX + Lucide)
-│   │   ├── pages/           # Full page templates (14 pages)
-│   │   ├── partials/        # HTMX fragment responses (10 partials)
-│   │   └── components/      # Reusable components (nav, toast, alert)
-│   └── static/css/          # Custom CSS (responsive tables, skeleton)
-├── Dockerfile               # Multi-stage build (golang:alpine → alpine)
-├── docker-compose.yml       # One-command deploy
-├── .env.example             # Environment template
-└── CLAUDE.md                # AI context file
+│   │   ├── layouts/            # base.html (Tailwind + HTMX + Lucide)
+│   │   ├── pages/              # 16 full page templates
+│   │   ├── partials/           # 12 HTMX fragment responses
+│   │   └── components/         # nav, alert components
+│   └── static/css/             # Custom CSS
+├── docs/
+│   └── DATABASE.md             # ERD + table descriptions
+├── Dockerfile                  # Multi-stage build (~15MB)
+├── docker-compose.yml          # One-command deploy
+├── CLAUDE.md                   # AI context file
+├── TASKS.md                    # Task breakdown (8 phases)
+└── PROMPT_LOG.md               # AI development log (39 prompts)
 ```
-
-## Features
-
-### Check-in / Check-out (3 phương thức)
-- **QR/TOTP**: Camera quét mã QR chứa TOTP code, reset mỗi 15 giây
-- **IP Whitelist**: Verify request IP thuộc CIDR range của chi nhánh
-- **GPS Geofencing**: Haversine distance check trong bán kính cho phép
-- Chống gian lận: TOTP expire 15s, multi-factor validation
-- Auto status: đúng giờ / trễ / vắng (dựa trên giờ làm)
-
-### Branch Management
-- CRUD chi nhánh với config riêng (QR/IP/Location)
-- IP Whitelist entries (CIDR notation)
-- Location Whitelist (lat, lng, radius)
-- Assign/unassign employees
-- Live QR display cho Manager (auto-refresh 15s)
-
-### Dashboard
-- 4 stat cards: tổng NV, check-in hôm nay, tỉ lệ đúng giờ, đi trễ
-- Chart.js stacked bar chart: 14-day trend
-- Top late leaderboard (tháng)
-- Recent activity feed
-- HTMX filter by branch (Admin)
-- Cache 5 min TTL
-
-### Reports & History
-- Filter ngày/tuần/tháng + trạng thái
-- HTMX partial reload (không reload page)
-- Export Excel (.xlsx)
-- Branch report (Manager/Admin)
-
-### Authentication & Authorization
-- JWT access + refresh token (cookie-based)
-- Microsoft OAuth2 login (optional)
-- 3 roles: Admin / Manager / Employee
-- RBAC middleware: AdminOnly, ManagerOrAdmin
-- Manager chỉ xem data chi nhánh mình
-
-### UI/UX
-- HTMX-powered SPA-like experience (no JS framework)
-- Tailwind CSS responsive (mobile-first)
-- Bottom navigation (mobile)
-- Responsive tables → card view on mobile
-- Toast notifications for all error states
-- Error pages: 404, 403, 500
-- Lucide icons
 
 ## Configuration
 
@@ -172,28 +278,25 @@ smart_attendance/
 | `PORT` | 8080 | Server port |
 | `ENV` | development | development / production |
 | `DB_PATH` | data/smart_attendance.db | SQLite file path |
+| `TURSO_URL` | (empty) | Turso remote DB URL (overrides DB_PATH) |
+| `TURSO_TOKEN` | (empty) | Turso auth token |
 | `JWT_SECRET` | (change me) | JWT signing secret |
 | `JWT_EXPIRE_MINUTES` | 60 | Access token TTL |
 | `JWT_REFRESH_HOURS` | 168 | Refresh token TTL (7 days) |
-| `RATE_LIMIT_PER_MIN` | 10 | Check-in rate limit |
-| `MICROSOFT_CLIENT_ID` | (empty) | Microsoft OAuth client ID |
-| `MICROSOFT_CLIENT_SECRET` | (empty) | Microsoft OAuth secret |
-| `MICROSOFT_REDIRECT_URI` | http://localhost:8080/auth/oauth/microsoft/callback | OAuth redirect |
-| `MICROSOFT_TENANT_ID` | common | Azure AD tenant |
+| `RATE_LIMIT_PER_MIN` | 10 | IP rate limit per minute |
+| `WEBAUTHN_RPID` | localhost | WebAuthn Relying Party ID |
+| `WEBAUTHN_ORIGIN` | http://localhost:8080 | WebAuthn origin |
 
 ## API Endpoints
 
 ### Public
 - `POST /api/v1/auth/login` — Login (JSON)
-- `POST /api/v1/auth/register` — Register (JSON)
 - `POST /api/v1/auth/refresh` — Refresh token
 
 ### Protected (JWT required)
-- `GET /api/v1/dashboard/stats` — Dashboard statistics
-- `GET /api/v1/dashboard/charts` — Chart data
-- `POST /api/v1/attendance/check-in` — Check in
-- `POST /api/v1/attendance/check-out` — Check out
+- `POST /api/v1/attendance/log` — Log attendance (check-in/out)
 - `GET /api/v1/attendance/status` — Today's status
+- `GET /api/v1/dashboard/stats` — Dashboard statistics
 - `GET /api/v1/branches` — List branches (Admin)
 - `POST /api/v1/branches` — Create branch (Admin)
 - `GET /api/v1/users` — List users (Admin)
@@ -201,12 +304,11 @@ smart_attendance/
 ## Scaling Strategy
 
 - **SQLite WAL mode** — concurrent reads, serialized writes
-- **In-memory cache** — branch config, dashboard stats (go-cache, 5 min TTL)
-- **Single binary** — Go compiles to 1 binary, templates via filesystem
-- **Indexed queries** — composite indexes on `(branch_id, user_id, created_at)`
-- **Batch inserts** — seed data uses `CreateInBatches(500)` for performance
-- **Horizontal scaling path** — swap SQLite → PostgreSQL via GORM driver change
-- **Goroutine concurrency** — handles peak-hour check-in load
+- **Turso (libSQL)** — remote database option for cloud deployment
+- **In-memory cache** — branch config, dashboard stats, permissions (5 min TTL)
+- **Single binary** — Go compiles to 1 binary (~15MB Docker image)
+- **Composite indexes** — optimized for `(user_id, work_date)`, `(branch_id, work_date)`
+- **Horizontal scaling path** — swap to PostgreSQL via GORM driver change
 
 ## License
 

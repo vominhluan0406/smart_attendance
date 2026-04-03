@@ -61,6 +61,7 @@ func (h *UserHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 		h.render.RenderPartial(w, "user_list.html", data)
 		return
 	}
+	injectBranchFlags(data, r, h.branchService)
 	h.render.Render(w, "users.html", data)
 }
 
@@ -68,6 +69,7 @@ func (h *UserHandler) CreatePage(w http.ResponseWriter, r *http.Request) {
 	branches, _ := h.branchService.ListAll()
 	data := userContext(r)
 	data["Branches"] = branches
+	injectBranchFlags(data, r, h.branchService)
 	h.render.Render(w, "user_create.html", data)
 }
 
@@ -87,6 +89,7 @@ func (h *UserHandler) EditPage(w http.ResponseWriter, r *http.Request) {
 	data["User"] = user
 	data["Branches"] = branches
 	data["CurrentBranch"] = currentBranch
+	injectBranchFlags(data, r, h.branchService)
 	h.render.Render(w, "user_edit.html", data)
 }
 
@@ -107,6 +110,7 @@ func (h *UserHandler) ProfilePage(w http.ResponseWriter, r *http.Request) {
 
 	data := userContext(r)
 	data["User"] = user
+	injectBranchFlags(data, r, h.branchService)
 	h.render.Render(w, "profile.html", data)
 }
 
@@ -252,7 +256,15 @@ func (h *UserHandler) DeleteAction(w http.ResponseWriter, r *http.Request) {
 	// Prevent self-delete
 	if id == middleware.GetUserID(r) {
 		w.WriteHeader(http.StatusBadRequest)
-		h.render.RenderPartial(w, "auth_error.html", "Cannot delete your own account")
+		h.render.RenderPartial(w, "auth_error.html", "Không thể xóa chính tài khoản của bạn")
+		return
+	}
+
+	// Prevent deleting admin accounts
+	target, err := h.userService.GetByID(id)
+	if err == nil && target != nil && target.Role == models.RoleAdmin {
+		w.WriteHeader(http.StatusForbidden)
+		h.render.RenderPartial(w, "auth_error.html", "Không thể xóa tài khoản Admin")
 		return
 	}
 
@@ -343,6 +355,16 @@ func (h *UserHandler) APIUpdate(w http.ResponseWriter, r *http.Request) {
 
 func (h *UserHandler) APIDelete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+
+	target, err := h.userService.GetByID(id)
+	if err == nil && target != nil && target.Role == models.RoleAdmin {
+		writeJSON(w, http.StatusForbidden, map[string]interface{}{
+			"success": false,
+			"error":   map[string]string{"code": "FORBIDDEN", "message": "Không thể xóa tài khoản Admin"},
+		})
+		return
+	}
+
 	if err := h.userService.Delete(id); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]interface{}{
 			"success": false,

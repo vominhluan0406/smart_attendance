@@ -40,10 +40,12 @@
                     {{end}}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    {{if ne (printf "%s" .Role) "admin"}}
                     <a href="/users/{{.ID}}/edit" class="text-indigo-600 hover:text-indigo-900 mr-3 btn-mobile">Sửa</a>
                     <button hx-delete="/users/{{.ID}}" hx-confirm="Bạn có chắc chắn muốn xóa nhân viên này?"
                         hx-target="closest tr" hx-swap="outerHTML swap:0.5s"
                         class="text-red-600 hover:text-red-900 btn-mobile">Xóa</button>
+                    {{end}}
                 </td>
             </tr>
             {{else}}
