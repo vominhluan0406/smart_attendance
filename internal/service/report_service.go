@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/smart-attendance/smart-attendance/internal/models"
@@ -58,9 +59,11 @@ func (s *ReportService) ExportUserHistoryExcel(userID string, dateFrom, dateTo *
 	}
 	result, err := s.attendanceRepo.List(params)
 	if err != nil {
+		log.Printf("[service][report] ERROR fetching user history for export: %v", err)
 		return nil, err
 	}
 
+	log.Printf("[service][report] ExportUserHistoryExcel: user=%s records=%d", userID, len(result.Records))
 	return s.generateExcel(result.Records)
 }
 
@@ -76,9 +79,11 @@ func (s *ReportService) ExportBranchReportExcel(branchID string, dateFrom, dateT
 	}
 	result, err := s.attendanceRepo.List(params)
 	if err != nil {
+		log.Printf("[service][report] ERROR fetching branch history for export: %v", err)
 		return nil, err
 	}
 
+	log.Printf("[service][report] ExportBranchReportExcel: branch=%s records=%d", branchID, len(result.Records))
 	return s.generateExcel(result.Records)
 }
 
@@ -86,13 +91,18 @@ func (s *ReportService) generateExcel(records []models.Attendance) ([]byte, erro
 	f := excelize.NewFile()
 	defer func() {
 		if err := f.Close(); err != nil {
-			fmt.Println(err)
+			log.Printf("[service][report] excel close error: %v", err)
 		}
 	}()
+
 	sheetName := "Sheet1"
-	
+	// Ensure the sheet exists and is active
+	f.NewSheet(sheetName)
+	index, _ := f.GetSheetIndex(sheetName)
+	f.SetActiveSheet(index)
+
 	// Set Headers
-	headers := []string{"ID", "User", "Branch", "Date", "Check In", "Check Out", "Status", "Method", "Notes"}
+	headers := []string{"ID", "Họ Tên", "Chi Nhánh", "Ngày", "Giờ Vào", "Giờ Ra", "Trạng Thái", "Phương Thức", "Ghi Chú"}
 	for i, header := range headers {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
 		f.SetCellValue(sheetName, cell, header)
@@ -101,6 +111,7 @@ func (s *ReportService) generateExcel(records []models.Attendance) ([]byte, erro
 	// Make Header bold
 	style, err := f.NewStyle(&excelize.Style{
 		Font: &excelize.Font{Bold: true},
+		Fill: excelize.Fill{Type: "pattern", Color: []string{"#E2E8F0"}, Pattern: 1},
 	})
 	if err == nil {
 		f.SetRowStyle(sheetName, 1, 1, style)
@@ -144,7 +155,8 @@ func (s *ReportService) generateExcel(records []models.Attendance) ([]byte, erro
 
 	buf, err := f.WriteToBuffer()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("write excel to buffer: %w", err)
 	}
+
 	return buf.Bytes(), nil
 }

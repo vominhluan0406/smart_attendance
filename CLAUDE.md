@@ -12,7 +12,8 @@ Hệ thống chấm công thông minh (Smart Attendance) cho doanh nghiệp quy 
 - **Database**: SQLite (file-based, zero config, embedded)
 - **Cache**: In-process cache (`github.com/patrickmn/go-cache` hoặc sync.Map)
 - **ORM**: GORM (với `glebarez/sqlite` — pure-Go driver, no CGO required)
-- **Auth**: JWT + Refresh Token (`golang-jwt/jwt`)
+- **Auth**: JWT + Refresh Token (`golang-jwt/jwt`) + WebAuthn (Passkeys/Biometrics)
+- **WebAuthn**: `github.com/go-webauthn/webauthn` (FIDO2/U2F)
 - **API**: RESTful, pagination + filtering on all list endpoints
 
 ### Frontend
@@ -77,11 +78,12 @@ smart_attendance/
 ## Core Features
 
 ### 1. Check-in / Check-out
-- **3 phương thức xác thực song song** (multi-factor):
+- **4 phương thức xác thực song song** (multi-factor):
   - **Camera QR Scanner**: Nhân viên sử dụng camera điện thoại/máy tính quét mã QR tại chi nhánh. Mã QR chứa TOTP code reset mỗi 15 giây. Tự động bóc tách và gửi lệnh điểm danh.
   - **IP Whitelist**: Mỗi chi nhánh cấu hình danh sách IP được phép (mạng nội bộ công ty). Request check-in phải từ IP trong whitelist.
   - **Location Whitelist**: Mỗi chi nhánh cấu hình tọa độ (lat, lng) + bán kính. GPS của nhân viên phải nằm trong vùng cho phép (haversine distance).
-- Chống gian lận: TOTP expire 15s, IP verify, GPS geofencing, detect mock location
+  - **Biometric (WebAuthn)**: Nhân viên sử dụng Passkeys (FaceID/TouchID/Windows Hello) để điểm danh. Yêu cầu admin phê duyệt thiết bị trước khi sử dụng.
+- Chống gian lận: TOTP expire 15s, IP verify, GPS geofencing, detect mock location, Biometric hardware-backed security
 - Mỗi nhân viên chỉ check-in được tại chi nhánh được gán
 - Hỗ trợ check-in bằng 1 hoặc kết hợp nhiều phương thức (configurable per branch)
 

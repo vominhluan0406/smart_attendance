@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{{block "title" .}}Smart Attendance{{end}}</title>
 
     <!-- Tailwind CSS -->
@@ -17,6 +17,12 @@
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- QR Scanner -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <style>
         .htmx-indicator {
@@ -79,6 +85,11 @@
             if (window.showToast && event.detail) {
                 showToast(event.detail.message || 'Thông báo', event.detail.type || 'info');
             }
+        });
+        // Re-init lucide icons + QR scanner after every HTMX swap
+        document.body.addEventListener('htmx:afterSettle', function() {
+            if (window.lucide) lucide.createIcons();
+            if (window.initQRScanner) window.initQRScanner();
         });
     </script>
     {{block "scripts" .}}{{end}}

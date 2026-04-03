@@ -14,11 +14,11 @@
                 <h1 class="text-2xl font-bold text-gray-900">{{.Branch.Name}}</h1>
                 <p class="text-sm text-gray-500 mt-1">Báo cáo chấm công chi nhánh</p>
             </div>
-            <a href="/reports/branch/{{.Branch.ID}}/export?date_from={{.DateFrom}}&date_to={{.DateTo}}&status={{.Status}}"
-                class="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 transition-all">
+            <button onclick="exportExcel('/reports/branch/{{.Branch.ID}}/export')"
+                class="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 transition-all cursor-pointer">
                 <i data-lucide="download" class="w-4 h-4"></i>
                 Export Excel
-            </a>
+            </button>
         </div>
 
         <!-- Filters -->
@@ -78,6 +78,18 @@
         <div id="history-list" class="relative">
             {{template "history_list.html" .}}
         </div>
+
+        <script>
+            function exportExcel(baseUrl) {
+                const form = document.getElementById('filter-form');
+                const formData = new FormData(form);
+                const params = new URLSearchParams();
+                for (const [key, value] of formData.entries()) {
+                    params.append(key, value);
+                }
+                window.location.href = baseUrl + '?' + params.toString();
+            }
+        </script>
     </main>
 </div>
 {{end}}

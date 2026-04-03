@@ -33,32 +33,40 @@ func main() {
 		log.Fatalf("database connection failed: %v", err)
 	}
 
-	// Auto-migrate models
-	if err := database.AutoMigrate(db,
-		&models.User{},
-		&models.Branch{},
-		&models.BranchIPWhitelist{},
-		&models.BranchLocation{},
-		&models.Attendance{},
-		// New tables
-		&models.Department{},
-		&models.WorkShift{},
-		&models.UserShiftAssignment{},
-		&models.Holiday{},
-		&models.LeaveType{},
-		&models.LeaveRequest{},
-		&models.LeaveBalance{},
-		&models.AttendanceAdjustment{},
-		&models.OvertimeRequest{},
-		&models.Permission{},
-		&models.RolePermission{},
-	); err != nil {
-		log.Fatalf("auto-migrate failed: %v", err)
-	}
+	// Migrate: Turso uses raw SQL, local uses GORM AutoMigrate
+	if cfg.TursoURL != "" {
+		log.Printf("[main] using Turso migration path")
+		if err := database.RawMigrateTurso(db); err != nil {
+			log.Fatalf("turso migrate failed: %v", err)
+		}
+	} else {
+		log.Printf("[main] using local SQLite migration path")
+		if err := database.SafeMigrate(db,
+			&models.User{},
+			&models.Branch{},
+			&models.BranchIPWhitelist{},
+			&models.BranchLocation{},
+			&models.Attendance{},
+			&models.Department{},
+			&models.WorkShift{},
+			&models.UserShiftAssignment{},
+			&models.Holiday{},
+			&models.LeaveType{},
+			&models.LeaveRequest{},
+			&models.LeaveBalance{},
+			&models.AttendanceAdjustment{},
+			&models.OvertimeRequest{},
+			&models.Permission{},
+			&models.RolePermission{},
+			&models.AttendanceLog{},
+			&models.UserCredential{},
+		); err != nil {
+			log.Fatalf("auto-migrate failed: %v", err)
+		}
 
-	// Run data migrations (backfill work_date, create default shifts)
-	if err := database.RunMigrations(db); err != nil {
-		log.Fatalf("data migration failed: %v", err)
+		if err := database.RunMigrations(db); err != nil {
+			log.Fatalf("data migration failed: %v", err)
+		}
 	}
 
 	// Seed default data
@@ -79,16 +87,27 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	branchRepo := repository.NewBranchRepository(db)
 	attendanceRepo := repository.NewAttendanceRepository(db)
+	attendanceLogRepo := repository.NewAttendanceLogRepository(db)
 	shiftRepo := repository.NewShiftRepository(db)
+	permRepo := repository.NewPermissionRepository(db)
+	credRepo := repository.NewUserCredentialRepository(db)
 
 	// Init services
-	authService := service.NewAuthService(userRepo, cfg)
+	authService := service.NewAuthService(userRepo, branchRepo, cfg)
 	userService := service.NewUserService(userRepo)
 	branchService := service.NewBranchService(branchRepo, userRepo, appCache)
 	totpService := service.NewTOTPService()
 	ipValidator := service.NewIPValidator()
 	locValidator := service.NewLocationValidator()
-	attendanceService := service.NewAttendanceService(attendanceRepo, shiftRepo, branchService, userService, totpService, ipValidator, locValidator)
+	permissionService := service.NewPermissionService(permRepo, appCache)
+
+	// WebAuthn RPID and Origin from config
+	webAuthnService, err := service.NewWebAuthnService(cfg.WebAuthnRPID, cfg.WebAuthnOrigin, credRepo, userRepo, appCache)
+	if err != nil {
+		log.Fatalf("Failed to initialize WebAuthnService: %v", err)
+	}
+
+	attendanceService := service.NewAttendanceService(attendanceRepo, attendanceLogRepo, shiftRepo, branchService, userService, totpService, ipValidator, locValidator)
 	reportService := service.NewReportService(attendanceRepo)
 	dashboardService := service.NewDashboardService(attendanceRepo, branchRepo, userRepo, appCache, db)
 
@@ -102,6 +121,8 @@ func main() {
 		TOTPService:       totpService,
 		ReportService:     reportService,
 		DashboardService:  dashboardService,
+		PermissionService: permissionService,
+		WebAuthnService:   webAuthnService,
 		Config:            cfg,
 		RateLimitPerMin:   cfg.RateLimitPerMin,
 	})

@@ -17,14 +17,14 @@
                         <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
                     </a>
                     {{end}}
-                    {{if eq .UserRole "employee"}}
+                    {{if or (and (eq .UserRole "employee") .QREnabled) (and (eq .UserRole "manager") .FaceEnabled)}}
                     <a href="/attendance"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
-                        <i data-lucide="camera" class="w-4 h-4"></i> Check-in
+                        <i data-lucide="scan-face" class="w-4 h-4"></i> Chấm công
                     </a>
                     {{end}}
 
-                    {{if or (eq .UserRole "admin") (eq .UserRole "manager")}}
+                    {{if eq .UserRole "manager"}}
                     <a href="/attendance/qr-manager"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
                         <i data-lucide="qr-code" class="w-4 h-4"></i> Mã QR
@@ -38,13 +38,15 @@
                     </a>
                     {{end}}
 
+                    {{if eq .UserRole "employee"}}
                     <a href="/reports/my-history"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
                         <i data-lucide="history" class="w-4 h-4"></i> Lịch sử
                     </a>
+                    {{end}}
 
-                    {{if eq .UserRole "manager"}}
-                    <a href="/reports/branch/{{.UserBranch}}"
+                    {{if or (eq .UserRole "manager") (eq .UserRole "admin")}}
+                    <a href="{{if eq .UserRole "admin"}}/reports{{else}}/reports/branch/{{.UserBranch}}{{end}}"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
                         <i data-lucide="file-text" class="w-4 h-4"></i> Báo cáo
                     </a>
@@ -58,7 +60,20 @@
                     {{end}}
                 </div>
             </div>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="hidden sm:block text-right mr-2">
+                    {{if eq .UserRole "employee"}}
+                    <a href="/profile" class="group">
+                        <p class="text-sm font-bold text-gray-900 leading-tight group-hover:text-indigo-600 transition-colors">{{.UserName}}</p>
+                        {{if .BranchName}}<p class="text-xs text-gray-400">{{.BranchName}}</p>{{end}}
+                    </a>
+                    {{else}}
+                    <div class="cursor-default">
+                        <p class="text-sm font-bold text-gray-900 leading-tight">{{.UserName}}</p>
+                        {{if .BranchName}}<p class="text-xs text-gray-400">{{.BranchName}}</p>{{end}}
+                    </div>
+                    {{end}}
+                </div>
                 <a href="/auth/logout"
                     class="text-sm font-medium text-gray-500 hover:text-gray-700 flex items-center gap-1">
                     <i data-lucide="log-out" class="w-4 h-4"></i> <span class="hidden sm:inline">Logout</span>
@@ -80,22 +95,28 @@
         <span>Dashboard</span>
     </a>
     {{end}}
-    {{if eq .UserRole "employee"}}
+    {{if or (and (eq .UserRole "employee") .QREnabled) (and (eq .UserRole "manager") .FaceEnabled)}}
     <a href="/attendance" class="bottom-nav-item">
-        <i data-lucide="camera"></i>
-        <span>Check-in</span>
+        <i data-lucide="scan-face"></i>
+        <span>Chấm công</span>
     </a>
     {{end}}
-    {{if or (eq .UserRole "admin") (eq .UserRole "manager")}}
+    {{if eq .UserRole "manager"}}
     <a href="/attendance/qr-manager" class="bottom-nav-item">
         <i data-lucide="qr-code"></i>
         <span>QR</span>
     </a>
     {{end}}
+    {{if eq .UserRole "employee"}}
     <a href="/reports/my-history" class="bottom-nav-item">
         <i data-lucide="history"></i>
         <span>Lịch sử</span>
     </a>
+    <a href="/profile" class="bottom-nav-item">
+        <i data-lucide="user"></i>
+        <span>Hồ sơ</span>
+    </a>
+    {{end}}
 </nav>
 
 <script>

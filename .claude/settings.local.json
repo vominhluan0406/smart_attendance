@@ -3,7 +3,11 @@
     "allow": [
       "Bash(go build:*)",
       "Bash(go get:*)",
-      "Bash(go vet:*)"
+      "Bash(go vet:*)",
+      "Bash(tasklist)",
+      "Bash(curl -s http://localhost:8080/api/v1/health)",
+      "Bash(taskkill //F //IM main.exe)",
+      "Bash(go run:*)"
     ]
   }
 }

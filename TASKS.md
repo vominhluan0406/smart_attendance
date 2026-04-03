@@ -91,6 +91,16 @@
 | 6.4 | README.md: setup guide, architecture diagram, scaling strategy, screenshots | `docs/readme` | L | P0–P5 | DONE |
 | 6.5 | Docker: test docker-compose up from scratch, verify 1-click deploy | `feature/docker-setup` | M | 0.7, P1–P5 | DONE |
 | 6.6 | PROMPT_LOG.md: hoàn thiện log tất cả sessions | `docs/prompt-log` | S | — | DONE |
+| 6.7 | Docker: fix Go version (1.25) in builder image | `hotfix/docker-go-version` | S | 6.5 | DONE |
+
+## Phase 7 — Advanced WebAuthn & Admin Control
+
+| # | Task | Branch | Size | Depends | Status |
+|---|------|--------|------|---------|--------|
+| 7.1 | WebAuthn: Fix Backup Eligible flag inconsistency (Model + DB Migration) | `feature/webauthn-fix` | M | P3 | DONE |
+| 7.2 | WebAuthn: Fix AA GUID naming mismatch (GORM tag) | `feature/webauthn-fix` | S | P3 | DONE |
+| 7.3 | Admin: Approve/Reject/Delete user credentials UI & Handlers | `feature/admin-credentials` | L | 1.8, P3 | DONE |
+| 7.4 | Logic: Hide biometric registration if already registered/approved | `feature/ui-polish` | S | 7.3 | DONE |
 
 ---
 
@@ -98,9 +108,9 @@
 
 ```
 P0 (Skeleton) ──→ P1 (Auth) ──→ P2 (Branch) ──→ P3 (Attendance) ──→ P4 (Reports) ──→ P5 (Dashboard)
-                                                                                            │
-                                                                                            ▼
-                                                                                      P6 (Polish)
+                                                     │                                       │
+                                                     ▼                                       ▼
+                                               P7 (WebAuthn) ──────────────────────────→ P6 (Polish)
 ```
 
 **Critical path**: P0 → P1 → P2 → P3 → P4 → P5 → P6

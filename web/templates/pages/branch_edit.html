@@ -56,14 +56,30 @@
                             <span class="ml-2 text-sm text-gray-700">QR Code (TOTP — refreshes every 15s)</span>
                         </label>
                         <label class="flex items-center">
-                            <input type="checkbox" name="allowed_methods" value="ip" class="h-4 w-4 rounded border-gray-300 text-indigo-600"
-                                   {{if containsMethod .Branch.AllowedMethods "ip"}}checked{{end}}>
-                            <span class="ml-2 text-sm text-gray-700">IP Whitelist</span>
+                            <input type="checkbox" name="allowed_methods" value="wifi_gps" class="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                                   {{if containsMethod .Branch.AllowedMethods "wifi_gps"}}checked{{end}}>
+                            <span class="ml-2 text-sm text-gray-700">Xác thực WiFi + GPS (Nhân viên)</span>
                         </label>
                         <label class="flex items-center">
-                            <input type="checkbox" name="allowed_methods" value="location" class="h-4 w-4 rounded border-gray-300 text-indigo-600"
-                                   {{if containsMethod .Branch.AllowedMethods "location"}}checked{{end}}>
-                            <span class="ml-2 text-sm text-gray-700">GPS Location</span>
+                            <input type="checkbox" name="allowed_methods" value="face" class="h-4 w-4 rounded border-gray-300 text-violet-600"
+                                   {{if containsMethod .Branch.AllowedMethods "face"}}checked{{end}}>
+                            <span class="ml-2 text-sm text-gray-700">Nhận diện khuôn mặt (Manager)</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="allowed_methods" value="password" class="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                                   {{if containsMethod .Branch.AllowedMethods "password"}}checked{{end}}>
+                            <span class="ml-2 text-sm text-gray-700">Chấm công bằng mật khẩu (Login)</span>
+                        </label>
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                        <label class="flex items-center cursor-pointer group">
+                            <input type="checkbox" name="require_biometric" value="1" class="h-5 w-5 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+                                   {{if .Branch.RequireBiometric}}checked{{end}}>
+                            <div class="ml-3">
+                                <span class="block text-sm font-bold text-emerald-900 group-hover:text-emerald-700 transition-colors">Yêu cầu vân tay/FaceID (WebAuthn)</span>
+                                <span class="block text-xs text-emerald-600/70 italic mt-0.5">Mẹo: Yêu cầu nhân viên xác thực sinh trắc học trên điện thoại cá nhân để bảo mật tối đa.</span>
+                            </div>
                         </label>
                     </div>
                 </fieldset>
@@ -93,20 +109,20 @@
                 <!-- IP Whitelist -->
                 <fieldset>
                     <legend class="text-lg font-semibold text-gray-900 mb-4">IP Whitelist</legend>
-                    <div id="ip-list" class="space-y-2">
+                    <div id="ip-list" class="space-y-3">
                         {{range .Branch.IPWhitelist}}
-                        <div class="flex gap-2">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             <input type="text" name="ip_cidr" value="{{.IPCIDR}}" placeholder="192.168.1.0/24"
-                                   class="flex-1 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
+                                   class="sm:col-span-2 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
                             <input type="text" name="ip_label" value="{{.Label}}" placeholder="Label"
-                                   class="w-40 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
                         </div>
                         {{end}}
-                        <div class="flex gap-2">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             <input type="text" name="ip_cidr" placeholder="192.168.1.0/24"
-                                   class="flex-1 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
+                                   class="sm:col-span-2 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
                             <input type="text" name="ip_label" placeholder="Label"
-                                   class="w-40 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300 focus:ring-indigo-500">
                         </div>
                     </div>
                 </fieldset>
@@ -114,28 +130,28 @@
                 <!-- Location Whitelist -->
                 <fieldset>
                     <legend class="text-lg font-semibold text-gray-900 mb-4">Location Whitelist</legend>
-                    <div id="loc-list" class="space-y-2">
+                    <div id="loc-list" class="space-y-3">
                         {{range .Branch.Locations}}
-                        <div class="flex gap-2">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             <input type="number" step="any" name="loc_lat" value="{{.Lat}}" placeholder="Lat"
-                                   class="w-32 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                             <input type="number" step="any" name="loc_lng" value="{{.Lng}}" placeholder="Lng"
-                                   class="w-32 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                             <input type="number" name="loc_radius" value="{{.RadiusM}}" placeholder="Radius(m)"
-                                   class="w-24 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                             <input type="text" name="loc_label" value="{{.Label}}" placeholder="Label"
-                                   class="flex-1 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                         </div>
                         {{end}}
-                        <div class="flex gap-2">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             <input type="number" step="any" name="loc_lat" placeholder="Lat"
-                                   class="w-32 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                             <input type="number" step="any" name="loc_lng" placeholder="Lng"
-                                   class="w-32 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                             <input type="number" name="loc_radius" placeholder="Radius(m)" value="200"
-                                   class="w-24 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                             <input type="text" name="loc_label" placeholder="Label"
-                                   class="flex-1 rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
+                                   class="rounded-md shadow-sm sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300">
                         </div>
                     </div>
                 </fieldset>

@@ -9,7 +9,9 @@ data/*.db-wal
 data/*.db-shm
 
 # Environment
+.env
 .env.*
+!.env.example
 
 # IDE
 .idea/

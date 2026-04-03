@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/smart-attendance/smart-attendance/internal/middleware"
 	"github.com/smart-attendance/smart-attendance/internal/models"
 	"github.com/smart-attendance/smart-attendance/internal/renderer"
 	"github.com/smart-attendance/smart-attendance/internal/repository"
@@ -49,10 +48,11 @@ func (h *BranchHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 		"PrevPage":    result.Page - 1,
 	}
 
-	data["UserRole"] = middleware.GetUserRole(r)
-	data["UserBranch"] = middleware.GetBranchID(r)
+	for k, v := range userContext(r) {
+		data[k] = v
+	}
 
-	if r.Header.Get("HX-Request") == "true" {
+	if r.Header.Get("HX-Request") == "true" && r.Header.Get("HX-Boosted") != "true" {
 		h.render.RenderPartial(w, "branch_list.html", data)
 		return
 	}
@@ -60,10 +60,7 @@ func (h *BranchHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BranchHandler) CreatePage(w http.ResponseWriter, r *http.Request) {
-	h.render.Render(w, "branch_create.html", map[string]interface{}{
-		"UserRole":   middleware.GetUserRole(r),
-		"UserBranch": middleware.GetBranchID(r),
-	})
+	h.render.Render(w, "branch_create.html", userContext(r))
 }
 
 func (h *BranchHandler) EditPage(w http.ResponseWriter, r *http.Request) {
@@ -77,12 +74,10 @@ func (h *BranchHandler) EditPage(w http.ResponseWriter, r *http.Request) {
 
 	empCount, _ := h.branchService.GetEmployeeCount(id)
 
-	h.render.Render(w, "branch_edit.html", map[string]interface{}{
-		"Branch":        branch,
-		"EmployeeCount": empCount,
-		"UserRole":      middleware.GetUserRole(r),
-		"UserBranch":    middleware.GetBranchID(r),
-	})
+	data := userContext(r)
+	data["Branch"] = branch
+	data["EmployeeCount"] = empCount
+	h.render.Render(w, "branch_edit.html", data)
 }
 
 // --- HTMX Form Handlers ---
@@ -108,6 +103,7 @@ func (h *BranchHandler) CreateForm(w http.ResponseWriter, r *http.Request) {
 		AllowedMethods: strings.Join(methods, ","),
 		WorkStartTime:  r.FormValue("work_start_time"),
 		WorkEndTime:    r.FormValue("work_end_time"),
+		RequireBiometric: r.FormValue("require_biometric") == "1",
 	}
 
 	if _, err := h.branchService.Create(input); err != nil {
@@ -132,7 +128,9 @@ func (h *BranchHandler) UpdateForm(w http.ResponseWriter, r *http.Request) {
 	lat, lng := parseLatLng(r.FormValue("lat"), r.FormValue("lng"))
 	radiusM, _ := strconv.Atoi(r.FormValue("radius_m"))
 	isActive := r.FormValue("is_active") == "on"
+	requireBiometric := r.FormValue("require_biometric") == "1"
 	methods := r.Form["allowed_methods"]
+	log.Printf("[handler][branch] UpdateForm ID=%s, methods=%v", id, methods)
 
 	input := service.UpdateBranchInput{
 		Name:           r.FormValue("name"),
@@ -144,6 +142,7 @@ func (h *BranchHandler) UpdateForm(w http.ResponseWriter, r *http.Request) {
 		WorkStartTime:  r.FormValue("work_start_time"),
 		WorkEndTime:    r.FormValue("work_end_time"),
 		IsActive:       &isActive,
+		RequireBiometric: &requireBiometric,
 	}
 
 	if _, err := h.branchService.Update(id, input); err != nil {
@@ -305,18 +304,6 @@ func (h *BranchHandler) parseListParams(r *http.Request) repository.BranchListPa
 		Limit:  limit,
 		Search: r.URL.Query().Get("search"),
 	}
-}
-
-func parseLatLng(latStr, lngStr string) (*float64, *float64) {
-	if latStr == "" || lngStr == "" {
-		return nil, nil
-	}
-	lat, err1 := strconv.ParseFloat(latStr, 64)
-	lng, err2 := strconv.ParseFloat(lngStr, 64)
-	if err1 != nil || err2 != nil {
-		return nil, nil
-	}
-	return &lat, &lng
 }
 
 func parseIPWhitelistForm(r *http.Request) []models.BranchIPWhitelist {

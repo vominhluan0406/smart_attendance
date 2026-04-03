@@ -1,60 +1,81 @@
-{{define "dashboard_stats"}}
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
     <!-- Total Employees -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
-        <div class="flex items-center justify-between mb-3">
-            <div class="p-2 bg-blue-100 rounded-xl">
-                <i data-lucide="users" class="w-5 h-5 text-blue-600"></i>
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 hover-lift transition-all relative overflow-hidden group">
+        <div class="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <i data-lucide="users" class="w-24 h-24 text-indigo-600"></i>
+        </div>
+        <div class="flex items-center justify-between mb-4 relative z-10">
+            <div class="p-3 bg-indigo-50 rounded-2xl group-hover:bg-indigo-600 transition-colors">
+                <i data-lucide="users" class="w-6 h-6 text-indigo-600 group-hover:text-white transition-colors"></i>
             </div>
             {{if eq .UserRole "admin"}}
-            <span class="text-xs text-gray-400">Toàn hệ thống</span>
+            <span class="px-2 py-1 rounded-lg bg-indigo-50 text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Hệ thống</span>
             {{else}}
-            <span class="text-xs text-gray-400">Chi nhánh</span>
+            <span class="px-2 py-1 rounded-lg bg-indigo-50 text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Chi nhánh</span>
             {{end}}
         </div>
-        <p class="text-2xl font-bold text-gray-900">{{.Stats.TotalEmployees}}</p>
-        <p class="text-xs text-gray-500 mt-1">Nhân viên</p>
+        <div class="relative z-10">
+            <p class="text-3xl font-black text-gray-900 tracking-tight">{{.Stats.TotalEmployees}}</p>
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Nhân viên</p>
+        </div>
     </div>
 
     <!-- Today Check-ins -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
-        <div class="flex items-center justify-between mb-3">
-            <div class="p-2 bg-green-100 rounded-xl">
-                <i data-lucide="log-in" class="w-5 h-5 text-green-600"></i>
-            </div>
-            <span class="text-xs text-gray-400">Hôm nay</span>
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 hover-lift transition-all relative overflow-hidden group">
+        <div class="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <i data-lucide="log-in" class="w-24 h-24 text-emerald-600"></i>
         </div>
-        <p class="text-2xl font-bold text-gray-900">{{.Stats.TodayCheckIns}}</p>
-        <p class="text-xs text-gray-500 mt-1">Đã check-in</p>
+        <div class="flex items-center justify-between mb-4 relative z-10">
+            <div class="p-3 bg-emerald-50 rounded-2xl group-hover:bg-emerald-600 transition-colors">
+                <i data-lucide="log-in" class="w-6 h-6 text-emerald-600 group-hover:text-white transition-colors"></i>
+            </div>
+            <span class="px-2 py-1 rounded-lg bg-emerald-50 text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Hôm nay</span>
+        </div>
+        <div class="relative z-10">
+            <p class="text-3xl font-black text-gray-900 tracking-tight">{{.Stats.TodayCheckIns}}</p>
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Đã check-in</p>
+        </div>
     </div>
 
     <!-- On-time Rate -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
-        <div class="flex items-center justify-between mb-3">
-            <div class="p-2 bg-emerald-100 rounded-xl">
-                <i data-lucide="target" class="w-5 h-5 text-emerald-600"></i>
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 hover-lift transition-all relative overflow-hidden group">
+        <div class="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <i data-lucide="target" class="w-24 h-24 text-violet-600"></i>
+        </div>
+        <div class="flex items-center justify-between mb-4 relative z-10">
+            <div class="p-3 bg-violet-50 rounded-2xl group-hover:bg-violet-600 transition-colors">
+                <i data-lucide="target" class="w-6 h-6 text-violet-600 group-hover:text-white transition-colors"></i>
             </div>
-            <span class="text-xs font-medium {{if ge .Stats.OnTimeRate 80.0}}text-green-600{{else if ge .Stats.OnTimeRate 60.0}}text-amber-600{{else}}text-red-600{{end}}">
-                {{printf "%.0f" .Stats.OnTimeRate}}%
-            </span>
+            <div class="flex flex-col items-end">
+                <span class="px-2 py-1 rounded-lg bg-violet-50 text-[10px] font-bold text-violet-600 uppercase tracking-wider mb-1">Tỷ lệ đúng giờ</span>
+                <span class="text-sm font-black {{if ge .Stats.OnTimeRate 80.0}}text-emerald-600{{else if ge .Stats.OnTimeRate 60.0}}text-amber-600{{else}}text-rose-600{{end}}">
+                    {{printf "%.0f" .Stats.OnTimeRate}}%
+                </span>
+            </div>
         </div>
-        <div class="flex items-baseline gap-2">
-            <p class="text-2xl font-bold text-gray-900">{{.Stats.TodayOnTime}}</p>
-            <span class="text-sm text-gray-400">/ {{.Stats.TodayCheckIns}}</span>
+        <div class="relative z-10">
+            <div class="flex items-baseline gap-2">
+                <p class="text-3xl font-black text-gray-900 tracking-tight">{{.Stats.TodayOnTime}}</p>
+                <span class="text-sm font-bold text-gray-400">/ {{.Stats.TodayCheckIns}}</span>
+            </div>
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Đúng giờ</p>
         </div>
-        <p class="text-xs text-gray-500 mt-1">Đúng giờ</p>
     </div>
 
     <!-- Late -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
-        <div class="flex items-center justify-between mb-3">
-            <div class="p-2 bg-amber-100 rounded-xl">
-                <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600"></i>
-            </div>
-            <span class="text-xs text-gray-400">Hôm nay</span>
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 hover-lift transition-all relative overflow-hidden group">
+        <div class="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <i data-lucide="alert-triangle" class="w-24 h-24 text-rose-600"></i>
         </div>
-        <p class="text-2xl font-bold text-gray-900">{{.Stats.TodayLate}}</p>
-        <p class="text-xs text-gray-500 mt-1">Đi trễ</p>
+        <div class="flex items-center justify-between mb-4 relative z-10">
+            <div class="p-3 bg-rose-50 rounded-2xl group-hover:bg-rose-600 transition-colors">
+                <i data-lucide="alert-triangle" class="w-6 h-6 text-rose-600 group-hover:text-white transition-colors"></i>
+            </div>
+            <span class="px-2 py-1 rounded-lg bg-rose-50 text-[10px] font-bold text-rose-600 uppercase tracking-wider">Cảnh báo</span>
+        </div>
+        <div class="relative z-10">
+            <p class="text-3xl font-black text-gray-900 tracking-tight">{{.Stats.TodayLate}}</p>
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Đi trễ hôm nay</p>
+        </div>
     </div>
 </div>
-{{end}}

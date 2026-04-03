@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	"net"
 	"net/http"
 	"strings"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/smart-attendance/smart-attendance/internal/middleware"
 	"github.com/smart-attendance/smart-attendance/internal/models"
 	"github.com/smart-attendance/smart-attendance/internal/renderer"
+	"github.com/smart-attendance/smart-attendance/internal/repository"
 	"github.com/smart-attendance/smart-attendance/internal/service"
 )
 
@@ -21,6 +21,8 @@ type AttendanceHandler struct {
 	branchService     *service.BranchService
 	totpService       *service.TOTPService
 	userService       *service.UserService
+	authService       *service.AuthService
+	webauthnService   *service.WebAuthnService
 	render            *renderer.Renderer
 }
 
@@ -29,6 +31,8 @@ func NewAttendanceHandler(
 	branchService *service.BranchService,
 	totpService *service.TOTPService,
 	userService *service.UserService,
+	authService *service.AuthService,
+	webauthnService *service.WebAuthnService,
 	render *renderer.Renderer,
 ) *AttendanceHandler {
 	return &AttendanceHandler{
@@ -36,6 +40,8 @@ func NewAttendanceHandler(
 		branchService:     branchService,
 		totpService:       totpService,
 		userService:       userService,
+		authService:       authService,
+		webauthnService:   webauthnService,
 		render:            render,
 	}
 }
@@ -60,22 +66,113 @@ func (h *AttendanceHandler) ManagerQRRedirect(w http.ResponseWriter, r *http.Req
 
 // --- HTMX Pages ---
 
-func (h *AttendanceHandler) CheckInPage(w http.ResponseWriter, r *http.Request) {
+// AttendancePage shows the scanner (always available) + today's log history.
+func (h *AttendanceHandler) AttendancePage(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	today, _ := h.attendanceService.GetTodayStatus(userID)
+	logs, _ := h.attendanceService.GetTodayLogs(userID)
 
-	h.render.Render(w, "attendance.html", map[string]interface{}{
-		"Today":      today,
-		"UserRole":   middleware.GetUserRole(r),
-		"UserBranch": middleware.GetBranchID(r),
-	})
+	data := userContext(r)
+	data["Today"] = today
+	data["Logs"] = logs
+
+	// Check which methods are enabled for user's branch
+	branchID := middleware.GetBranchID(r)
+	if branchID != "" {
+		if branch, err := h.branchService.GetByIDCached(branchID); err == nil {
+			data["QREnabled"] = h.branchService.HasMethod(branch, models.MethodQRTOTP)
+			data["IPEnabled"] = h.branchService.HasMethod(branch, models.MethodIP)
+			data["LocationEnabled"] = h.branchService.HasMethod(branch, models.MethodLocation)
+			data["FaceEnabled"] = h.branchService.HasMethod(branch, models.MethodFace)
+			data["PasswordEnabled"] = h.branchService.HasMethod(branch, models.MethodPassword)
+			data["WiFiGPSEnabled"] = h.branchService.HasMethod(branch, models.MethodWiFiGPS)
+			data["BiometricRequired"] = branch.RequireBiometric
+		}
+	}
+
+	h.render.Render(w, "attendance.html", data)
+}
+
+// PasswordCheckinPage shows a login form specifically for attendance check-in (shared device).
+func (h *AttendanceHandler) PasswordCheckinPage(w http.ResponseWriter, r *http.Request) {
+	data := userContext(r)
+	role, _ := data["UserRole"].(models.Role)
+	
+	// Strictly only allow non-employees to see the check-in page
+	if role == models.RoleEmployee {
+		log.Printf("[handler][attendance] blocking employee from password checkin page")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Fetch employees of this branch for the dropdown
+	branchID := middleware.GetBranchID(r)
+	if branchID != "" {
+		res, err := h.userService.List(repository.UserListParams{
+			BranchID: branchID,
+			Role:     string(models.RoleEmployee),
+			IsActive: func() *bool { b := true; return &b }(),
+			Limit:    100,
+		})
+		if err == nil {
+			data["Employees"] = res.Users
+		}
+	}
+
+	h.render.Render(w, "password_checkin.html", data)
+}
+
+func (h *AttendanceHandler) WiFiGPSCheckinPage(w http.ResponseWriter, r *http.Request) {
+	data := userContext(r)
+	branchID := middleware.GetBranchID(r)
+	if branchID != "" {
+		if branch, err := h.branchService.GetByIDCached(branchID); err == nil {
+			data["BiometricRequired"] = branch.RequireBiometric
+		}
+	}
+
+	h.render.Render(w, "wifi_gps_checkin.html", data)
+}
+
+func (h *AttendanceHandler) BiometricLoginBegin(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	user, err := h.userService.GetByID(userID)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "User not found"})
+		return
+	}
+
+	options, err := h.webauthnService.BeginLogin(user)
+	if err != nil {
+		log.Printf("[handler][attendance] webauthn login begin failed: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, options)
+}
+
+func (h *AttendanceHandler) BiometricLoginFinish(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	user, err := h.userService.GetByID(userID)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "User not found"})
+		return
+	}
+
+	if err := h.webauthnService.FinishLogin(user, r); err != nil {
+		log.Printf("[handler][attendance] webauthn login finish failed: %v", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "biometric_verified": "1"})
 }
 
 // QRDisplayPage shows the live QR code for a specific branch (Manager/Admin only).
 func (h *AttendanceHandler) QRDisplayPage(w http.ResponseWriter, r *http.Request) {
 	branchID := chi.URLParam(r, "branchID")
 
-	// RBAC: Manager check
 	if middleware.GetUserRole(r) == models.RoleManager {
 		if middleware.GetBranchID(r) != branchID {
 			http.Error(w, "Forbidden: You can only view QR for your own branch.", http.StatusForbidden)
@@ -97,21 +194,21 @@ func (h *AttendanceHandler) QRDisplayPage(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	h.render.Render(w, "qr_display.html", map[string]interface{}{
-		"Branch":     branch,
-		"BranchID":   branch.ID,
-		"TOTPCode":   code,
-		"Remaining":  remaining,
-		"UserRole":   middleware.GetUserRole(r),
-		"UserBranch": middleware.GetBranchID(r),
-	})
+	recent, _ := h.attendanceService.GetRecentByBranch(branchID, 5)
+
+	data := userContext(r)
+	data["Branch"] = branch
+	data["BranchID"] = branch.ID
+	data["TOTPCode"] = code
+	data["Remaining"] = remaining
+	data["RecentLogs"] = recent
+	h.render.Render(w, "qr_display.html", data)
 }
 
 // QRCodePartial returns the QR code partial (HTMX auto-refresh target).
 func (h *AttendanceHandler) QRCodePartial(w http.ResponseWriter, r *http.Request) {
 	branchID := chi.URLParam(r, "branchID")
 
-	// RBAC: Manager check
 	if middleware.GetUserRole(r) == models.RoleManager {
 		if middleware.GetBranchID(r) != branchID {
 			http.Error(w, "Forbidden", http.StatusForbidden)
@@ -142,7 +239,6 @@ func (h *AttendanceHandler) QRCodePartial(w http.ResponseWriter, r *http.Request
 func (h *AttendanceHandler) QRImage(w http.ResponseWriter, r *http.Request) {
 	branchID := chi.URLParam(r, "branchID")
 
-	// RBAC: Manager check (Optional for image but good to have)
 	if middleware.GetUserRole(r) == models.RoleManager {
 		if middleware.GetBranchID(r) != branchID {
 			http.Error(w, "Forbidden", http.StatusForbidden)
@@ -162,9 +258,7 @@ func (h *AttendanceHandler) QRImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// QR content: branch_id:totp_code
 	qrContent := branchID + ":" + code
-
 	png, err := qrcode.Encode(qrContent, qrcode.Medium, 256)
 	if err != nil {
 		log.Printf("[handler][attendance] QR encode error: %v", err)
@@ -177,33 +271,39 @@ func (h *AttendanceHandler) QRImage(w http.ResponseWriter, r *http.Request) {
 	w.Write(png)
 }
 
-// --- HTMX Form Handlers ---
+// --- HTMX Form Handler ---
 
-func (h *AttendanceHandler) CheckInForm(w http.ResponseWriter, r *http.Request) {
+// LogTimeForm handles QR scan → log time (replaces separate check-in/check-out).
+func (h *AttendanceHandler) LogTimeForm(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		h.render.RenderPartial(w, "auth_error.html", "Invalid form data")
+		h.render.RenderPartial(w, "auth_error.html", "Dữ liệu không hợp lệ")
 		return
 	}
 
 	userID := middleware.GetUserID(r)
 	lat, lng := parseLatLng(r.FormValue("lat"), r.FormValue("lng"))
 
-	input := service.CheckInInput{
-		UserID:   userID,
-		TOTPCode: r.FormValue("totp_code"),
-		IP:       getClientIP(r),
-		Lat:      lat,
-		Lng:      lng,
+	input := service.LogTimeInput{
+		UserID:          middleware.GetUserID(r),
+		TOTPCode:        r.FormValue("totp_code"),
+		ScannedBranchID: r.FormValue("scanned_branch_id"),
+		Lat:             lat,
+		Lng:             lng,
+		IP:              getClientIP(r),
+		FaceVerified:    r.FormValue("face_verified") == "1",
+		BiometricVerified: r.FormValue("biometric_verified") == "1",
 	}
 
-	result, err := h.attendanceService.CheckIn(input)
+	log.Printf("[handler][attendance] LogTimeForm input: User=%s, IP=%s, Lat=%v, Lng=%v, BranchID=%s, TOTP=%s",
+		input.UserID, input.IP, input.Lat, input.Lng, input.ScannedBranchID, input.TOTPCode)
+
+	result, err := h.attendanceService.LogTime(input)
 	if err != nil {
-		log.Printf("[handler][attendance] check-in failed for user %s: %v", userID, err)
-		w.WriteHeader(http.StatusBadRequest)
+		log.Printf("[handler][attendance] log-time failed for user %s: %v", userID, err)
 		h.render.RenderPartial(w, "checkin_result.html", map[string]interface{}{
 			"Success": false,
-			"Error":   err.Error(),
+			"Error":   translateAttendanceError(err),
 		})
 		return
 	}
@@ -211,37 +311,62 @@ func (h *AttendanceHandler) CheckInForm(w http.ResponseWriter, r *http.Request) 
 	h.render.RenderPartial(w, "checkin_result.html", map[string]interface{}{
 		"Success":    true,
 		"Attendance": result.Attendance,
+		"LogCount":   result.LogCount,
 		"TOTP":       result.TOTPVerified,
 		"IP":         result.IPVerified,
 		"Location":   result.LocVerified,
+		"Face":       result.FaceVerified,
+		"NFC":        result.NFCVerified,
+		"Password":   result.PasswordVerified,
 	})
 }
 
-func (h *AttendanceHandler) CheckOutForm(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
-
-	att, err := h.attendanceService.CheckOut(userID)
-	if err != nil {
-		log.Printf("[handler][attendance] check-out failed for user %s: %v", userID, err)
+// PasswordLogForm handles check-in via username/password (Fallback method).
+func (h *AttendanceHandler) PasswordLogForm(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		h.render.RenderPartial(w, "auth_error.html", "Dữ liệu không hợp lệ")
+		return
+	}
+
+	email := r.FormValue("email")
+	password := r.FormValue("password")
+
+	// 1. Verify credentials via AuthService
+	user, err := h.authService.VerifyPassword(email, password)
+	if err != nil {
+		h.render.RenderPartial(w, "auth_error.html", "Email hoặc mật khẩu không chính xác")
+		return
+	}
+
+	input := service.LogTimeInput{
+		UserID:           user.ID,
+		IP:               getClientIP(r),
+		PasswordVerified: true,
+	}
+
+	result, err := h.attendanceService.LogTime(input)
+	if err != nil {
 		h.render.RenderPartial(w, "checkin_result.html", map[string]interface{}{
 			"Success": false,
-			"Error":   err.Error(),
+			"Error":   translateAttendanceError(err),
 		})
 		return
 	}
 
 	h.render.RenderPartial(w, "checkin_result.html", map[string]interface{}{
 		"Success":    true,
-		"Attendance": att,
-		"CheckedOut": true,
+		"Attendance": result.Attendance,
+		"LogCount":   result.LogCount,
+		"Password":   true,
 	})
 }
 
 // --- API JSON Handlers ---
 
-func (h *AttendanceHandler) APICheckIn(w http.ResponseWriter, r *http.Request) {
-	var input service.CheckInInput
+// APILogTime handles POST /api/v1/attendance/log
+func (h *AttendanceHandler) APILogTime(w http.ResponseWriter, r *http.Request) {
+	var input service.LogTimeInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
 			"success": false,
@@ -252,16 +377,11 @@ func (h *AttendanceHandler) APICheckIn(w http.ResponseWriter, r *http.Request) {
 	input.UserID = middleware.GetUserID(r)
 	input.IP = getClientIP(r)
 
-	result, err := h.attendanceService.CheckIn(input)
+	result, err := h.attendanceService.LogTime(input)
 	if err != nil {
-		code := http.StatusBadRequest
-		errCode := "CHECK_IN_FAILED"
-		if errors.Is(err, service.ErrAlreadyCheckedIn) {
-			errCode = "ALREADY_CHECKED_IN"
-		}
-		writeJSON(w, code, map[string]interface{}{
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
 			"success": false,
-			"error":   map[string]string{"code": errCode, "message": err.Error()},
+			"error":   map[string]string{"code": "LOG_TIME_FAILED", "message": err.Error()},
 		})
 		return
 	}
@@ -269,24 +389,6 @@ func (h *AttendanceHandler) APICheckIn(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"data":    result,
-	})
-}
-
-func (h *AttendanceHandler) APICheckOut(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
-
-	att, err := h.attendanceService.CheckOut(userID)
-	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
-			"success": false,
-			"error":   map[string]string{"code": "CHECK_OUT_FAILED", "message": err.Error()},
-		})
-		return
-	}
-
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"success": true,
-		"data":    att,
 	})
 }
 
@@ -302,25 +404,47 @@ func (h *AttendanceHandler) APIStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logs, _ := h.attendanceService.GetTodayLogs(userID)
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"success":    true,
-		"data":       att,
-		"checked_in": att != nil,
+		"success": true,
+		"data":    att,
+		"logs":    logs,
 	})
 }
 
 // --- Helpers ---
 
-func getClientIP(r *http.Request) string {
-	if ip := r.Header.Get("X-Real-Ip"); ip != "" {
-		return ip
+func translateAttendanceError(err error) string {
+	switch {
+	case errors.Is(err, service.ErrNoBranch):
+		return "Bạn chưa được gán chi nhánh. Vui lòng liên hệ quản lý."
+	case errors.Is(err, service.ErrTOTPInvalid):
+		return "Mã QR không hợp lệ hoặc đã hết hạn. Vui lòng quét lại."
+	case errors.Is(err, service.ErrIPNotAllowed):
+		return "Bạn không thể chấm công từ mạng này. Vui lòng kết nối WiFi chi nhánh."
+	case errors.Is(err, service.ErrLocationOutside):
+		return "Bạn đang ngoài khu vực chi nhánh. Vui lòng di chuyển đến gần hơn."
+	case errors.Is(err, service.ErrMethodRequired):
+		return "Không xác minh được. Vui lòng quét mã QR tại chi nhánh."
+	case errors.Is(err, service.ErrUserNotFound):
+		return "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại."
+	case errors.Is(err, service.ErrBranchNotFound):
+		return "Chi nhánh không tồn tại. Vui lòng liên hệ quản lý."
+	default:
+		msg := err.Error()
+		if strings.Contains(msg, "invalid or expired QR") {
+			return "Mã QR đã hết hạn. Vui lòng quét mã mới."
+		}
+		if strings.Contains(msg, "QR/TOTP code required") {
+			return "Vui lòng quét mã QR tại chi nhánh để chấm công."
+		}
+		if strings.Contains(msg, "GPS location required") {
+			return "Không lấy được vị trí GPS. Vui lòng bật định vị và thử lại."
+		}
+		if strings.Contains(msg, "location outside") {
+			return "Bạn đang ngoài khu vực chi nhánh."
+		}
+		return "Có lỗi xảy ra. Vui lòng thử lại."
 	}
-	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-		return strings.Split(forwarded, ",")[0]
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
 }

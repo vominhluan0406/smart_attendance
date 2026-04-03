@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/smart-attendance/smart-attendance/internal/models"
+	"github.com/smart-attendance/smart-attendance/internal/timezone"
 	"gorm.io/gorm"
 )
 
@@ -34,7 +35,7 @@ func (r *AttendanceRepository) FindByID(id string) (*models.Attendance, error) {
 // FindTodayByUser returns today's attendance record for a user (if any).
 // Uses composite index (user_id, work_date) for fast lookup.
 func (r *AttendanceRepository) FindTodayByUser(userID string) (*models.Attendance, error) {
-	today := time.Now().Format("2006-01-02")
+	today := timezone.Now().Format("2006-01-02")
 
 	var att models.Attendance
 	err := r.db.Where("user_id = ? AND work_date = ?", userID, today).
@@ -66,7 +67,7 @@ func (r *AttendanceRepository) List(params AttendanceListParams) (*AttendanceLis
 	if params.Page < 1 {
 		params.Page = 1
 	}
-	if params.Limit < 1 || params.Limit > 100 {
+	if params.Limit < 1 || params.Limit > 10000 {
 		params.Limit = 20
 	}
 
@@ -91,6 +92,24 @@ func (r *AttendanceRepository) List(params AttendanceListParams) (*AttendanceLis
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
+	}
+
+	// Important: use a fresh query for the Find to avoid side-effects from Count (though GORM usually handles this)
+	query = r.db.Model(&models.Attendance{})
+	if params.UserID != "" {
+		query = query.Where("user_id = ?", params.UserID)
+	}
+	if params.BranchID != "" {
+		query = query.Where("branch_id = ?", params.BranchID)
+	}
+	if params.Status != "" {
+		query = query.Where("status = ?", params.Status)
+	}
+	if params.DateFrom != nil {
+		query = query.Where("work_date >= ?", params.DateFrom.Format("2006-01-02"))
+	}
+	if params.DateTo != nil {
+		query = query.Where("work_date <= ?", params.DateTo.Format("2006-01-02"))
 	}
 
 	var records []models.Attendance

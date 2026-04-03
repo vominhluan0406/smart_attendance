@@ -8,6 +8,7 @@ import (
 	"github.com/smart-attendance/smart-attendance/internal/config"
 	"github.com/smart-attendance/smart-attendance/internal/handler"
 	"github.com/smart-attendance/smart-attendance/internal/middleware"
+	"github.com/smart-attendance/smart-attendance/internal/models"
 	"github.com/smart-attendance/smart-attendance/internal/renderer"
 	"github.com/smart-attendance/smart-attendance/internal/service"
 )
@@ -21,6 +22,8 @@ type Deps struct {
 	TOTPService       *service.TOTPService
 	ReportService     *service.ReportService
 	DashboardService  *service.DashboardService
+	PermissionService *service.PermissionService
+	WebAuthnService   *service.WebAuthnService
 	Config            *config.Config
 	RateLimitPerMin   int
 }
@@ -39,14 +42,20 @@ func New(deps Deps) http.Handler {
 	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
 	// Handlers
-	home := handler.NewHomeHandler(deps.Render)
+	home := handler.NewHomeHandler(deps.Render, deps.BranchService, deps.WebAuthnService, deps.UserService)
 	oauth := handler.NewOAuthHandler(deps.AuthService, deps.Config)
 	auth := handler.NewAuthHandler(deps.AuthService, deps.Render, oauth.IsEnabled())
-	users := handler.NewUserHandler(deps.UserService, deps.AuthService, deps.Render)
+	users := handler.NewUserHandler(deps.UserService, deps.AuthService, deps.BranchService, deps.WebAuthnService, deps.Render)
 	branches := handler.NewBranchHandler(deps.BranchService, deps.Render)
-	attendance := handler.NewAttendanceHandler(deps.AttendanceService, deps.BranchService, deps.TOTPService, deps.UserService, deps.Render)
+	attendance := handler.NewAttendanceHandler(deps.AttendanceService, deps.BranchService, deps.TOTPService, deps.UserService, deps.AuthService, deps.WebAuthnService, deps.Render)
 	reports := handler.NewReportHandler(deps.ReportService, deps.BranchService, deps.Render)
 	dashboard := handler.NewDashboardHandler(deps.DashboardService, deps.BranchService, deps.Render)
+
+	// Permission-based middleware helpers
+	ps := deps.PermissionService
+	requirePerm := func(code string) func(http.Handler) http.Handler {
+		return middleware.RequirePermission(ps, code)
+	}
 
 	// Custom error pages
 	r.NotFound(home.NotFound)
@@ -71,49 +80,68 @@ func New(deps Deps) http.Handler {
 
 		pr.Get("/", home.Index)
 
-		// Dashboard (Manager/Admin only)
+		// Dashboard (requires dashboard.view permission)
 		pr.Route("/dashboard", func(dr chi.Router) {
-			dr.Use(middleware.ManagerOrAdmin)
+			dr.Use(requirePerm(models.PermDashboardView))
 			dr.Get("/", dashboard.DashboardPage)
 			dr.Get("/stats", dashboard.StatsPartial)
 			dr.Get("/chart", dashboard.ChartPartial)
 			dr.Get("/recent", dashboard.RecentPartial)
 		})
-		
-		// Reports (User specific)
-		pr.Route("/reports", func(rr chi.Router) {
-			rr.Get("/my-history", reports.UserHistoryPage)
-			rr.Get("/my-history/partial", reports.UserHistoryPartial)
-			rr.Get("/my-history/export", reports.ExportUserHistory)
 
-			// Reports (Manager/Admin specific)
-			rr.Group(func(adminRr chi.Router) {
-				adminRr.Use(middleware.ManagerOrAdmin)
-				adminRr.Get("/branch/{branchID}", reports.BranchReportPage)
-				adminRr.Get("/branch/{branchID}/partial", reports.BranchReportPartial)
-				adminRr.Get("/branch/{branchID}/export", reports.ExportBranchReport)
+		// Reports
+		pr.Route("/reports", func(rr chi.Router) {
+			// Admin report selection (requires report.view_all)
+			rr.Group(func(admRr chi.Router) {
+				admRr.Use(requirePerm(models.PermReportViewAll))
+				admRr.Get("/", reports.AdminReportPage)
+			})
+
+			// Personal history (requires report.view_own)
+			rr.Group(func(ownRr chi.Router) {
+				ownRr.Use(requirePerm(models.PermReportViewOwn))
+				ownRr.Get("/my-history", reports.UserHistoryPage)
+				ownRr.Get("/my-history/partial", reports.UserHistoryPartial)
+				ownRr.Get("/my-history/export", reports.ExportUserHistory)
+			})
+
+			// Branch reports (requires report.view_branch)
+			rr.Group(func(brRr chi.Router) {
+				brRr.Use(requirePerm(models.PermReportViewBranch))
+				brRr.Get("/branch/{branchID}", reports.BranchReportPage)
+				brRr.Get("/branch/{branchID}/partial", reports.BranchReportPartial)
+				brRr.Get("/branch/{branchID}/export", reports.ExportBranchReport)
 			})
 		})
 
-		// Attendance check-in/out
+		// Attendance — time log + QR display
 		pr.Route("/attendance", func(ar chi.Router) {
-			ar.Use(middleware.RateLimit(deps.RateLimitPerMin))
-			ar.Get("/", attendance.CheckInPage)
-			ar.Post("/check-in", attendance.CheckInForm)
-			ar.Post("/check-out", attendance.CheckOutForm)
+			// Check-in page + log (rate limited)
+			ar.Group(func(ciRouter chi.Router) {
+				ciRouter.Use(requirePerm(models.PermAttendanceCheckIn))
+				ciRouter.Get("/", attendance.AttendancePage)
+				ciRouter.With(middleware.RateLimit(deps.RateLimitPerMin)).Post("/log", attendance.LogTimeForm)
+				
+				// Fallback Password check-in
+				ciRouter.Get("/password", attendance.PasswordCheckinPage)
+				ciRouter.With(middleware.RateLimit(deps.RateLimitPerMin)).Post("/password", attendance.PasswordLogForm)
+
+				// Combined WiFi + GPS check-in
+				ciRouter.Get("/wifi-gps", attendance.WiFiGPSCheckinPage)
+			})
 
 			// Manager redirect
 			ar.Get("/qr-manager", attendance.ManagerQRRedirect)
 
-			// QR display (Manager/Admin) — shows live QR for branch
+			// QR display (Manager/Admin) — no rate limit, auto-refreshes every 15s
 			ar.Get("/qr/{branchID}", attendance.QRDisplayPage)
 			ar.Get("/qr/{branchID}/partial", attendance.QRCodePartial)
 			ar.Get("/qr/{branchID}/image", attendance.QRImage)
 		})
 
-		// Branch management (Admin only)
+		// Branch management (requires branch.manage)
 		pr.Route("/branches", func(br chi.Router) {
-			br.Use(middleware.AdminOnly)
+			br.Use(requirePerm(models.PermBranchManage))
 			br.Get("/", branches.ListPage)
 			br.Get("/create", branches.CreatePage)
 			br.Post("/create", branches.CreateForm)
@@ -122,15 +150,28 @@ func New(deps Deps) http.Handler {
 			br.Delete("/{id}", branches.DeleteAction)
 		})
 
-		// User management (Admin only)
+		// User management (requires user.manage)
 		pr.Route("/users", func(ur chi.Router) {
-			ur.Use(middleware.AdminOnly)
+			ur.Use(requirePerm(models.PermUserManage))
 			ur.Get("/", users.ListPage)
 			ur.Get("/create", users.CreatePage)
 			ur.Post("/create", users.CreateForm)
 			ur.Get("/{id}/edit", users.EditPage)
 			ur.Put("/{id}", users.UpdateForm)
 			ur.Delete("/{id}", users.DeleteAction)
+
+			// Credentials management
+			ur.Post("/{id}/credentials/{credID}/approve", users.ApproveCredential)
+			ur.Delete("/{id}/credentials/{credID}", users.DeleteCredential)
+		})
+
+		// User Profile & Biometrics
+		pr.Get("/profile", users.ProfilePage)
+		pr.Route("/api/webauthn", func(wr chi.Router) {
+			wr.Get("/register/begin", users.RegisterBiometricBegin)
+			wr.Post("/register/finish", users.RegisterBiometricFinish)
+			wr.Get("/login/begin", attendance.BiometricLoginBegin)
+			wr.Post("/login/finish", attendance.BiometricLoginFinish)
 		})
 	})
 
@@ -147,9 +188,9 @@ func New(deps Deps) http.Handler {
 		api.Group(func(pa chi.Router) {
 			pa.Use(middleware.JWTAuth(deps.AuthService))
 
-			// Dashboard API (Manager/Admin only)
+			// Dashboard API
 			pa.Route("/dashboard", func(da chi.Router) {
-				da.Use(middleware.ManagerOrAdmin)
+				da.Use(requirePerm(models.PermDashboardView))
 				da.Get("/stats", dashboard.APIStats)
 				da.Get("/charts", dashboard.APICharts)
 			})
@@ -157,14 +198,14 @@ func New(deps Deps) http.Handler {
 			// Attendance API
 			pa.Route("/attendance", func(aa chi.Router) {
 				aa.Use(middleware.RateLimit(deps.RateLimitPerMin))
-				aa.Post("/check-in", attendance.APICheckIn)
-				aa.Post("/check-out", attendance.APICheckOut)
+				aa.Use(requirePerm(models.PermAttendanceCheckIn))
+				aa.Post("/log", attendance.APILogTime)
 				aa.Get("/status", attendance.APIStatus)
 			})
 
-			// Branch API (Admin only)
+			// Branch API
 			pa.Route("/branches", func(ba chi.Router) {
-				ba.Use(middleware.AdminOnly)
+				ba.Use(requirePerm(models.PermBranchManage))
 				ba.Get("/", branches.APIList)
 				ba.Post("/", branches.APICreate)
 				ba.Get("/{id}", branches.APIGet)
@@ -172,9 +213,9 @@ func New(deps Deps) http.Handler {
 				ba.Delete("/{id}", branches.APIDelete)
 			})
 
-			// User API (Admin only)
+			// User API
 			pa.Route("/users", func(ua chi.Router) {
-				ua.Use(middleware.AdminOnly)
+				ua.Use(requirePerm(models.PermUserManage))
 				ua.Get("/", users.APIList)
 				ua.Get("/{id}", users.APIGet)
 				ua.Put("/{id}", users.APIUpdate)

@@ -14,14 +14,46 @@
             <p class="max-w-2xl text-lg leading-relaxed text-gray-600 mb-12 px-4 text-center">
                 Hệ thống quản lý nhân sự tập trung, an toàn và chính xác cho mọi doanh nghiệp.
             </p>
+            
+            {{if and (eq .UserRole "employee") .BiometricRequired (not .HasBiometric)}}
+            <!-- Biometric Registration Hook -->
+            <div class="mb-12 w-full max-w-sm px-4 animate-in fade-in slide-in-from-top-4 duration-1000">
+                <div class="bg-emerald-50 rounded-2xl p-6 border border-emerald-100 shadow-sm relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 opacity-10">
+                        <i data-lucide="fingerprint" class="w-24 h-24 text-emerald-600"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-2 text-emerald-700">
+                            <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                            <span class="text-xs font-bold uppercase tracking-wider">Yêu cầu bảo mật</span>
+                        </div>
+                        <h3 class="text-base font-bold text-emerald-900 mb-1">Kích hoạt Biometric</h3>
+                        <p class="text-sm text-emerald-600/80 mb-4 leading-snug">Chi nhánh của bạn yêu cầu xác thực vân tay/khuôn mặt. Vui lòng thiết lập ngay để có thể chấm công.</p>
+                        <a href="/profile" class="inline-flex items-center justify-center gap-2 w-full bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-md hover:bg-emerald-700 transition-all">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                            Đăng ký ngay
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {{end}}
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-sm px-4">
                 {{if eq .UserRole "employee"}}
+                {{if .QREnabled}}
                 <a href="/attendance"
                     class="flex items-center justify-center gap-3 rounded-2xl bg-indigo-600 px-6 py-4 text-base font-bold text-white shadow-xl hover:bg-indigo-700 active:scale-95 transition-all">
                     <i data-lucide="camera" class="w-5 h-5"></i>
-                    Check-in ngay
+                    Chấm công QR
                 </a>
+                {{end}}
+                {{if .WiFiGPSEnabled}}
+                <a href="/attendance/wifi-gps"
+                    class="flex items-center justify-center gap-3 rounded-2xl bg-emerald-600 px-6 py-4 text-base font-bold text-white shadow-xl hover:bg-emerald-700 active:scale-95 transition-all">
+                    <i data-lucide="wifi" class="w-5 h-5"></i>
+                    Chấm công WiFi + GPS
+                </a>
+                {{end}}
                 <a href="/reports/my-history"
                     class="flex items-center justify-center gap-3 rounded-2xl bg-white border-2 border-gray-100 px-6 py-4 text-base font-bold text-gray-900 hover:bg-gray-50 active:scale-95 transition-all">
                     <i data-lucide="history" class="w-5 h-5"></i>
@@ -35,13 +67,27 @@
                     <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
                     Dashboard
                 </a>
+                {{if .FaceEnabled}}
+                <a href="/attendance"
+                    class="flex items-center justify-center gap-3 rounded-2xl bg-violet-600 px-6 py-4 text-base font-bold text-white shadow-xl hover:bg-violet-700 active:scale-95 transition-all">
+                    <i data-lucide="scan-face" class="w-5 h-5"></i>
+                    Chấm công FaceID
+                </a>
+                {{end}}
+                {{if .PasswordEnabled}}
+                <a href="/attendance/password"
+                    class="flex items-center justify-center gap-3 rounded-2xl bg-white border-2 border-indigo-100 px-6 py-4 text-base font-bold text-indigo-600 hover:bg-indigo-50 active:scale-95 transition-all">
+                    <i data-lucide="log-in" class="w-5 h-5"></i>
+                    Đăng nhập chấm công
+                </a>
+                {{end}}
                 <a href="/attendance/qr-manager"
-                    class="flex items-center justify-center gap-3 rounded-2xl bg-green-600 px-6 py-4 text-base font-bold text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all">
+                    class="flex items-center justify-center gap-2 rounded-2xl bg-white border-2 border-gray-100 px-6 py-4 text-base font-bold text-gray-900 hover:bg-gray-50 active:scale-95 transition-all">
                     <i data-lucide="qr-code" class="w-5 h-5"></i>
-                    Mã QR
+                    Mã QR chi nhánh
                 </a>
                 <a href="/reports/branch/{{.UserBranch}}"
-                    class="col-span-1 sm:col-span-2 flex items-center justify-center gap-2 rounded-2xl bg-white border-2 border-gray-100 px-6 py-4 text-base font-bold text-gray-900 hover:bg-gray-50 active:scale-95 transition-all">
+                    class="flex items-center justify-center gap-2 rounded-2xl bg-white border-2 border-gray-100 px-6 py-4 text-base font-bold text-gray-900 hover:bg-gray-50 active:scale-95 transition-all">
                     <i data-lucide="file-text" class="w-5 h-5"></i>
                     Báo cáo chi nhánh
                 </a>
@@ -53,13 +99,8 @@
                     <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
                     Dashboard
                 </a>
-                <a href="/attendance/qr-manager"
-                    class="flex items-center justify-center gap-3 rounded-2xl bg-green-600 px-6 py-4 text-base font-bold text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all">
-                    <i data-lucide="qr-code" class="w-5 h-5"></i>
-                    Mã QR
-                </a>
                 <a href="/branches"
-                    class="flex items-center justify-center gap-2 rounded-2xl bg-white border-2 border-gray-100 px-6 py-4 text-base font-bold text-gray-900 hover:bg-gray-50 active:scale-95 transition-all">
+                    class="flex items-center justify-center gap-3 rounded-2xl bg-emerald-600 px-6 py-4 text-base font-bold text-white shadow-xl hover:bg-emerald-700 active:scale-95 transition-all">
                     <i data-lucide="map-pin" class="w-5 h-5"></i>
                     Chi nhánh
                 </a>
@@ -67,6 +108,11 @@
                     class="flex items-center justify-center gap-2 rounded-2xl bg-white border-2 border-gray-100 px-6 py-4 text-base font-bold text-gray-900 hover:bg-gray-50 active:scale-95 transition-all">
                     <i data-lucide="users" class="w-5 h-5"></i>
                     Nhân viên
+                </a>
+                <a href="/reports"
+                    class="flex items-center justify-center gap-2 rounded-2xl bg-white border-2 border-gray-100 px-6 py-4 text-base font-bold text-gray-900 hover:bg-gray-50 active:scale-95 transition-all">
+                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                    Xem báo cáo
                 </a>
                 {{end}}
             </div>
@@ -88,6 +134,45 @@
                     <p class="text-sm font-bold text-gray-900 uppercase tracking-widest">Đa nền tảng</p>
                 </div>
             </div>
+
+            {{if or (eq .UserRole "manager") (eq .UserRole "admin")}}
+            <!-- Manager Diagnostics -->
+            <div class="mt-12 w-full max-w-sm px-4 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
+                <div class="bg-indigo-50/50 rounded-2xl p-6 border border-indigo-100/50 backdrop-blur-sm">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="info" class="w-4 h-4 text-indigo-500"></i>
+                        <h3 class="text-xs font-bold text-indigo-500 uppercase tracking-wider">Thông tin hệ thống</h3>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-500">Địa chỉ IP:</span>
+                            <span class="text-sm font-mono font-bold text-gray-900">{{.ClientIP}}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-500">Vị trí GPS:</span>
+                            <span id="gps-info" class="text-sm font-mono font-bold text-emerald-600">Đang lấy...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <script>
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function(pos) {
+                        const info = document.getElementById('gps-info');
+                        if (info) {
+                            info.innerText = pos.coords.latitude.toFixed(5) + ', ' + pos.coords.longitude.toFixed(5);
+                        }
+                    }, function(err) {
+                        const info = document.getElementById('gps-info');
+                        if (info) {
+                            info.innerText = 'Lỗi: ' + (err.code === 1 ? 'Bị từ chối' : 'Không xác định');
+                            info.classList.replace('text-emerald-600', 'text-red-500');
+                        }
+                    }, { enableHighAccuracy: true });
+                }
+            </script>
+            {{end}}
         </div>
     </main>
 </div>

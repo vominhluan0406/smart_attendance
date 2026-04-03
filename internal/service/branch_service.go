@@ -38,6 +38,7 @@ type CreateBranchInput struct {
 	AllowedMethods string  `json:"allowed_methods"`
 	WorkStartTime  string  `json:"work_start_time"`
 	WorkEndTime    string  `json:"work_end_time"`
+	RequireBiometric bool  `json:"require_biometric"`
 }
 
 func (s *BranchService) Create(input CreateBranchInput) (*models.Branch, error) {
@@ -60,8 +61,9 @@ func (s *BranchService) Create(input CreateBranchInput) (*models.Branch, error) 
 		Lat:            input.Lat,
 		Lng:            input.Lng,
 		RadiusM:        input.RadiusM,
-		TOTPSecret:     generateTOTPSecret(),
+		RequireBiometric: input.RequireBiometric,
 		AllowedMethods: input.AllowedMethods,
+		TOTPSecret:     generateTOTPSecret(),
 		WorkStartTime:  input.WorkStartTime,
 		WorkEndTime:    input.WorkEndTime,
 		IsActive:       true,
@@ -120,9 +122,10 @@ type UpdateBranchInput struct {
 	Lng            *float64 `json:"lng"`
 	RadiusM        int      `json:"radius_m"`
 	AllowedMethods string   `json:"allowed_methods"`
-	WorkStartTime  string   `json:"work_start_time"`
-	WorkEndTime    string   `json:"work_end_time"`
-	IsActive       *bool    `json:"is_active"`
+	WorkStartTime  string  `json:"work_start_time"`
+	WorkEndTime    string  `json:"work_end_time"`
+	IsActive       *bool   `json:"is_active"`
+	RequireBiometric *bool `json:"require_biometric"`
 }
 
 func (s *BranchService) Update(id string, input UpdateBranchInput) (*models.Branch, error) {
@@ -149,9 +152,10 @@ func (s *BranchService) Update(id string, input UpdateBranchInput) (*models.Bran
 	if input.RadiusM > 0 {
 		branch.RadiusM = input.RadiusM
 	}
-	if input.AllowedMethods != "" {
-		branch.AllowedMethods = input.AllowedMethods
-	}
+	// Always update AllowedMethods from input as it's the full set of methods
+	log.Printf("[service][branch] Updating branch %s: OldMethods=%s NewMethods=%s", id, branch.AllowedMethods, input.AllowedMethods)
+	branch.AllowedMethods = input.AllowedMethods
+
 	if input.WorkStartTime != "" {
 		branch.WorkStartTime = input.WorkStartTime
 	}
@@ -160,6 +164,9 @@ func (s *BranchService) Update(id string, input UpdateBranchInput) (*models.Bran
 	}
 	if input.IsActive != nil {
 		branch.IsActive = *input.IsActive
+	}
+	if input.RequireBiometric != nil {
+		branch.RequireBiometric = *input.RequireBiometric
 	}
 
 	if err := s.branchRepo.Update(branch); err != nil {

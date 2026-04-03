@@ -19,7 +19,7 @@ func (r *UserRepository) Create(user *models.User) error {
 
 func (r *UserRepository) FindByID(id string) (*models.User, error) {
 	var user models.User
-	if err := r.db.First(&user, "id = ?", id).Error; err != nil {
+	if err := r.db.Preload("Credentials").First(&user, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil

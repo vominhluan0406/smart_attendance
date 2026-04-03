@@ -59,7 +59,7 @@ func (h *AuthHandler) LoginForm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	setTokenCookies(w, tokens)
-	w.Header().Set("HX-Redirect", "/dashboard")
+	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -238,10 +238,4 @@ func setTokenCookies(w http.ResponseWriter, tokens *service.TokenPair) {
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})
-}
-
-func writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
 }

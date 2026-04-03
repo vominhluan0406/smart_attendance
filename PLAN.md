@@ -416,12 +416,16 @@ Vì dùng **SQLite + GORM AutoMigrate**, migration an toàn:
 
 ## 7. Implementation Plan
 
-| Step | Task | Files | Size |
-|---|---|---|---|
-| 1 | Create new models (9 files) | `internal/models/department.go, work_shift.go, leave_type.go, leave_request.go, leave_balance.go, attendance_adjustment.go, overtime_request.go, holiday.go, user_shift_assignment.go` | M |
-| 2 | Update existing models (3 files) | `internal/models/user.go, branch.go, attendance.go` | S |
-| 3 | Add composite indexes + AutoMigrate update | `internal/database/database.go, cmd/server/main.go` | S |
-| 4 | Backfill migration: `work_date` + default shifts | `internal/database/migrate.go` (new) | M |
-| 5 | Seed default leave types + holidays | `internal/database/seed.go` | S |
-| 6 | Update AttendanceService: shift-aware check-in | `internal/service/attendance_service.go` | M |
 | 7 | Update Dashboard queries: use `work_date` | `internal/repository/dashboard_queries.go` | M |
+
+---
+
+## 8. Phase 7: WebAuthn Biometrics & Admin Control (COMPLETED)
+
+### Features Implemented:
+- **Biometric Check-in**: Secure login using FaceID/TouchID/Windows Hello via WebAuthn.
+- **Admin Approval**: Mandatory admin approval workflow for new biometric devices.
+- **Credential Management**: Admins can view and delete (reset) user credentials.
+- **Graceful Migration**: Existing credentials automatically approved and synchronized with modern backup flags.
+
+**Status: ALL TASKS COMPLETED. System ready for production deployment.**

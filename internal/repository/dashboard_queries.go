@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/smart-attendance/smart-attendance/internal/models"
+	"github.com/smart-attendance/smart-attendance/internal/timezone"
 	"gorm.io/gorm"
 )
 
@@ -74,7 +75,7 @@ func (r *AttendanceRepository) CountTodayByStatus(branchID string, status models
 // DailyStats returns aggregated daily attendance for the last N days, optionally filtered by branch.
 // Uses work_date column (index-friendly) instead of strftime(check_in_at).
 func (r *AttendanceRepository) DailyStats(branchID string, days int) ([]DailyAttendance, error) {
-	now := time.Now()
+	now := timezone.Now()
 	startDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -(days-1))
 	startStr := startDate.Format("2006-01-02")
 
@@ -178,12 +179,12 @@ func (r *AttendanceRepository) CountActiveEmployees(db *gorm.DB, branchID string
 }
 
 func todayRange() (time.Time, time.Time) {
-	now := time.Now()
+	now := timezone.Now()
 	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	end := start.Add(24 * time.Hour)
 	return start, end
 }
 
 func todayStr() string {
-	return time.Now().Format("2006-01-02")
+	return timezone.Now().Format("2006-01-02")
 }

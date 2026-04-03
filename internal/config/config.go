@@ -13,7 +13,9 @@ type Config struct {
 	Env  string // development, production
 
 	// Database
-	DBPath string
+	DBPath   string
+	TursoURL   string
+	TursoToken string
 
 	// JWT
 	JWTSecret        string
@@ -28,15 +30,23 @@ type Config struct {
 	MicrosoftClientSecret string
 	MicrosoftRedirectURI  string
 	MicrosoftTenantID     string
+
+	// WebAuthn
+	WebAuthnRPID   string
+	WebAuthnOrigin string
 }
 
 func Load() *Config {
-	_ = godotenv.Load()
+	// Load .env.dev first (dev overrides), then .env as fallback
+	_ = godotenv.Load(".env.dev")
+	_ = godotenv.Load(".env")
 
 	return &Config{
 		Port:             getEnv("PORT", "8080"),
 		Env:              getEnv("ENV", "development"),
 		DBPath:           getEnv("DB_PATH", "data/smart_attendance.db"),
+		TursoURL:         getEnv("TURSO_URL", ""),
+		TursoToken:       getEnv("TURSO_TOKEN", ""),
 		JWTSecret:        getEnv("JWT_SECRET", "change-me-in-production"),
 		JWTExpireMinutes: getEnvInt("JWT_EXPIRE_MINUTES", 60),
 		JWTRefreshHours:  getEnvInt("JWT_REFRESH_HOURS", 168),
@@ -46,6 +56,9 @@ func Load() *Config {
 		MicrosoftClientSecret: getEnv("MICROSOFT_CLIENT_SECRET", ""),
 		MicrosoftRedirectURI:  getEnv("MICROSOFT_REDIRECT_URI", "http://localhost:8080/auth/oauth/microsoft/callback"),
 		MicrosoftTenantID:     getEnv("MICROSOFT_TENANT_ID", "common"),
+
+		WebAuthnRPID:   getEnv("WEBAUTHN_RPID", "localhost"),
+		WebAuthnOrigin: getEnv("WEBAUTHN_ORIGIN", "http://localhost:8080"),
 	}
 }
 

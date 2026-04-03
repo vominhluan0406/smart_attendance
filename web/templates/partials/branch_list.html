@@ -1,4 +1,3 @@
-{{define "branch_table"}}
 <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
     <table class="min-w-full divide-y divide-gray-200 responsive-table">
         <thead class="bg-gray-50">
@@ -29,6 +28,8 @@
                     {{end}}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <a href="/reports/branch/{{.ID}}"
+                        class="text-emerald-600 hover:text-emerald-900 mr-3 btn-mobile">Report</a>
                     <a href="/branches/{{.ID}}/edit"
                         class="text-indigo-600 hover:text-indigo-900 mr-3 btn-mobile">Edit</a>
                     <button hx-delete="/branches/{{.ID}}" hx-confirm="Delete this branch?" hx-target="closest tr"
@@ -61,4 +62,3 @@
     </div>
     {{end}}
 </div>
-{{end}}

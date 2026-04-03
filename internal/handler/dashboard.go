@@ -41,11 +41,9 @@ func (h *DashboardHandler) DashboardPage(w http.ResponseWriter, r *http.Request)
 	stats, err := h.dashboardService.GetStats(branchID)
 	if err != nil {
 		log.Printf("[handler][dashboard] ERROR getting stats: %v", err)
-		h.render.Render(w, "dashboard.html", map[string]interface{}{
-			"Error":      "Không thể tải dữ liệu dashboard",
-			"UserRole":   role,
-			"UserBranch": userBranchID,
-		})
+		data := userContext(r)
+		data["Error"] = "Không thể tải dữ liệu dashboard"
+		h.render.Render(w, "dashboard.html", data)
 		return
 	}
 
@@ -73,17 +71,14 @@ func (h *DashboardHandler) DashboardPage(w http.ResponseWriter, r *http.Request)
 	// Serialize chart data to JSON for Chart.js
 	chartJSON, _ := json.Marshal(chartData)
 
-	data := map[string]interface{}{
-		"Stats":          stats,
-		"ChartData":      chartData,
-		"ChartJSON":      string(chartJSON),
-		"TopLate":        topLate,
-		"Recent":         recent,
-		"Branches":       branches,
-		"SelectedBranch": branchID,
-		"UserRole":       role,
-		"UserBranch":     userBranchID,
-	}
+	data := userContext(r)
+	data["Stats"] = stats
+	data["ChartData"] = chartData
+	data["ChartJSON"] = string(chartJSON)
+	data["TopLate"] = topLate
+	data["Recent"] = recent
+	data["Branches"] = branches
+	data["SelectedBranch"] = branchID
 
 	if err := h.render.Render(w, "dashboard.html", data); err != nil {
 		log.Printf("[handler][dashboard] render error: %v", err)

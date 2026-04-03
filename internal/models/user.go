@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/go-webauthn/webauthn/webauthn"
+)
 
 type Role string
 
@@ -12,7 +16,7 @@ const (
 
 type User struct {
 	BaseModel
-	EmployeeCode  string     `gorm:"type:text;uniqueIndex" json:"employee_code,omitempty"`
+	EmployeeCode  string     `gorm:"type:text;index" json:"employee_code,omitempty"`
 	Email         string     `gorm:"type:text;uniqueIndex;not null" json:"email"`
 	PasswordHash  string     `gorm:"type:text" json:"-"`
 	FullName      string     `gorm:"type:text;not null" json:"full_name"`
@@ -26,5 +30,34 @@ type User struct {
 	OAuthProvider string     `gorm:"type:text" json:"oauth_provider,omitempty"`
 	OAuthID       string     `gorm:"type:text;index" json:"oauth_id,omitempty"`
 
+
 	Department *Department `gorm:"foreignKey:DepartmentID" json:"department,omitempty"`
+
+	Credentials []UserCredential `gorm:"foreignKey:UserID" json:"-"`
+}
+
+func (u *User) WebAuthnID() []byte {
+	return []byte(u.ID)
+}
+
+func (u *User) WebAuthnName() string {
+	return u.Email
+}
+
+func (u *User) WebAuthnDisplayName() string {
+	return u.FullName
+}
+
+func (u *User) WebAuthnIcon() string {
+	return ""
+}
+
+func (u *User) WebAuthnCredentials() []webauthn.Credential {
+	var res []webauthn.Credential
+	for _, c := range u.Credentials {
+		if c.IsApproved {
+			res = append(res, c.ToWebAuthn())
+		}
+	}
+	return res
 }

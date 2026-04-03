@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -15,13 +16,15 @@ import (
 )
 
 type UserHandler struct {
-	userService *service.UserService
-	authService *service.AuthService
-	render      *renderer.Renderer
+	userService   *service.UserService
+	authService   *service.AuthService
+	branchService *service.BranchService
+	webauthnService *service.WebAuthnService
+	render        *renderer.Renderer
 }
 
-func NewUserHandler(userService *service.UserService, authService *service.AuthService, render *renderer.Renderer) *UserHandler {
-	return &UserHandler{userService: userService, authService: authService, render: render}
+func NewUserHandler(userService *service.UserService, authService *service.AuthService, branchService *service.BranchService, webauthnService *service.WebAuthnService, render *renderer.Renderer) *UserHandler {
+	return &UserHandler{userService: userService, authService: authService, branchService: branchService, webauthnService: webauthnService, render: render}
 }
 
 // --- HTMX Pages ---
@@ -50,10 +53,11 @@ func (h *UserHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 		"PrevPage":    result.Page - 1,
 	}
 
-	data["UserRole"] = middleware.GetUserRole(r)
-	data["UserBranch"] = middleware.GetBranchID(r)
+	for k, v := range userContext(r) {
+		data[k] = v
+	}
 
-	if r.Header.Get("HX-Request") == "true" {
+	if r.Header.Get("HX-Request") == "true" && r.Header.Get("HX-Boosted") != "true" {
 		h.render.RenderPartial(w, "user_list.html", data)
 		return
 	}
@@ -61,10 +65,10 @@ func (h *UserHandler) ListPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) CreatePage(w http.ResponseWriter, r *http.Request) {
-	h.render.Render(w, "user_create.html", map[string]interface{}{
-		"UserRole":   middleware.GetUserRole(r),
-		"UserBranch": middleware.GetBranchID(r),
-	})
+	branches, _ := h.branchService.ListAll()
+	data := userContext(r)
+	data["Branches"] = branches
+	h.render.Render(w, "user_create.html", data)
 }
 
 func (h *UserHandler) EditPage(w http.ResponseWriter, r *http.Request) {
@@ -74,11 +78,103 @@ func (h *UserHandler) EditPage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
-	h.render.Render(w, "user_edit.html", map[string]interface{}{
-		"User":       user,
-		"UserRole":   middleware.GetUserRole(r),
-		"UserBranch": middleware.GetBranchID(r),
-	})
+	branches, _ := h.branchService.ListAll()
+	currentBranch := ""
+	if user.BranchID != nil {
+		currentBranch = *user.BranchID
+	}
+	data := userContext(r)
+	data["User"] = user
+	data["Branches"] = branches
+	data["CurrentBranch"] = currentBranch
+	h.render.Render(w, "user_edit.html", data)
+}
+
+func (h *UserHandler) ProfilePage(w http.ResponseWriter, r *http.Request) {
+	// RBAC: Admin and Manager don't have personal profiles (managed via admin UI)
+	role := middleware.GetUserRole(r)
+	if role == models.RoleAdmin || role == models.RoleManager {
+		http.Error(w, "Forbidden: Admin and Manager roles do not have personal profile pages.", http.StatusForbidden)
+		return
+	}
+
+	userID := middleware.GetUserID(r)
+	user, err := h.userService.GetByID(userID)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	data := userContext(r)
+	data["User"] = user
+	h.render.Render(w, "profile.html", data)
+}
+
+func (h *UserHandler) RegisterBiometricBegin(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	user, err := h.userService.GetByID(userID)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "User not found"})
+		return
+	}
+
+	options, err := h.webauthnService.BeginRegistration(user)
+	if err != nil {
+		log.Printf("[handler][user] webauthn begin failed: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, options)
+}
+
+func (h *UserHandler) RegisterBiometricFinish(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	user, err := h.userService.GetByID(userID)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "User not found"})
+		return
+	}
+
+	if err := h.webauthnService.FinishRegistration(user, r); err != nil {
+		log.Printf("[handler][user] webauthn finish failed: %v", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *UserHandler) ApproveCredential(w http.ResponseWriter, r *http.Request) {
+	credID := chi.URLParam(r, "credID")
+	
+	// We use the service to approve (or just repo for simplicity if no complex logic)
+	// Let's use the repo directly if we have access to it, 
+	// but UserHandler doesn't have credRepo. 
+	// Wait, UserHandler has webauthnService which has credRepo?
+	// No, webauthnService fields are private.
+	// I should probably add Approve/Delete to WebAuthnService or use UserService.
+	
+	// Better: Add these to UserService or WebAuthnService.
+	if err := h.webauthnService.ApproveCredential(credID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("HX-Refresh", "true")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *UserHandler) DeleteCredential(w http.ResponseWriter, r *http.Request) {
+	credID := chi.URLParam(r, "credID")
+	
+	if err := h.webauthnService.DeleteCredential(credID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("HX-Refresh", "true")
+	w.WriteHeader(http.StatusOK)
 }
 
 // --- HTMX Form Handlers ---
@@ -95,6 +191,9 @@ func (h *UserHandler) CreateForm(w http.ResponseWriter, r *http.Request) {
 		Password: r.FormValue("password"),
 		FullName: r.FormValue("full_name"),
 		Role:     models.Role(r.FormValue("role")),
+	}
+	if branchID := r.FormValue("branch_id"); branchID != "" {
+		input.BranchID = &branchID
 	}
 
 	if _, err := h.authService.Register(input); err != nil {
@@ -120,12 +219,18 @@ func (h *UserHandler) UpdateForm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	isActive := r.FormValue("is_active") == "on"
+	branchID := r.FormValue("branch_id")
+	var branchPtr *string
+	if branchID != "" {
+		branchPtr = &branchID
+	}
 	input := service.UpdateUserInput{
 		FullName: r.FormValue("full_name"),
 		Email:    r.FormValue("email"),
 		Role:     models.Role(r.FormValue("role")),
 		IsActive: &isActive,
 		Password: r.FormValue("password"),
+		BranchID: branchPtr,
 	}
 
 	if _, err := h.userService.Update(id, input); err != nil {

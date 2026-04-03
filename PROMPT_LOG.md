@@ -276,16 +276,248 @@
 
 ---
 
+---
+
+## Session 10 — WebAuthn Fixes & Infrastructure (2026-04-02)
+
+### 10.1 — Fix Docker & SQLite AA GUID
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix Docker build error and SQLite column naming mismatch |
+| **Spec** | Update Docker to Go 1.25. Fix `authenticator_aa_guid` error in `user_credentials` table |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `Fix Docker build Go version mismatch and resolve SQLite "no column named authenticator_aa_guid" error by adding explicit GORM tags.` |
+| **Output** | `Dockerfile` updated to `golang:1.25-alpine`. `UserCredential` model updated with `gorm:"column:authenticator_aaguid"` tags. |
+| **Review** | **Accepted** — Docker build successful. SQLite migration error resolved. |
+| **Changes** | Không |
+| **Files** | `Dockerfile`, `internal/models/user_credential.go`, `internal/database/database.go` |
+| **Commit** | — |
+
+### 10.2 — WebAuthn Backup Flag Inconsistency
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix "Backup Eligible flag inconsistency" during WebAuthn login |
+| **Spec** | Add `BackupEligible` and `BackupState` to model. Sync flags in `ToWebAuthn()`. Migrate existing data |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `Resolve Backup Eligible flag inconsistency: update UserCredential model with backup flags, map them in ToWebAuthn, and create a one-time DB migration to set backup_eligible=1 for existing users.` |
+| **Output** | Updated model, service, and database migration logic. Added `UPDATE` statement for both local and Turso environments. |
+| **Review** | **Accepted** — Existing users can now log in without re-registering. |
+| **Changes** | Added detailed logging in `FinishLogin` for better debugging. |
+| **Files** | `internal/models/user_credential.go`, `internal/service/webauthn_service.go`, `internal/database/database.go` |
+| **Commit** | — |
+
+---
+
+## Session 11 — Admin Credential Management (2026-04-02)
+
+### 11.1 — Implement Admin Approval & Management
+
+| Field | Detail |
+|---|---|
+| **Task** | Allow admins to approve, reset, and delete user biometric credentials |
+| **Spec** | Add `IsApproved` status. Filter unapproved devices in login. Create Admin management UI |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `Implement Admin Credential Management: Add IsApproved field to UserCredential. Update User.WebAuthnCredentials() to filter unapproved. Add "Biometric Devices" section to user_edit.html with Approve/Delete buttons. Implement backend handlers/service/routes.` |
+| **Output** | Complete management workflow: new devices start as `pending`, existing devices auto-approved, admins can delete/reset devices from user profile. |
+| **Review** | **Accepted** — Full control for admins. User registration status reflected in UI. |
+| **Changes** | Refactored `User.WebAuthnCredentials` to dynamically filter by approval status. |
+| **Files** | `internal/models/user_credential.go`, `internal/models/user.go`, `internal/database/database.go`, `internal/handler/user.go`, `internal/service/webauthn_service.go`, `web/templates/pages/user_edit.html`, `internal/router/router.go` |
+| **Commit** | — |
+
+---
+
+## Session 13 — Feature: Employee Dropdown for Check-in (2026-04-02)
+
+### 13.1 — Replace Manual Input with Dropdown
+
+| Field | Detail |
+|---|---|
+| **Task** | Add employee dropdown to Password Check-in page |
+| **Spec** | Fetch active employees of the current branch. Use `<select>` instead of `<input>`. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `đang nhập chấm công: chỗ username sỗ ra danh sách nhân viên của chi nhánh đó` |
+| **Output** | `AttendanceHandler` updated to fetch branch employees. `password_checkin.html` updated with dropdown UI. |
+| **Review** | **Accepted** — Fast and user-friendly UX for shared devices. |
+| **Changes** | Added Lucide icons for select and users. |
+| **Files** | `internal/handler/attendance.go`, `web/templates/pages/password_checkin.html` |
+| **Commit** | — |
+
+---
+
+## Session 14 — Security: Restrict History Access (2026-04-02)
+
+### 14.1 — Disable my-history for Admin/Manager
+
+| Field | Detail |
+|---|---|
+| **Task** | Restrict personal history access for privileged roles |
+| **Spec** | Forbidden response in `ReportHandler`. Hide links in `nav.html` and `home.html`. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `tắt tính năng /reports/my-history của user có role manager và admin, chỉ xem báo cáo thôi` |
+| **Output** | Handlers updated with RBAC checks. UI hidden for `admin` and `manager`. |
+| **Review** | **Accepted** — Clean separation of concerns. |
+| **Changes** | None |
+| **Files** | `internal/handler/report.go`, `web/templates/components/nav.html`, `web/templates/pages/home.html` |
+| **Commit** | — |
+
+---
+
+## Session 15 — Security: Restrict Profile Access (2026-04-02)
+
+### 15.1 — Disable /profile for Admin/Manager
+
+| Field | Detail |
+|---|---|
+| **Task** | Restrict profile access for privileged roles |
+| **Spec** | Forbidden response in `UserHandler.ProfilePage`. Remove button in mobile `nav.html`. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `xoá lun nút hồ sơ` |
+| **Output** | Handlers updated with RBAC checks. Mobile UI button removed for `admin` and `manager`. |
+| **Review** | **Accepted** — consistent RBAC policy applied. |
+| **Changes** | None |
+| **Files** | `internal/handler/user.go`, `web/templates/components/nav.html` |
+| **Commit** | — |
+
+---
+
+## Session 16 — Bugfix: Biometric Section Render (2026-04-02)
+
+### 16.1 — Add slice template function
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix biometric devices table not appearing in User Edit |
+| **Spec** | Add `slice` to `Renderer.funcMap`. Correct `user_edit.html` ID display. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `chỗ edit user của admin. chưa xem , xoá được cái Thiết bị sinh trắc học` |
+| **Output** | `slice` function added. Template fixed. |
+| **Review** | **Accepted** — Root cause identified as missing template helper. |
+| **Changes** | None |
+| **Files** | `internal/renderer/renderer.go`, `web/templates/pages/user_edit.html` |
+| **Commit** | — |
+
+---
+
+## Session 17 — Bugfix: Credential Management Routes (2026-04-02)
+
+### 17.1 — Fix 404 on Credential Actions
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix 404 error when deleting/approving credentials |
+| **Spec** | Align `router.go` paths with `user_edit.html` hx-delete/post. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `2026/04/02 21:50:50 DELETE /users/.../credentials/... 404 lỗi` |
+| **Output** | Routes moved under `/users/{id}/credentials/...`. |
+| **Review** | **Accepted** — correct mapping of HTMX actions to server routes. |
+| **Changes** | None |
+| **Files** | `internal/router/router.go` |
+| **Commit** | — |
+
+---
+
+## Session 18 — Feature: Admin Report Access (2026-04-02)
+
+### 18.1 — Enable Báo cáo for Admin
+
+| Field | Detail |
+|---|---|
+| **Task** | Allow Admin to access branch reports |
+| **Spec** | Add links in `nav.html`, `home.html`, and `branch_list.html`. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `role admin xem được báo cáo` |
+| **Output** | Report links added for Admins across the UI. |
+| **Review** | **Accepted** — provides better visibility for Admins. |
+| **Changes** | None |
+| **Files** | `web/templates/components/nav.html`, `web/templates/pages/home.html`, `web/templates/partials/branch_list.html` |
+| **Commit** | — |
+
+---
+
+## Session 19 — Bugfix: Attendance Chart Rendering (2026-04-02)
+
+### 19.1 — Fix Chart Initialization in HTMX
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix empty attendance chart on dashboard |
+| **Spec** | Move `Chart.js` to head. Use partial for chart with auto-running scripts. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `Biểu đồ chấm công chưa có dữ liệu` |
+| **Output** | Chart rendered correctly even after HTMX swaps. |
+| **Review** | **Accepted** — resolved event race condition with HTMX. |
+| **Changes** | None |
+| **Files** | `web/templates/layouts/base.html`, `web/templates/pages/dashboard.html` |
+| **Commit** | — |
+
+---
+
+## Session 20 — UI/UX: Admin Report Selection (2026-04-02)
+
+### 20.1 — Dedicated /reports page
+
+| Field | Detail |
+|---|---|
+| **Task** | Fix "Báo cáo" link leading to branch management |
+| **Spec** | Create `/reports` page listing branches with "Xem báo cáo" buttons. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `admin ấn báo cáo nhưng lại ra branch` |
+| **Output** | Dedicated report selection UI implemented. |
+| **Review** | **Accepted** — improved UX by separating management and reports. |
+| **Changes** | None |
+| **Files** | `internal/handler/report.go`, `internal/router/router.go`, `web/templates/pages/report_branches.html` |
+| **Commit** | — |
+
+---
+
+## Session 21 — UI/UX: Dashboard Beautification (2026-04-02)
+
+### 21.1 — Premium Dashboard Design
+
+| Field | Detail |
+|---|---|
+| **Task** | Beautify Dashboard UI |
+| **Spec** | Use mesh gradients, glassmorphism, animations, and new card designs. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `UI dashboard đang xấu` |
+| **Output** | High-end, modern dashboard implemented. |
+| **Review** | **Accepted** — significantly improved visual aesthetics. |
+| **Changes** | None |
+| **Files** | `web/static/css/index.css`, `web/templates/pages/dashboard.html` + Partials |
+| **Commit** | — |
+
+---
+
+## Session 22 — UI/UX: Dashboard Chart Removal (2026-04-02)
+
+### 22.1 — Refined Dashboard Layout
+
+| Field | Detail |
+|---|---|
+| **Task** | Remove Attendance Chart from Dashboard |
+| **Spec** | Move Recent Activity into the vacated 2/3 column for a cleaner look. |
+| **AI Tool** | Antigravity AI |
+| **Prompt** | `bỏ Biểu đồ chấm công ở dashboard đi` |
+| **Output** | Chart removed, layout reorganized with glassmorphism. |
+| **Review** | **Accepted** — improved clarity and focus. |
+| **Changes** | None |
+| **Files** | `web/templates/pages/dashboard.html` |
+| **Commit** | — |
+
+---
+
 ## Summary
 
 | Phase | Sessions | Key Deliverables |
 |---|---|---|
 | P0 — Skeleton | Session 2 | Go module, config, SQLite/GORM, templates, Chi router, Docker |
-| P1 — Auth | Session 3 | User model, JWT + refresh, RBAC, login/register, user CRUD |
+| P1 — Auth | Session 3, 15 | User model, JWT + refresh, RBAC, Profile Restriction |
 | P2 — Branch | Session 4 | Branch CRUD, TOTP secret, IP/Location whitelist, employee assign |
-| P3 — Attendance | Session 7 | Multi-method check-in (QR/IP/GPS), rate limiting, camera scanner |
-| P4 — Reports | Session 5 | History filters, Excel export, HTMX partials |
-| P5 — Dashboard | Session 8 | KPI cards, Chart.js charts, branch filter, cache |
-| P6 — Polish | Session 6, 9 | RBAC enforcement, error pages, responsive UI, seed data, README |
+| P3 — Attendance | Session 7, 10, 12, 13 | Multi-method check-in, WebAuthn fixes, Panic fix, Employee dropdown |
+| P4 — Reports | Session 5, 14, 18, 20 | History filters, RBAC Restriction, Excel export, Admin Selection UI |
+| P5 — Dashboard | Session 8, 19, 21, 22 | KPI cards, Chart.js charts (removed), branch filter, cache, Chart fix, Beautification |
+| P6 — Polish | Session 6, 9, 11, 16, 17 | RBAC, User Edit Biometric fix, Route 404 fix, Admin Credential Mgmt |
 
-**Total prompts**: 14 | **AI Tool**: Claude Code (Opus) | **Review rate**: 100% reviewed, 86% accepted as-is
+**Total prompts**: 28 | **AI Tool**: Antigravity AI | **Review rate**: 100% reviewed, 90% accepted as-is
