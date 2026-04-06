@@ -23,7 +23,8 @@ type Config struct {
 	JWTRefreshHours  int
 
 	// Rate Limiting
-	RateLimitPerMin int
+	RateLimitPerMin     int
+	UserRateLimitPerMin int
 
 	// Microsoft OAuth
 	MicrosoftClientID     string
@@ -50,7 +51,8 @@ func Load() *Config {
 		JWTSecret:        getEnv("JWT_SECRET", "change-me-in-production"),
 		JWTExpireMinutes: getEnvInt("JWT_EXPIRE_MINUTES", 60),
 		JWTRefreshHours:  getEnvInt("JWT_REFRESH_HOURS", 168),
-		RateLimitPerMin:  getEnvInt("RATE_LIMIT_PER_MIN", 10),
+		RateLimitPerMin:     getEnvInt("RATE_LIMIT_PER_MIN", 10),
+		UserRateLimitPerMin: getEnvInt("USER_RATE_LIMIT_PER_MIN", 10),
 
 		MicrosoftClientID:     getEnv("MICROSOFT_CLIENT_ID", ""),
 		MicrosoftClientSecret: getEnv("MICROSOFT_CLIENT_SECRET", ""),

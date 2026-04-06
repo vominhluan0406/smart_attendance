@@ -20,7 +20,7 @@ var (
 	}
 	userLimiter = &rateLimiter{
 		requests: make(map[string][]time.Time),
-		window:   5 * time.Minute,
+		window:   time.Minute,
 	}
 )
 
@@ -71,9 +71,9 @@ func RateLimit(maxPerMinute int) func(http.Handler) http.Handler {
 	}
 }
 
-// RateLimitByUser limits requests per user_id (from JWT context) per 5 minutes.
+// RateLimitByUser limits requests per user_id (from JWT context) per minute.
 // This prevents a single user from spamming check-in attempts even on shared WiFi.
-func RateLimitByUser(maxPer5Min int) func(http.Handler) http.Handler {
+func RateLimitByUser(maxPerMin int) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userID := GetUserID(r)
@@ -82,7 +82,7 @@ func RateLimitByUser(maxPer5Min int) func(http.Handler) http.Handler {
 				return
 			}
 			key := "user:" + userID
-			if !rateLimitByKey(userLimiter, key, maxPer5Min) {
+			if !rateLimitByKey(userLimiter, key, maxPerMin) {
 				writeRateLimitError(w, r)
 				return
 			}

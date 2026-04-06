@@ -4,81 +4,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>{{block "title" .}}Smart Attendance{{end}}</title>
 
-    <!-- Tailwind CSS -->
+    <!-- Critical CSS: Tailwind (load first, blocking is OK for CSS) -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- HTMX -->
-    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/static/css/index.css?v={{now.Unix}}">
 
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- HTMX: defer to not block render -->
+    <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
 
-    <!-- QR Scanner -->
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <!-- Lucide Icons: defer -->
+    <script src="https://unpkg.com/lucide@latest" defer></script>
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
+    <!-- Heavy libs: load only when needed via lazy load -->
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
 </head>
 
 <body class="h-full pb-16 sm:pb-0 font-sans" hx-boost="true" hx-indicator="#global-loader">
     <div id="global-loader"></div>
     {{template "toast" .}}
-    {{block "body" .}}{{end}}
+
+    <!-- Page content with transition wrapper -->
+    <div id="page-content" class="page-transition">
+        {{block "body" .}}{{end}}
+    </div>
 
     <script>
-        lucide.createIcons();
+        // Init icons once DOM ready (deferred script)
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.lucide) lucide.createIcons();
+        });
 
-        // Global HTMX error handling — show toast on any failed request
+        // Global HTMX error handling
         document.body.addEventListener('htmx:responseError', function(event) {
             var xhr = event.detail.xhr;
-            var msg = 'Thao tác thất bại';
-
-            // Try to extract text from response
-            if (xhr && xhr.responseText) {
-                var text = xhr.responseText.replace(/<[^>]*>/g, '').trim();
-                if (text.length > 0 && text.length < 200) {
-                    msg = text;
+            var msg = 'Thao tac that bai';
+            if (xhr) {
+                if (xhr.status === 401) msg = 'Phien dang nhap het han';
+                else if (xhr.status === 403) msg = 'Ban khong co quyen thuc hien thao tac nay';
+                else if (xhr.status === 404) msg = 'Khong tim thay du lieu';
+                else if (xhr.status >= 500) msg = 'Loi he thong, vui long thu lai';
+                else if (xhr.responseText) {
+                    var text = xhr.responseText.replace(/<[^>]*>/g, '').trim();
+                    if (text.length > 0 && text.length < 200) msg = text;
                 }
             }
-
-            // Add status code context for common errors
-            if (xhr) {
-                if (xhr.status === 401) msg = 'Phiên đăng nhập hết hạn';
-                else if (xhr.status === 403) msg = 'Bạn không có quyền thực hiện thao tác này';
-                else if (xhr.status === 404) msg = 'Không tìm thấy dữ liệu';
-                else if (xhr.status >= 500) msg = 'Lỗi hệ thống, vui lòng thử lại';
-            }
-
             if (window.showToast) showToast(msg, 'error');
         });
-
-        // Network failure (no response at all)
         document.body.addEventListener('htmx:sendError', function() {
-            if (window.showToast) showToast('Mất kết nối mạng', 'error');
+            if (window.showToast) showToast('Mat ket noi mang', 'error');
         });
-
-        // Timeout
         document.body.addEventListener('htmx:timeout', function() {
-            if (window.showToast) showToast('Yêu cầu quá thời gian chờ', 'error');
+            if (window.showToast) showToast('Yeu cau qua thoi gian cho', 'error');
         });
-
-        // Custom toast trigger via HX-Trigger header from server
         document.body.addEventListener('showToast', function(event) {
             if (window.showToast && event.detail) {
-                showToast(event.detail.message || 'Thông báo', event.detail.type || 'info');
+                showToast(event.detail.message || 'Thong bao', event.detail.type || 'info');
             }
         });
-        // Re-init lucide icons + QR scanner after every HTMX swap
+
+        // Page transition on HTMX boost navigation
+        document.body.addEventListener('htmx:beforeSwap', function(e) {
+            var content = document.getElementById('page-content');
+            if (content && e.detail.boosted) {
+                content.classList.add('page-exit');
+            }
+        });
         document.body.addEventListener('htmx:afterSettle', function() {
             if (window.lucide) lucide.createIcons();
             if (window.initQRScanner) window.initQRScanner();
+            var content = document.getElementById('page-content');
+            if (content) {
+                content.classList.remove('page-exit');
+                content.classList.add('page-enter');
+                requestAnimationFrame(function() {
+                    content.classList.remove('page-enter');
+                });
+            }
         });
+
+        // Lazy-load heavy libraries only when needed
+        window.loadScript = function(src, cb) {
+            if (document.querySelector('script[src="' + src + '"]')) { if (cb) cb(); return; }
+            var s = document.createElement('script');
+            s.src = src;
+            s.onload = cb;
+            document.head.appendChild(s);
+        };
+        // QR Scanner: lazy load
+        window.loadQRScanner = function(cb) {
+            loadScript('https://unpkg.com/html5-qrcode', cb);
+        };
+        // Chart.js: lazy load
+        window.loadChartJS = function(cb) {
+            loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js', cb);
+        };
     </script>
     <!-- Device fingerprinting for anti-fraud -->
     <script>
@@ -92,7 +118,6 @@
             navigator.hardwareConcurrency || 0,
             navigator.platform
         ].join('|');
-        // SHA-256 hash
         if (crypto.subtle) {
             crypto.subtle.digest('SHA-256', new TextEncoder().encode(fp)).then(function(buf) {
                 var hash = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');

@@ -139,35 +139,6 @@
 .card-accent-amber { border-top: 4px solid #f59e0b; }
 .card-accent-rose { border-top: 4px solid #f43f5e; }
 
-/* HTMX Loading Indicators */
-#global-loader {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 0%;
-    height: 6px;
-    background: #4f46e5;
-    background: linear-gradient(90deg, #4f46e5 0%, #0ea5e9 50%, #4f46e5 100%);
-    background-size: 200% 100%;
-    z-index: 10001;
-    display: none;
-    box-shadow: 0 2px 12px rgba(79, 70, 229, 0.6);
-    transition: width 0.3s ease-out;
-}
-
-.htmx-request #global-loader,
-.htmx-request#global-loader {
-    display: block !important;
-    width: 100%;
-    animation: loader-progress 2s ease-in-out infinite, shimmer 1.5s infinite linear;
-}
-
-@keyframes loader-progress {
-    0% { width: 0%; }
-    50% { width: 70%; }
-    100% { width: 100%; }
-}
-
 /* Button Spinner */
 .btn-spinner {
     display: none !important;
@@ -194,4 +165,105 @@ form.htmx-request .btn-icon {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+/* ===== PAGE TRANSITIONS (App-like feel) ===== */
+.page-transition {
+    animation: pageIn 0.25s ease-out;
+}
+.page-enter {
+    animation: pageIn 0.2s ease-out;
+}
+.page-exit {
+    opacity: 0.5;
+    transform: scale(0.98);
+    transition: all 0.15s ease-in;
+}
+@keyframes pageIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== SMOOTH SCROLLING ===== */
+html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ===== NATIVE APP FEEL ===== */
+body {
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+}
+
+/* Prevent pull-to-refresh on mobile (app-like) */
+body.no-pull-refresh {
+    overscroll-behavior-y: none;
+}
+
+/* Active press effect for all interactive elements */
+a:active, button:active, .bottom-nav-item:active {
+    transform: scale(0.96);
+    transition: transform 0.1s;
+}
+
+/* Bottom nav active state highlight */
+.bottom-nav-item {
+    transition: color 0.2s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+}
+.bottom-nav-item::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 20px;
+    height: 3px;
+    background: #4f46e5;
+    border-radius: 2px;
+    transition: transform 0.2s;
+}
+.bottom-nav-item:hover::after,
+.bottom-nav-item.active::after {
+    transform: translateX(-50%) scaleX(1);
+}
+
+/* ===== HTMX BOOST: Instant page loads ===== */
+/* Preload indicator on links (subtle) */
+a[hx-boost="true"]:hover,
+body[hx-boost="true"] a:hover {
+    cursor: pointer;
+}
+
+/* ===== IMPROVED LOADING BAR ===== */
+#global-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 3px;
+    background: linear-gradient(90deg, #4f46e5 0%, #06b6d4 50%, #4f46e5 100%);
+    background-size: 200% 100%;
+    z-index: 10001;
+    display: none;
+    box-shadow: 0 1px 8px rgba(79, 70, 229, 0.4);
+    transition: width 0.2s ease-out;
+    border-radius: 0 2px 2px 0;
+}
+
+.htmx-request #global-loader,
+.htmx-request#global-loader {
+    display: block !important;
+    width: 100%;
+    animation: loader-progress 1.5s ease-in-out infinite, shimmer 1s infinite linear;
+}
+
+/* ===== CARD PRESS FEEDBACK ===== */
+.rounded-2xl {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.rounded-2xl:active {
+    transform: scale(0.98);
 }

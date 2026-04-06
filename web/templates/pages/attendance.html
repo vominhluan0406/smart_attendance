@@ -225,14 +225,16 @@
             );
         }
 
-        if (typeof Html5Qrcode === 'undefined') {
-            var p = document.getElementById('reader-placeholder');
-            if (p) p.innerHTML = '<div class="text-center p-6"><p class="text-red-500 font-bold">QR library chưa tải</p><p class="text-xs text-gray-500 mt-2">Vui lòng tải lại trang (F5)</p></div>';
-            return;
-        }
+        function startScanner() {
+            if (typeof Html5Qrcode === 'undefined') {
+                var p = document.getElementById('reader-placeholder');
+                if (p) p.innerHTML = '<div class="text-center p-6"><p class="text-gray-500">Đang tải camera...</p></div>';
+                window.loadQRScanner(function() { startScanner(); });
+                return;
+            }
 
-        readerEl.dataset.scannerActive = 'true';
-        var qr = new Html5Qrcode("reader");
+            readerEl.dataset.scannerActive = 'true';
+            var qr = new Html5Qrcode("reader");
 
         qr.start(
             { facingMode: "environment" },
@@ -274,6 +276,8 @@
             var p = document.getElementById('reader-placeholder');
             if (p) p.innerHTML = '<div class="text-center p-6"><p class="text-red-500 font-bold">Không thể mở camera</p><p class="text-xs text-gray-500 mt-2">' + err + '</p></div>';
         });
+        } // end startScanner
+        startScanner();
     };
 
     window.initQRScanner();

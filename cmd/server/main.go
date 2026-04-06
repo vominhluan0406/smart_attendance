@@ -135,7 +135,8 @@ func main() {
 		WebAuthnService:   webAuthnService,
 		LeaveService:      leaveService,
 		Config:            cfg,
-		RateLimitPerMin:   cfg.RateLimitPerMin,
+		RateLimitPerMin:     cfg.RateLimitPerMin,
+		UserRateLimitPerMin: cfg.UserRateLimitPerMin,
 	})
 
 	// Start server
