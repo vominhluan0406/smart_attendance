@@ -117,6 +117,8 @@ func main() {
 	}
 
 	fraudAlertService := service.NewFraudAlertService(fraudAlertRepo, attendanceRepo)
+	adjRepo := repository.NewAttendanceAdjustmentRepository(db)
+	adjService := service.NewAttendanceAdjustmentService(adjRepo, attendanceRepo, userRepo)
 	leaveService := service.NewLeaveService(leaveRepo, leaveTypeRepo, attendanceRepo, userRepo)
 	attendanceService := service.NewAttendanceService(attendanceRepo, attendanceLogRepo, shiftRepo, branchService, userService, totpService, ipValidator, locValidator, leaveRepo, antiFraudService)
 	reportService := service.NewReportService(attendanceRepo)
@@ -135,8 +137,9 @@ func main() {
 		PermissionService: permissionService,
 		WebAuthnService:   webAuthnService,
 		LeaveService:      leaveService,
-		FraudAlertService: fraudAlertService,
-		Config:            cfg,
+		FraudAlertService:         fraudAlertService,
+		AttendanceAdjustmentService: adjService,
+		Config:                    cfg,
 		RateLimitPerMin:     cfg.RateLimitPerMin,
 		UserRateLimitPerMin: cfg.UserRateLimitPerMin,
 	})

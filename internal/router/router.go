@@ -25,8 +25,9 @@ type Deps struct {
 	PermissionService *service.PermissionService
 	WebAuthnService   *service.WebAuthnService
 	LeaveService      *service.LeaveService
-	FraudAlertService *service.FraudAlertService
-	Config              *config.Config
+	FraudAlertService           *service.FraudAlertService
+	AttendanceAdjustmentService *service.AttendanceAdjustmentService
+	Config                      *config.Config
 	RateLimitPerMin     int
 	UserRateLimitPerMin int
 }
@@ -55,6 +56,7 @@ func New(deps Deps) http.Handler {
 	dashboard := handler.NewDashboardHandler(deps.DashboardService, deps.BranchService, deps.Render)
 	leave := handler.NewLeaveHandler(deps.LeaveService, deps.BranchService, deps.Render)
 	fraudAlerts := handler.NewFraudAlertHandler(deps.FraudAlertService, deps.BranchService, deps.Render)
+	adjustments := handler.NewAttendanceAdjustmentHandler(deps.AttendanceAdjustmentService, deps.BranchService, deps.Render)
 
 	// Permission-based middleware helpers
 	ps := deps.PermissionService
@@ -154,6 +156,21 @@ func New(deps Deps) http.Handler {
 				mgrLr.Use(middleware.RequireRoles(models.RoleManager))
 				mgrLr.Get("/manage", leave.ManageLeavePage)
 				mgrLr.Post("/manage/{id}/review", leave.ReviewAction)
+			})
+		})
+
+		// Attendance adjustments (bổ sung công)
+		pr.Route("/adjustments", func(ar chi.Router) {
+			ar.Group(func(empAr chi.Router) {
+				empAr.Use(requirePerm(models.PermAttendanceAdjustmentRequest))
+				empAr.Get("/my", adjustments.MyAdjustmentsPage)
+				empAr.Post("/my", adjustments.SubmitRequest)
+			})
+
+			ar.Group(func(mgrAr chi.Router) {
+				mgrAr.Use(requirePerm(models.PermAttendanceAdjustmentApprove))
+				mgrAr.Get("/manage", adjustments.ManageAdjustmentsPage)
+				mgrAr.Post("/manage/{id}/review", adjustments.ReviewAction)
 			})
 		})
 
