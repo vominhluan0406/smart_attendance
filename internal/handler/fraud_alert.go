@@ -92,6 +92,25 @@ func (h *FraudAlertHandler) ReviewAction(w http.ResponseWriter, r *http.Request)
 	fmt.Fprintf(w, `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700"><i data-lucide="check-circle" class="w-3 h-3"></i> Đã xem xét</span><script>lucide.createIcons()</script>`)
 }
 
+// InvalidateAction invalidates the attendance record linked to a fraud alert.
+func (h *FraudAlertHandler) InvalidateAction(w http.ResponseWriter, r *http.Request) {
+	alertID := chi.URLParam(r, "id")
+	reviewerID := middleware.GetUserID(r)
+
+	branchID := ""
+	if middleware.GetUserRole(r) == models.RoleManager {
+		branchID = middleware.GetBranchID(r)
+	}
+
+	err := h.fraudAlertService.InvalidateAttendance(alertID, reviewerID, branchID)
+	if err != nil {
+		fmt.Fprintf(w, `<span class="text-xs text-red-600 font-bold">%s</span>`, err.Error())
+		return
+	}
+
+	fmt.Fprintf(w, `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700"><i data-lucide="ban" class="w-3 h-3"></i> Đã huỷ</span><script>lucide.createIcons()</script>`)
+}
+
 // resolveBranchID returns the branch to filter by based on user role.
 func (h *FraudAlertHandler) resolveBranchID(r *http.Request) string {
 	role := middleware.GetUserRole(r)

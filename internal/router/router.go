@@ -166,6 +166,7 @@ func New(deps Deps) http.Handler {
 			ar.Group(func(rr chi.Router) {
 				rr.Use(requirePerm(models.PermFraudAlertReview))
 				rr.Post("/{id}/review", fraudAlerts.ReviewAction)
+				rr.Post("/{id}/invalidate", fraudAlerts.InvalidateAction)
 			})
 		})
 

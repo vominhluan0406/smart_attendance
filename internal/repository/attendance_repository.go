@@ -130,3 +130,15 @@ func (r *AttendanceRepository) List(params AttendanceListParams) (*AttendanceLis
 		Limit:   params.Limit,
 	}, nil
 }
+
+// InvalidateByUserAndDate sets the attendance status to "invalidated" for a user on a specific date.
+// Returns the number of affected rows.
+func (r *AttendanceRepository) InvalidateByUserAndDate(userID, workDate, note string) (int64, error) {
+	result := r.db.Model(&models.Attendance{}).
+		Where("user_id = ? AND work_date = ? AND status != ?", userID, workDate, models.StatusInvalidated).
+		Updates(map[string]interface{}{
+			"status": models.StatusInvalidated,
+			"note":   note,
+		})
+	return result.RowsAffected, result.Error
+}

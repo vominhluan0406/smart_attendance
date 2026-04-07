@@ -116,7 +116,7 @@ func main() {
 		log.Fatalf("Failed to initialize WebAuthnService: %v", err)
 	}
 
-	fraudAlertService := service.NewFraudAlertService(fraudAlertRepo)
+	fraudAlertService := service.NewFraudAlertService(fraudAlertRepo, attendanceRepo)
 	leaveService := service.NewLeaveService(leaveRepo, leaveTypeRepo, attendanceRepo, userRepo)
 	attendanceService := service.NewAttendanceService(attendanceRepo, attendanceLogRepo, shiftRepo, branchService, userService, totpService, ipValidator, locValidator, leaveRepo, antiFraudService)
 	reportService := service.NewReportService(attendanceRepo)

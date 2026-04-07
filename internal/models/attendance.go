@@ -5,10 +5,11 @@ import "time"
 type AttendanceStatus string
 
 const (
-	StatusOnTime AttendanceStatus = "on_time"
-	StatusLate   AttendanceStatus = "late"
-	StatusAbsent AttendanceStatus = "absent"
-	StatusLeave  AttendanceStatus = "leave"
+	StatusOnTime      AttendanceStatus = "on_time"
+	StatusLate        AttendanceStatus = "late"
+	StatusAbsent      AttendanceStatus = "absent"
+	StatusLeave       AttendanceStatus = "leave"
+	StatusInvalidated AttendanceStatus = "invalidated"
 )
 
 type Attendance struct {

@@ -452,9 +452,35 @@ func seedPermissions(db *gorm.DB) {
 		log.Printf("[seed] created %d role-permission mappings", len(rps))
 	}
 
+	// Ensure any new permissions added to code are created in DB.
+	ensureNewPermissions(db)
+
 	// Always ensure every role in DefaultRolePermissions has its mappings.
 	// This handles new roles added after initial seed (e.g., manager_device).
 	ensureRolePermissions(db)
+}
+
+// ensureNewPermissions creates any permissions defined in code but missing from the DB.
+func ensureNewPermissions(db *gorm.DB) {
+	var existing []models.Permission
+	db.Find(&existing)
+	existingCodes := make(map[string]bool, len(existing))
+	for _, p := range existing {
+		existingCodes[p.Code] = true
+	}
+
+	var added int
+	for _, p := range models.DefaultPermissions() {
+		if existingCodes[p.Code] {
+			continue
+		}
+		if err := db.Create(&p).Error; err == nil {
+			added++
+		}
+	}
+	if added > 0 {
+		log.Printf("[seed] created %d new permissions", added)
+	}
 }
 
 // ensureRolePermissions checks each role's expected permissions and inserts any missing ones.

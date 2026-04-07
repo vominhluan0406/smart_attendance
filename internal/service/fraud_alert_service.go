@@ -9,11 +9,15 @@ import (
 )
 
 type FraudAlertService struct {
-	alertRepo *repository.FraudAlertRepository
+	alertRepo      *repository.FraudAlertRepository
+	attendanceRepo *repository.AttendanceRepository
 }
 
-func NewFraudAlertService(alertRepo *repository.FraudAlertRepository) *FraudAlertService {
-	return &FraudAlertService{alertRepo: alertRepo}
+func NewFraudAlertService(alertRepo *repository.FraudAlertRepository, attendanceRepo *repository.AttendanceRepository) *FraudAlertService {
+	return &FraudAlertService{
+		alertRepo:      alertRepo,
+		attendanceRepo: attendanceRepo,
+	}
 }
 
 // GetBranchAlerts returns paginated fraud alerts for a branch with filters.
@@ -58,5 +62,41 @@ func (s *FraudAlertService) ReviewAlert(alertID, reviewerID, branchID string) er
 	}
 
 	log.Printf("[service][fraud_alert] alert reviewed: id=%s by=%s", alertID, reviewerID)
+	return nil
+}
+
+// InvalidateAttendance marks the attendance record as invalidated for a fraud alert's user+date.
+// Also auto-reviews the alert.
+func (s *FraudAlertService) InvalidateAttendance(alertID, reviewerID, branchID string) error {
+	alert, err := s.alertRepo.FindByID(alertID)
+	if err != nil {
+		log.Printf("[service][fraud_alert] InvalidateAttendance: alert not found id=%s err=%v", alertID, err)
+		return fmt.Errorf("không tìm thấy cảnh báo")
+	}
+
+	if branchID != "" && alert.BranchID != branchID {
+		return fmt.Errorf("bạn không có quyền thao tác cảnh báo này")
+	}
+
+	workDate := alert.CreatedAt.Format("2006-01-02")
+	note := fmt.Sprintf("Huỷ bởi %s — lý do: cảnh báo gian lận #%s (%s)", reviewerID, alert.ID[:8], alert.AlertType)
+
+	affected, err := s.attendanceRepo.InvalidateByUserAndDate(alert.UserID, workDate, note)
+	if err != nil {
+		log.Printf("[service][fraud_alert] InvalidateAttendance: DB error user=%s date=%s err=%v", alert.UserID, workDate, err)
+		return fmt.Errorf("không thể huỷ chấm công")
+	}
+
+	if affected == 0 {
+		return fmt.Errorf("không tìm thấy bản ghi chấm công ngày %s để huỷ", workDate)
+	}
+
+	// Auto-review the alert
+	if !alert.IsReviewed {
+		s.alertRepo.MarkReviewed(alertID, reviewerID)
+	}
+
+	log.Printf("[service][fraud_alert] attendance invalidated: alert=%s user=%s date=%s by=%s affected=%d",
+		alertID, alert.UserID, workDate, reviewerID, affected)
 	return nil
 }
