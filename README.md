@@ -141,9 +141,9 @@ Hệ thống seed sẵn 22 users (1 admin, 3 managers, 3 kiosk devices, 15 emplo
 2. Đăng nhập `manager.hcm@demo.com` > "Duyệt nghỉ" > Approve đơn vừa tạo
 3. Quay lại `emp1.hcm@demo.com` > "Lịch sử" > Thấy ngày nghỉ status "Nghỉ phép"
 
-### 5. Hệ thống chống gian lận (Anti-Fraud)
+### 5. Hệ thống chống gian lận (Anti-Fraud) — 9 lớp bảo vệ
 
-Hệ thống tự động phát hiện và cảnh báo các hành vi gian lận:
+Hệ thống tự động phát hiện và cảnh báo các hành vi gian lận qua 9 lớp kiểm tra độc lập. Mỗi lớp chạy song song khi nhân viên check-in, kết quả ghi vào bảng `fraud_alerts` để admin review.
 
 | Lớp | Cơ chế | Hành vi chặn |
 |---|---|---|
@@ -157,7 +157,110 @@ Hệ thống tự động phát hiện và cảnh báo các hành vi gian lận:
 | 8 | Anomaly Detection | Z-score > 3.0 trên pattern check-in 30 ngày |
 | 9 | Concurrent Session | Max 3 session/user, auto-revoke oldest |
 
-Tất cả cảnh báo được ghi vào bảng `fraud_alerts` để admin review.
+#### Chi tiết từng lớp
+
+**Lớp 1 — GPS Accuracy Check (Chống fake GPS)**
+
+Ứng dụng fake GPS thường trả về tọa độ chính xác tuyệt đối (accuracy ≈ 0m), trong khi GPS thật luôn có sai số 10–150m. Hệ thống reject nếu:
+- `accuracy < 10m` → nghi ngờ fake GPS (quá chính xác)
+- `accuracy > 150m` → tín hiệu yếu, không đáng tin cậy
+
+```
+📱 Fake GPS app:  accuracy = 0.5m  → ❌ Rejected (< 10m)
+📱 GPS thật:      accuracy = 25m   → ✅ Accepted
+📱 Trong hầm:     accuracy = 200m  → ❌ Rejected (> 150m)
+```
+
+**Lớp 2 — TOTP Single-Use Nonce (Chống chụp ảnh/chia sẻ QR)**
+
+Mã QR tại chi nhánh chứa TOTP code (Time-based One-Time Password) reset mỗi 15 giây. Mỗi code chỉ được dùng **đúng 1 lần** (nonce), lưu vào cache để chặn reuse:
+
+```
+15:00:00  QR hiển thị code "A1B2C3"
+15:00:05  NV Hùng quét → ✅ check-in thành công, code "A1B2C3" đánh dấu đã dùng
+15:00:08  NV Lan quét cùng code → ❌ Rejected (code đã sử dụng — nghi chụp ảnh chia sẻ)
+15:00:15  QR reset → code mới "D4E5F6"
+```
+
+**Lớp 3 — Rate Limit per User (Chống spam check-in)**
+
+Giới hạn tối đa **3 lần check-in trong 5 phút** cho mỗi user (tách biệt với rate limit IP). Ngăn chặn brute-force quét QR hoặc spam request:
+
+```
+15:00:00  Check-in lần 1 → ✅
+15:01:00  Check-in lần 2 → ✅
+15:02:00  Check-in lần 3 → ✅
+15:03:00  Check-in lần 4 → ❌ Rate limited (chờ hết 5 phút)
+```
+
+**Lớp 4 — Impossible Travel Detection (Chống chấm hộ từ xa)**
+
+So sánh tọa độ GPS giữa 2 lần check-in liên tiếp, tính vận tốc di chuyển bằng công thức Haversine. Nếu vận tốc > **150 km/h** → không thể di chuyển hợp lý:
+
+```
+09:00  Check-in tại HCM (10.776, 106.700)
+09:15  Check-in tại Hà Nội (21.028, 105.854)  ← khoảng cách ~1,200km
+       Vận tốc = 1200km / 0.25h = 4,800 km/h → ❌ Impossible travel!
+```
+
+**Lớp 5 — Device Fingerprinting (Chống mượn thiết bị)**
+
+Thu thập fingerprint thiết bị (User-Agent, screen resolution, platform... → SHA-256 hash) và bind với user. Khi phát hiện thiết bị mới chưa từng dùng:
+
+```
+NV Hùng luôn dùng iPhone 15 (hash: abc123)
+Đột nhiên check-in từ Samsung S24 (hash: xyz789) → ⚠️ FraudAlert: thiết bị lạ
+```
+
+Admin nhận cảnh báo để xác minh — có thể là thiết bị mới hợp lệ hoặc ai đó mượn tài khoản.
+
+**Lớp 6 — IP-Location Cross-Check (Chống VPN/Proxy)**
+
+So sánh vị trí địa lý của IP address (tra cứu GeoIP) với tọa độ GPS gửi lên. Nếu khoảng cách > **500km** → nghi ngờ dùng VPN:
+
+```
+IP: 113.161.x.x → GeoIP: Hồ Chí Minh
+GPS gửi lên:    → Hồ Chí Minh         → ✅ Khớp
+
+IP: 185.220.x.x → GeoIP: Đức (VPN)
+GPS gửi lên:    → Hồ Chí Minh         → ⚠️ Lệch 9,000km — nghi VPN
+```
+
+**Lớp 7 — WebAuthn Sign Count (Chống clone authenticator)**
+
+WebAuthn (FaceID/TouchID/Windows Hello) sử dụng **sign count** — bộ đếm tăng dần mỗi lần xác thực. Nếu ai đó clone authenticator, 2 thiết bị sẽ có sign count riêng → server phát hiện count không tăng monotonically:
+
+```
+Lần 1: sign_count = 1  → ✅
+Lần 2: sign_count = 2  → ✅
+Lần 3: sign_count = 2  → ❌ Clone detected! (count phải là 3 nhưng vẫn là 2)
+```
+
+Cơ chế WebAuthn đảm bảo **private key không bao giờ rời thiết bị** — server chỉ lưu public key và verify signature. Ngay cả khi server bị hack, attacker không thể giả mạo xác thực.
+
+**Lớp 8 — Anomaly Detection (Phát hiện bất thường thống kê)**
+
+Tính **Z-score** trên thời gian check-in 30 ngày gần nhất. Nếu thời gian hôm nay lệch > **3.0 standard deviation** so với pattern thông thường → flag bất thường:
+
+```
+Pattern 30 ngày: check-in trung bình 08:02, std dev = 5 phút
+Hôm nay check-in: 05:30 → Z-score = (05:30 - 08:02) / 5min = -30.4 → ⚠️ Bất thường!
+```
+
+Phát hiện các trường hợp: bot tự động check-in lúc nửa đêm, ai đó dùng tài khoản người khác với pattern khác hẳn.
+
+**Lớp 9 — Concurrent Session Limit (Chống chia sẻ tài khoản)**
+
+Giới hạn tối đa **3 session đồng thời** cho mỗi user. Nếu đăng nhập thiết bị thứ 4 → tự động revoke session cũ nhất:
+
+```
+Session 1: iPhone (HCM)     → active
+Session 2: Laptop (HCM)     → active
+Session 3: iPad (HCM)       → active
+Session 4: Android (Hà Nội) → ✅ active, nhưng Session 1 bị revoke
+```
+
+Ngăn chặn việc chia sẻ tài khoản cho nhiều người để chấm hộ.
 
 ---
 
