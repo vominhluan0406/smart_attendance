@@ -78,6 +78,13 @@
                     </a>
                     {{end}}
 
+                    {{if or (eq .UserRole "manager") (eq .UserRole "admin")}}
+                    <a href="/alerts"
+                        class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
+                        <i data-lucide="shield-alert" class="w-4 h-4"></i> Gian lận
+                    </a>
+                    {{end}}
+
                     {{if eq .UserRole "admin"}}
                     <a href="/users"
                         class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 gap-2">
@@ -165,6 +172,10 @@
     <a href="/leave/manage" class="bottom-nav-item">
         <i data-lucide="clipboard-check"></i>
         <span>Duyệt nghỉ</span>
+    </a>
+    <a href="/alerts" class="bottom-nav-item">
+        <i data-lucide="shield-alert"></i>
+        <span>Gian lận</span>
     </a>
     {{end}}
     {{if eq .UserRole "employee"}}

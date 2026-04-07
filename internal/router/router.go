@@ -25,6 +25,7 @@ type Deps struct {
 	PermissionService *service.PermissionService
 	WebAuthnService   *service.WebAuthnService
 	LeaveService      *service.LeaveService
+	FraudAlertService *service.FraudAlertService
 	Config              *config.Config
 	RateLimitPerMin     int
 	UserRateLimitPerMin int
@@ -53,6 +54,7 @@ func New(deps Deps) http.Handler {
 	reports := handler.NewReportHandler(deps.ReportService, deps.BranchService, deps.Render)
 	dashboard := handler.NewDashboardHandler(deps.DashboardService, deps.BranchService, deps.Render)
 	leave := handler.NewLeaveHandler(deps.LeaveService, deps.BranchService, deps.Render)
+	fraudAlerts := handler.NewFraudAlertHandler(deps.FraudAlertService, deps.BranchService, deps.Render)
 
 	// Permission-based middleware helpers
 	ps := deps.PermissionService
@@ -152,6 +154,18 @@ func New(deps Deps) http.Handler {
 				mgrLr.Use(middleware.RequireRoles(models.RoleManager))
 				mgrLr.Get("/manage", leave.ManageLeavePage)
 				mgrLr.Post("/manage/{id}/review", leave.ReviewAction)
+			})
+		})
+
+		// Fraud alerts (manager + admin)
+		pr.Route("/alerts", func(ar chi.Router) {
+			ar.Use(requirePerm(models.PermFraudAlertView))
+			ar.Get("/", fraudAlerts.AlertsPage)
+			ar.Get("/partial", fraudAlerts.AlertsPartial)
+
+			ar.Group(func(rr chi.Router) {
+				rr.Use(requirePerm(models.PermFraudAlertReview))
+				rr.Post("/{id}/review", fraudAlerts.ReviewAction)
 			})
 		})
 

@@ -1,0 +1,123 @@
+{{ if .Result }}{{ if .Result.Records }}
+<div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-100 responsive-table">
+            <thead class="bg-gray-50/50">
+                <tr>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Thời gian</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Nhân viên</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Loại</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Mức độ</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Mô tả</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">IP</th>
+                    <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Trạng thái</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50 bg-white">
+                {{ range .Result.Records }}
+                <tr class="hover:bg-gray-50/50 transition-colors" id="alert-{{.ID}}">
+                    <td data-label="Thời gian" class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div class="font-bold">{{ .CreatedAt.Format "02/01/2006" }}</div>
+                        <div class="text-xs text-gray-400">{{ .CreatedAt.Format "15:04:05" }}</div>
+                    </td>
+                    <td data-label="Nhân viên" class="px-6 py-4 whitespace-nowrap">
+                        {{ if .User }}
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xs">
+                                {{ slice .User.FullName 0 1 }}
+                            </div>
+                            <div>
+                                <div class="text-sm font-bold text-gray-900">{{ .User.FullName }}</div>
+                                <div class="text-xs text-gray-400">{{ .User.Email }}</div>
+                            </div>
+                        </div>
+                        {{ else }}
+                        <span class="text-sm text-gray-400">{{ .UserID }}</span>
+                        {{ end }}
+                    </td>
+                    <td data-label="Loại" class="px-6 py-4 whitespace-nowrap">
+                        {{ if eq (printf "%s" .AlertType) "gps_accuracy" }}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-700"><i data-lucide="map-pin-off" class="w-3 h-3"></i> GPS giả mạo</span>
+                        {{ else if eq (printf "%s" .AlertType) "totp_reuse" }}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700"><i data-lucide="qr-code" class="w-3 h-3"></i> QR tái sử dụng</span>
+                        {{ else if eq (printf "%s" .AlertType) "impossible_travel" }}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700"><i data-lucide="zap" class="w-3 h-3"></i> Di chuyển bất thường</span>
+                        {{ else if eq (printf "%s" .AlertType) "new_device" }}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700"><i data-lucide="smartphone" class="w-3 h-3"></i> Thiết bị mới</span>
+                        {{ else if eq (printf "%s" .AlertType) "ip_location_mismatch" }}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700"><i data-lucide="wifi-off" class="w-3 h-3"></i> IP/GPS lệch</span>
+                        {{ else if eq (printf "%s" .AlertType) "cloned_authenticator" }}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700"><i data-lucide="copy" class="w-3 h-3"></i> Clone auth</span>
+                        {{ else if eq (printf "%s" .AlertType) "anomaly_time" }}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-cyan-50 text-cyan-700"><i data-lucide="clock" class="w-3 h-3"></i> Giờ bất thường</span>
+                        {{ else if eq (printf "%s" .AlertType) "concurrent_session" }}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700"><i data-lucide="users" class="w-3 h-3"></i> Đa phiên</span>
+                        {{ else }}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700">{{ .AlertType }}</span>
+                        {{ end }}
+                    </td>
+                    <td data-label="Mức độ" class="px-6 py-4 whitespace-nowrap">
+                        {{ if eq .Severity "critical" }}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700"><i data-lucide="alert-triangle" class="w-3 h-3"></i> Nghiêm trọng</span>
+                        {{ else }}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700"><i data-lucide="alert-circle" class="w-3 h-3"></i> Cảnh báo</span>
+                        {{ end }}
+                    </td>
+                    <td data-label="Mô tả" class="px-6 py-4 text-sm text-gray-600 max-w-xs">
+                        <p class="line-clamp-2" title="{{ .Description }}">{{ .Description }}</p>
+                    </td>
+                    <td data-label="IP" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                        {{ if .IPAddress }}{{ .IPAddress }}{{ else }}-{{ end }}
+                    </td>
+                    <td data-label="Trạng thái" class="px-6 py-4 whitespace-nowrap text-right" id="alert-status-{{.ID}}">
+                        {{ if .IsReviewed }}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                                <i data-lucide="check-circle" class="w-3 h-3"></i> Đã xem xét
+                            </span>
+                        {{ else }}
+                            <button hx-post="/alerts/{{.ID}}/review" hx-target="#alert-status-{{.ID}}" hx-swap="innerHTML"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm cursor-pointer">
+                                <i data-lucide="eye" class="w-3.5 h-3.5"></i> Xem xét
+                            </button>
+                        {{ end }}
+                    </td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+<div class="mt-4 flex justify-between items-center text-sm text-gray-600">
+    <div>
+        Tổng cộng: {{ .Result.Total }} cảnh báo (Trang {{ .Result.Page }})
+    </div>
+    <div class="flex space-x-2">
+        {{ if gt .Result.Page 1 }}
+        <button class="px-3 py-1 border rounded bg-white hover:bg-gray-50"
+                hx-get="/alerts/partial?page={{ subtract .Result.Page 1 }}&limit={{ .Result.Limit }}"
+                hx-include="#filter-form"
+                hx-target="#alerts-list">
+            Trước
+        </button>
+        {{ end }}
+
+        <button class="px-3 py-1 border rounded bg-white hover:bg-gray-50"
+                hx-get="/alerts/partial?page={{ add .Result.Page 1 }}&limit={{ .Result.Limit }}"
+                hx-include="#filter-form"
+                hx-target="#alerts-list">
+            Sau
+        </button>
+    </div>
+</div>
+
+<script>if (window.lucide) { lucide.createIcons(); }</script>
+{{ else }}
+<div class="text-center py-16 bg-white rounded-3xl shadow-sm border border-gray-100">
+    <i data-lucide="shield-check" class="w-16 h-16 mx-auto mb-4 text-green-200"></i>
+    <p class="text-gray-400 text-lg font-medium">Không có cảnh báo nào</p>
+    <p class="text-gray-300 text-sm mt-1">Hệ thống hoạt động bình thường</p>
+    <script>if (window.lucide) { lucide.createIcons(); }</script>
+</div>
+{{ end }}{{ end }}

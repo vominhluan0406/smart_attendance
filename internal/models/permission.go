@@ -73,6 +73,10 @@ const (
 	// Department
 	PermDepartmentView   = "department.view"
 	PermDepartmentManage = "department.manage"
+
+	// Fraud Alert
+	PermFraudAlertView   = "fraud_alert.view"
+	PermFraudAlertReview = "fraud_alert.review"
 )
 
 // DefaultPermissions returns all permission definitions for seeding.
@@ -128,6 +132,10 @@ func DefaultPermissions() []Permission {
 		// Department
 		{Code: PermDepartmentView, Name: "Xem phòng ban", Module: "department", Description: "Xem danh sách phòng ban", IsActive: true},
 		{Code: PermDepartmentManage, Name: "Quản lý phòng ban", Module: "department", Description: "Thêm/sửa/xóa phòng ban", IsActive: true},
+
+		// Fraud Alert
+		{Code: PermFraudAlertView, Name: "Xem cảnh báo gian lận", Module: "fraud_alert", Description: "Xem danh sách cảnh báo gian lận chi nhánh", IsActive: true},
+		{Code: PermFraudAlertReview, Name: "Xét duyệt cảnh báo", Module: "fraud_alert", Description: "Đánh dấu cảnh báo đã xem xét", IsActive: true},
 	}
 }
 
@@ -157,6 +165,7 @@ func DefaultRolePermissions() map[Role][]string {
 			PermDashboardView,
 			PermLeaveViewBranch, PermLeaveApprove,
 			PermOvertimeViewBranch, PermOvertimeApprove,
+			PermFraudAlertView, PermFraudAlertReview,
 		},
 		RoleManagerDevice: {
 			// Minimal kiosk permissions — QR display + password check-in only
@@ -178,6 +187,7 @@ func DefaultRolePermissions() map[Role][]string {
 			PermShiftView, PermShiftManage,
 			PermHolidayView, PermHolidayManage,
 			PermDepartmentView, PermDepartmentManage,
+			PermFraudAlertView, PermFraudAlertReview,
 		},
 	}
 }
