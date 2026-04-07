@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/smart-attendance/smart-attendance/internal/models"
@@ -97,68 +98,138 @@ type LogTimeResult struct {
 // Each scan creates an AttendanceLog and updates the daily Attendance summary.
 func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) {
 	// 1. Get user and branch
-	user, err := s.userService.GetByID(input.UserID)
+	user, branch, err := s.validateUserAndBranch(input.UserID)
 	if err != nil {
-		return nil, ErrUserNotFound
+		return nil, err
+	}
+
+	// 2. Anti-fraud pre-checks
+	if err := s.performAntiFraudPreChecks(user, branch, input); err != nil {
+		return nil, err
+	}
+
+	// 3. Standard method validation
+	result, validationErrors, err := s.validateVerificationMethods(branch, input)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if at least one method passed
+	if !s.isAnyMethodPassed(branch, result, input) {
+		log.Printf("[service][attendance] log denied for user %s: branch_id=%s, errors=%v",
+			input.UserID, branch.ID, validationErrors)
+		if len(validationErrors) > 0 {
+			return nil, fmt.Errorf("%s", validationErrors[0])
+		}
+		return nil, ErrMethodRequired
+	}
+
+	// 4. Mark TOTP as used if successful
+	if result.TOTPVerified {
+		s.antiFraud.MarkTOTPUsed(branch.ID, input.TOTPCode)
+	}
+
+	// 5. Anti-fraud post-checks (VPN detection)
+	s.performAntiFraudPostChecks(user, branch, input)
+
+	// 6. Resolve shift and anomaly detection
+	now := timezone.Now()
+	shiftData, err := s.resolveShiftData(input.UserID, branch, now)
+	if err != nil {
+		return nil, err
+	}
+	result.AnomalyFlag = shiftData.anomalyFlag
+	result.AnomalyScore = shiftData.anomalyScore
+
+	// 7. Create AttendanceLog
+	method := buildMethodStr(result)
+	attLog := s.buildAttendanceLog(input, branch, result, shiftData, method, now)
+	if err := s.logRepo.Create(attLog); err != nil {
+		return nil, fmt.Errorf("failed to create attendance log: %w", err)
+	}
+	result.Log = attLog
+
+	// 8. Update daily Attendance summary
+	att, err := s.updateDailyAttendance(input.UserID, branch, shiftData, method, now, input)
+	if err != nil {
+		return nil, err
+	}
+
+	// 9. Count today's logs
+	count, _ := s.logRepo.CountTodayLogs(input.UserID, shiftData.workDate)
+	result.Attendance = att
+	result.LogCount = int(count)
+
+	log.Printf("[service][attendance] log-time: user=%s branch=%s method=%s log#%d", input.UserID, branch.Name, method, count)
+	return result, nil
+}
+
+// --- Decomposition Helpers ---
+
+func (s *AttendanceService) validateUserAndBranch(userID string) (*models.User, *models.Branch, error) {
+	user, err := s.userService.GetByID(userID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to identify user: %w", ErrUserNotFound)
 	}
 	if user.BranchID == nil {
-		return nil, ErrNoBranch
+		return nil, nil, fmt.Errorf("user not assigned: %w", ErrNoBranch)
 	}
 
 	branch, err := s.branchService.GetByIDCached(*user.BranchID)
 	if err != nil {
-		return nil, ErrBranchNotFound
+		return nil, nil, fmt.Errorf("failed to load branch: %w", ErrBranchNotFound)
 	}
+	return user, branch, nil
+}
 
-	// === ANTI-FRAUD PRE-CHECKS ===
-
-	// [Feature 1] GPS Accuracy Check — reject fake GPS
+func (s *AttendanceService) performAntiFraudPreChecks(user *models.User, branch *models.Branch, input LogTimeInput) error {
+	// GPS Accuracy Check
 	if input.Lat != nil && input.Lng != nil {
 		if err := s.antiFraud.ValidateGPSAccuracy(input.AccuracyM); err != nil {
-			s.antiFraud.CreateAlert(input.UserID, branch.ID, models.FraudGPSAccuracy, "warning",
+			s.antiFraud.CreateAlert(user.ID, branch.ID, models.FraudGPSAccuracy, "warning",
 				fmt.Sprintf("GPS accuracy: %.1fm", safeFloat(input.AccuracyM)),
 				map[string]interface{}{"accuracy": safeFloat(input.AccuracyM)}, input.IP, input.Lat, input.Lng)
-			return nil, err
+			return fmt.Errorf("gps accuracy validation failed: %w", err)
 		}
 	}
 
-	// [Feature 2] TOTP Single-Use Nonce — prevent QR screenshot relay
+	// TOTP Single-Use Nonce
 	if input.TOTPCode != "" {
 		if err := s.antiFraud.CheckTOTPNonce(branch.ID, input.TOTPCode); err != nil {
-			s.antiFraud.CreateAlert(input.UserID, branch.ID, models.FraudTOTPReuse, "critical",
+			s.antiFraud.CreateAlert(user.ID, branch.ID, models.FraudTOTPReuse, "critical",
 				"TOTP code reused", map[string]interface{}{"code": input.TOTPCode}, input.IP, input.Lat, input.Lng)
-			return nil, err
+			return fmt.Errorf("totp reuse detection: %w", err)
 		}
 	}
 
-	// [Feature 4] Impossible Travel Detection
+	// Impossible Travel Detection
 	if input.Lat != nil && input.Lng != nil {
-		now0 := timezone.Now()
-		if err := s.antiFraud.CheckImpossibleTravel(input.UserID, *input.Lat, *input.Lng, now0); err != nil {
-			s.antiFraud.CreateAlert(input.UserID, branch.ID, models.FraudImpossibleTravel, "critical",
+		if err := s.antiFraud.CheckImpossibleTravel(user.ID, *input.Lat, *input.Lng, timezone.Now()); err != nil {
+			s.antiFraud.CreateAlert(user.ID, branch.ID, models.FraudImpossibleTravel, "critical",
 				"Impossible travel detected", map[string]interface{}{"lat": *input.Lat, "lng": *input.Lng}, input.IP, input.Lat, input.Lng)
-			return nil, err
+			return fmt.Errorf("travel detection: %w", err)
 		}
 	}
 
-	// [Feature 5] Device Fingerprinting — detect buddy punching
+	// Device Fingerprinting
 	if input.DeviceFingerprint != "" {
-		isNew, err := s.antiFraud.CheckDevice(input.UserID, input.DeviceFingerprint, input.UserAgent)
+		isNew, err := s.antiFraud.CheckDevice(user.ID, input.DeviceFingerprint, input.UserAgent)
 		if err != nil {
-			return nil, err // Device blocked
+			return fmt.Errorf("device access denied: %w", err)
 		}
 		if isNew {
-			s.antiFraud.CreateAlert(input.UserID, branch.ID, models.FraudNewDevice, "warning",
+			s.antiFraud.CreateAlert(user.ID, branch.ID, models.FraudNewDevice, "warning",
 				"New device detected", map[string]interface{}{"ua": input.UserAgent}, input.IP, input.Lat, input.Lng)
 		}
 	}
+	return nil
+}
 
-	// === STANDARD METHOD VALIDATION ===
-
-	// 2. Validate methods
+func (s *AttendanceService) validateVerificationMethods(branch *models.Branch, input LogTimeInput) (*LogTimeResult, []string, error) {
 	result := &LogTimeResult{}
 	var validationErrors []string
 
+	// QR/TOTP
 	if s.branchService.HasMethod(branch, models.MethodQRTOTP) {
 		if input.TOTPCode == "" {
 			validationErrors = append(validationErrors, "QR/TOTP code required")
@@ -167,8 +238,7 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		} else {
 			valid, err := s.totpService.ValidateCode(branch.TOTPSecret, input.TOTPCode)
 			if err != nil {
-				log.Printf("[service][attendance] TOTP validation error for branch %s: %v", branch.ID, err)
-				validationErrors = append(validationErrors, "TOTP validation failed")
+				return nil, nil, fmt.Errorf("totp validation system error: %w", err)
 			} else if !valid {
 				validationErrors = append(validationErrors, "mã QR không hợp lệ hoặc đã hết hạn")
 			} else {
@@ -177,6 +247,7 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		}
 	}
 
+	// IP
 	if s.branchService.HasMethod(branch, models.MethodIP) || s.branchService.HasMethod(branch, models.MethodWiFiGPS) {
 		if s.ipValidator.Validate(input.IP, branch.IPWhitelist) {
 			result.IPVerified = true
@@ -185,6 +256,7 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		}
 	}
 
+	// GPS Location
 	if s.branchService.HasMethod(branch, models.MethodLocation) || s.branchService.HasMethod(branch, models.MethodWiFiGPS) {
 		if input.Lat != nil && input.Lng != nil {
 			if s.locValidator.Validate(*input.Lat, *input.Lng, branch.Locations) {
@@ -197,95 +269,84 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		}
 	}
 
-	// Face recognition (MOCK/DEMO — chưa kết nối Face API thực tế, always passes if flag is set)
-	// TODO: Integrate real face recognition API (e.g., AWS Rekognition, Azure Face API)
+	// Face, Password, NFC, Biometric
 	if s.branchService.HasMethod(branch, models.MethodFace) && input.FaceVerified {
 		result.FaceVerified = true
 	}
-
-	// Password check
 	if s.branchService.HasMethod(branch, models.MethodPassword) && input.PasswordVerified {
 		result.PasswordVerified = true
 	}
-
-	// Combined WiFi + GPS check (Both must pass)
-	if s.branchService.HasMethod(branch, models.MethodWiFiGPS) {
-		if result.IPVerified && result.LocVerified {
-			result.WiFiGPSVerified = true
-		}
+	if s.branchService.HasMethod(branch, models.MethodNFC) && input.NFCVerified {
+		result.NFCVerified = true
 	}
-
+	if s.branchService.HasMethod(branch, models.MethodWiFiGPS) && result.IPVerified && result.LocVerified {
+		result.WiFiGPSVerified = true
+	}
 	if branch.RequireBiometric && !input.BiometricVerified {
 		validationErrors = append(validationErrors, "Yêu cầu xác thực vân tay/FaceID")
 	}
 
-	// 3. Final decision
-	anyPassed := (result.TOTPVerified && s.branchService.HasMethod(branch, models.MethodQRTOTP)) ||
+	return result, validationErrors, nil
+}
+
+func (s *AttendanceService) isAnyMethodPassed(branch *models.Branch, result *LogTimeResult, input LogTimeInput) bool {
+	// Check biometric constraint first if required
+	if branch.RequireBiometric && !input.BiometricVerified {
+		return false
+	}
+	return (result.TOTPVerified && s.branchService.HasMethod(branch, models.MethodQRTOTP)) ||
 		(result.IPVerified && s.branchService.HasMethod(branch, models.MethodIP)) ||
 		(result.LocVerified && s.branchService.HasMethod(branch, models.MethodLocation)) ||
 		(result.FaceVerified && s.branchService.HasMethod(branch, models.MethodFace)) ||
 		(result.PasswordVerified && s.branchService.HasMethod(branch, models.MethodPassword)) ||
 		(result.WiFiGPSVerified && s.branchService.HasMethod(branch, models.MethodWiFiGPS)) ||
 		(result.NFCVerified && s.branchService.HasMethod(branch, models.MethodNFC))
+}
 
-	if !anyPassed {
-		log.Printf("[service][attendance] log denied for user %s: branch_id=%s, IP_ok=%v, Loc_ok=%v, WiFiGPS_ok=%v, errors=%v",
-			input.UserID, branch.ID, result.IPVerified, result.LocVerified, result.WiFiGPSVerified, validationErrors)
-		if len(validationErrors) > 0 {
-			return nil, fmt.Errorf("%s", validationErrors[0])
-		}
-		return nil, ErrMethodRequired
-	}
-
-	// [Feature 2] Mark TOTP code as used after successful validation
-	if result.TOTPVerified {
-		s.antiFraud.MarkTOTPUsed(branch.ID, input.TOTPCode)
-	}
-
-	// [Feature 6] IP-Location Cross-Check — detect VPN
+func (s *AttendanceService) performAntiFraudPostChecks(user *models.User, branch *models.Branch, input LogTimeInput) {
 	if input.Lat != nil && input.Lng != nil && len(branch.Locations) > 0 {
 		branchLoc := branch.Locations[0]
 		if err := s.antiFraud.CheckIPLocationConsistency(input.IP, *input.Lat, *input.Lng, branchLoc.Lat, branchLoc.Lng); err != nil {
-			s.antiFraud.CreateAlert(input.UserID, branch.ID, models.FraudIPLocationMismatch, "warning",
+			s.antiFraud.CreateAlert(user.ID, branch.ID, models.FraudIPLocationMismatch, "warning",
 				"IP-GPS location mismatch", map[string]interface{}{"ip": input.IP, "lat": *input.Lat, "lng": *input.Lng},
 				input.IP, input.Lat, input.Lng)
-			// Warning only — don't block
-			log.Printf("[service][attendance] IP-location mismatch for user %s (warning only)", input.UserID)
 		}
 	}
+}
 
-	// 4. Resolve shift
-	now := timezone.Now()
-	workDate := now.Format("2006-01-02")
-	method := buildMethodStr(result)
+type shiftData struct {
+	shiftID            *string
+	gracePeriod        int
+	workStartTime      string
+	workDate           string
+	anomalyFlag       bool
+	anomalyScore      float64
+}
 
-	var shiftID *string
-	gracePeriod := 15
-	workStartTime := branch.WorkStartTime
+func (s *AttendanceService) resolveShiftData(userID string, branch *models.Branch, now time.Time) (shiftData, error) {
+	data := shiftData{
+		gracePeriod:   15,
+		workStartTime: branch.WorkStartTime,
+		workDate:      now.Format("2006-01-02"),
+	}
 
-	shift, err := s.shiftRepo.FindUserShift(input.UserID, *user.BranchID, workDate)
+	shift, err := s.shiftRepo.FindUserShift(userID, branch.ID, data.workDate)
 	if err == nil && shift != nil {
-		shiftID = &shift.ID
-		gracePeriod = shift.GracePeriodMinutes
-		workStartTime = shift.StartTime
+		data.shiftID = &shift.ID
+		data.gracePeriod = shift.GracePeriodMinutes
+		data.workStartTime = shift.StartTime
 	}
 
-	// [Feature 8] Anomaly Detection — flag suspicious check-in times
-	anomalyFlag, anomalyScore := s.antiFraud.CheckTimeAnomaly(input.UserID, now)
-	if anomalyFlag {
-		s.antiFraud.CreateAlert(input.UserID, branch.ID, models.FraudAnomalyTime, "warning",
-			fmt.Sprintf("Unusual check-in time (z-score: %.1f)", anomalyScore),
-			map[string]interface{}{"time": now.Format("15:04"), "zscore": anomalyScore}, input.IP, input.Lat, input.Lng)
-	}
-	result.AnomalyFlag = anomalyFlag
-	result.AnomalyScore = anomalyScore
+	data.anomalyFlag, data.anomalyScore = s.antiFraud.CheckTimeAnomaly(userID, now)
+	return data, nil
+}
 
-	// 5. Create AttendanceLog
-	attLog := &models.AttendanceLog{
+func (s *AttendanceService) buildAttendanceLog(input LogTimeInput, branch *models.Branch, result *LogTimeResult, data shiftData, method string, now time.Time) *models.AttendanceLog {
+	return &models.AttendanceLog{
 		UserID:            input.UserID,
-		BranchID:          *user.BranchID,
-		ShiftID:           shiftID,
-		WorkDate:          workDate,
+		BranchID:          branch.ID,
+		ShiftID:           data.shiftID,
+		WorkDate:          data.workDate,
 		LoggedAt:          now,
 		Method:            method,
 		IPAddress:         input.IP,
@@ -300,69 +361,60 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		NFCVerified:       result.NFCVerified,
 		PasswordVerified:  input.PasswordVerified,
 		BiometricVerified: input.BiometricVerified,
-		AnomalyFlag:       anomalyFlag,
-		AnomalyScore:      anomalyScore,
+		AnomalyFlag:       data.anomalyFlag,
+		AnomalyScore:      data.anomalyScore,
 	}
-	if err := s.logRepo.Create(attLog); err != nil {
-		return nil, fmt.Errorf("create attendance log: %w", err)
-	}
-	result.Log = attLog
-
-	// 5. Find or create daily Attendance summary
-	att, err := s.attendanceRepo.FindTodayByUser(input.UserID)
-	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		// First log of the day → create attendance
-		att = &models.Attendance{
-			UserID:       input.UserID,
-			BranchID:     *user.BranchID,
-			ShiftID:      shiftID,
-			WorkDate:     workDate,
-			CheckInAt:    &now,
-			Status:       calculateStatusWithGrace(now, workStartTime, gracePeriod),
-			Method:       method,
-			IPAddress:    input.IP,
-			Lat:          input.Lat,
-			Lng:          input.Lng,
-			TOTPVerified:     result.TOTPVerified,
-			IPVerified:       result.IPVerified,
-			LocVerified:      result.LocVerified,
-			FaceVerified:     result.FaceVerified,
-			NFCVerified:      result.NFCVerified,
-			PasswordVerified: result.PasswordVerified,
-		}
-		if err := s.attendanceRepo.Create(att); err != nil {
-			return nil, fmt.Errorf("create attendance: %w", err)
-		}
-	} else if err == nil {
-		// Subsequent log → update attendance summary
-		// CheckInAt = earliest, CheckOutAt = latest
-		if att.CheckInAt != nil && now.Before(*att.CheckInAt) {
-			att.CheckInAt = &now
-			att.Status = calculateStatusWithGrace(now, workStartTime, gracePeriod)
-		}
-		if att.CheckOutAt == nil || now.After(*att.CheckOutAt) {
-			att.CheckOutAt = &now
-		}
-		// If only 1 previous log and this is the 2nd, set CheckOutAt
-		if att.CheckOutAt == nil {
-			att.CheckOutAt = &now
-		}
-		if err := s.attendanceRepo.Update(att); err != nil {
-			return nil, fmt.Errorf("update attendance: %w", err)
-		}
-	} else {
-		return nil, fmt.Errorf("find attendance: %w", err)
-	}
-
-
-	// 7. Count today's logs
-	count, _ := s.logRepo.CountTodayLogs(input.UserID, workDate)
-	result.Attendance = att
-	result.LogCount = int(count)
-
-	log.Printf("[service][attendance] log-time: user=%s branch=%s method=%s log#%d", input.UserID, branch.Name, method, count)
-	return result, nil
 }
+
+func (s *AttendanceService) updateDailyAttendance(userID string, branch *models.Branch, data shiftData, method string, now time.Time, input LogTimeInput) (*models.Attendance, error) {
+	att, err := s.attendanceRepo.FindTodayByUser(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			att = &models.Attendance{
+				UserID:       userID,
+				BranchID:     branch.ID,
+				ShiftID:      data.shiftID,
+				WorkDate:     data.workDate,
+				CheckInAt:    &now,
+				Status:       calculateStatusWithGrace(now, data.workStartTime, data.gracePeriod),
+				Method:       method,
+				IPAddress:    input.IP,
+				Lat:          input.Lat,
+				Lng:          input.Lng,
+				TOTPVerified:     resultVerified(method, "qr_totp"),
+				IPVerified:       resultVerified(method, "ip"),
+				LocVerified:      resultVerified(method, "location"),
+				FaceVerified:     resultVerified(method, "face"),
+				NFCVerified:      resultVerified(method, "nfc"),
+				PasswordVerified: resultVerified(method, "password"),
+			}
+			if err := s.attendanceRepo.Create(att); err != nil {
+				return nil, fmt.Errorf("failed to initialize daily attendance: %w", err)
+			}
+			return att, nil
+		}
+		return nil, fmt.Errorf("database error during attendance lookup: %w", err)
+	}
+
+	// Update existing record (Immutability note: In Go GORM context, we usually update the fetched pointer)
+	if att.CheckInAt != nil && now.Before(*att.CheckInAt) {
+		att.CheckInAt = &now
+		att.Status = calculateStatusWithGrace(now, data.workStartTime, data.gracePeriod)
+	}
+	if att.CheckOutAt == nil || now.After(*att.CheckOutAt) {
+		att.CheckOutAt = &now
+	}
+	if err := s.attendanceRepo.Update(att); err != nil {
+		return nil, fmt.Errorf("failed to update daily attendance: %w", err)
+	}
+	return att, nil
+}
+
+func resultVerified(methodStr, search string) bool {
+	return strings.Contains(methodStr, search)
+}
+
+
 
 // GetTodayStatus returns today's attendance summary for a user.
 func (s *AttendanceService) GetTodayStatus(userID string) (*models.Attendance, error) {
@@ -414,41 +466,26 @@ func calculateStatusWithGrace(checkInTime time.Time, workStartTime string, grace
 }
 
 func buildMethodStr(result *LogTimeResult) string {
-	s := ""
+	var methods []string
 	if result.TOTPVerified {
-		s += "qr_totp"
+		methods = append(methods, "qr_totp")
 	}
 	if result.IPVerified {
-		if s != "" {
-			s += ","
-		}
-		s += "ip"
+		methods = append(methods, "ip")
 	}
 	if result.LocVerified {
-		if s != "" {
-			s += ","
-		}
-		s += "location"
+		methods = append(methods, "location")
 	}
 	if result.FaceVerified {
-		if s != "" {
-			s += ","
-		}
-		s += "face"
+		methods = append(methods, "face")
 	}
 	if result.NFCVerified {
-		if s != "" {
-			s += ","
-		}
-		s += "nfc"
+		methods = append(methods, "nfc")
 	}
 	if result.PasswordVerified {
-		if s != "" {
-			s += ","
-		}
-		s += "password"
+		methods = append(methods, "password")
 	}
-	return s
+	return strings.Join(methods, ",")
 }
 
 func safeFloat(f *float64) float64 {
