@@ -12,6 +12,7 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/smart-attendance/organization-service/internal/model"
 	"github.com/smart-attendance/organization-service/internal/repository"
+	"github.com/smart-attendance/shared/event"
 	"gorm.io/gorm"
 )
 
@@ -22,12 +23,14 @@ var (
 type BranchService struct {
 	branchRepo *repository.BranchRepository
 	cache      *cache.Cache
+	eventBus   *event.Bus
 }
 
-func NewBranchService(branchRepo *repository.BranchRepository) *BranchService {
+func NewBranchService(branchRepo *repository.BranchRepository, eventBus *event.Bus) *BranchService {
 	return &BranchService{
 		branchRepo: branchRepo,
 		cache:      cache.New(5*time.Minute, 10*time.Minute),
+		eventBus:   eventBus,
 	}
 }
 
@@ -184,6 +187,7 @@ func (s *BranchService) Update(id string, input UpdateBranchInput) (*model.Branc
 	}
 
 	s.invalidateCache(id)
+	s.publishBranchEvent(id, "updated")
 	log.Printf("[service][branch] updated branch %s (%s)", branch.ID, branch.Name)
 	return branch, nil
 }
@@ -194,8 +198,24 @@ func (s *BranchService) Delete(id string) error {
 		return err
 	}
 	s.invalidateCache(id)
+	s.publishBranchEvent(id, "deleted")
 	log.Printf("[service][branch] deleted branch %s", id)
 	return nil
+}
+
+func (s *BranchService) publishBranchEvent(branchID, action string) {
+	if s.eventBus == nil {
+		return
+	}
+	subject := event.SubjectBranchUpdated
+	if action == "deleted" {
+		subject = event.SubjectBranchDeleted
+	}
+	s.eventBus.Publish(subject, event.BranchEvent{
+		BranchID:  branchID,
+		Action:    action,
+		Timestamp: time.Now(),
+	})
 }
 
 // HasMethod checks if a branch allows a specific check-in method.
@@ -217,6 +237,7 @@ func (s *BranchService) UpdateIPWhitelist(branchID string, ips []model.BranchIPW
 		return err
 	}
 	s.invalidateCache(branchID)
+	s.publishBranchEvent(branchID, "updated")
 	log.Printf("[service][branch] updated IP whitelist for branch %s (%d entries)", branchID, len(ips))
 	return nil
 }
@@ -229,6 +250,7 @@ func (s *BranchService) UpdateLocations(branchID string, locs []model.BranchLoca
 		return err
 	}
 	s.invalidateCache(branchID)
+	s.publishBranchEvent(branchID, "updated")
 	log.Printf("[service][branch] updated locations for branch %s (%d entries)", branchID, len(locs))
 	return nil
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/smart-attendance/attendance-service/internal/repository"
 	"github.com/smart-attendance/attendance-service/internal/service"
 	"github.com/smart-attendance/attendance-service/internal/wal"
+	"github.com/smart-attendance/shared/event"
 	"github.com/smart-attendance/shared/middleware"
 )
 
@@ -38,9 +39,31 @@ func main() {
 	// Initialize in-memory cache (for TOTP nonces, impossible travel, anomaly stats)
 	cache := gocache.New(5*time.Minute, 10*time.Minute)
 
-	// Initialize HTTP clients
+	// Initialize HTTP clients (with local cache)
 	authClient := client.NewAuthClient(cfg.AuthServiceURL)
 	orgClient := client.NewOrgClient(cfg.OrgServiceURL)
+
+	// Connect to NATS for cache invalidation events
+	eventBus := event.Connect(cfg.NatsURL)
+	if eventBus != nil {
+		defer eventBus.Close()
+
+		// Subscribe: invalidate user cache when Auth Service updates a user
+		event.SubscribeJSON(eventBus, event.SubjectUserUpdated, func(ev event.UserEvent) {
+			authClient.InvalidateUser(ev.UserID)
+		})
+		event.SubscribeJSON(eventBus, event.SubjectUserDeleted, func(ev event.UserEvent) {
+			authClient.InvalidateUser(ev.UserID)
+		})
+
+		// Subscribe: invalidate branch cache when Org Service updates a branch
+		event.SubscribeJSON(eventBus, event.SubjectBranchUpdated, func(ev event.BranchEvent) {
+			orgClient.InvalidateBranch(ev.BranchID)
+		})
+		event.SubscribeJSON(eventBus, event.SubjectBranchDeleted, func(ev event.BranchEvent) {
+			orgClient.InvalidateBranch(ev.BranchID)
+		})
+	}
 
 	// Initialize repositories
 	attendanceRepo := repository.NewAttendanceRepository(db)

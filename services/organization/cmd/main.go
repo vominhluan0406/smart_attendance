@@ -11,6 +11,7 @@ import (
 	"github.com/smart-attendance/organization-service/internal/handler"
 	"github.com/smart-attendance/organization-service/internal/repository"
 	"github.com/smart-attendance/organization-service/internal/service"
+	"github.com/smart-attendance/shared/event"
 	"github.com/smart-attendance/shared/middleware"
 )
 
@@ -40,8 +41,14 @@ func main() {
 	branchRepo := repository.NewBranchRepository(db)
 	shiftRepo := repository.NewShiftRepository(db)
 
+	// Connect to NATS event bus
+	eventBus := event.Connect(cfg.NatsURL)
+	if eventBus != nil {
+		defer eventBus.Close()
+	}
+
 	// Initialize services
-	branchService := service.NewBranchService(branchRepo)
+	branchService := service.NewBranchService(branchRepo, eventBus)
 
 	// Initialize handlers
 	branchHandler := handler.NewBranchHandler(branchService)

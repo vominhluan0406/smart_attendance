@@ -13,6 +13,7 @@ type Config struct {
 	Env            string
 	AuthServiceURL string
 	OrgServiceURL  string
+	NatsURL        string
 }
 
 func Load() *Config {
@@ -26,6 +27,7 @@ func Load() *Config {
 		Env:            getEnv("ENV", "development"),
 		AuthServiceURL: getEnv("AUTH_SERVICE_URL", "http://localhost:8081"),
 		OrgServiceURL:  getEnv("ORG_SERVICE_URL", "http://localhost:8085"),
+		NatsURL:        getEnv("NATS_URL", ""),
 	}
 
 	log.Printf("[attendance][config] loaded: port=%s env=%s auth=%s org=%s",

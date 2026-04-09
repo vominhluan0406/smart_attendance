@@ -5,18 +5,22 @@ import (
 	"fmt"
 	"log"
 
+	"time"
+
 	"github.com/smart-attendance/auth-service/internal/model"
 	"github.com/smart-attendance/auth-service/internal/repository"
+	"github.com/smart-attendance/shared/event"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 type UserService struct {
 	userRepo *repository.UserRepository
+	eventBus *event.Bus
 }
 
-func NewUserService(userRepo *repository.UserRepository) *UserService {
-	return &UserService{userRepo: userRepo}
+func NewUserService(userRepo *repository.UserRepository, eventBus *event.Bus) *UserService {
+	return &UserService{userRepo: userRepo, eventBus: eventBus}
 }
 
 func (s *UserService) GetByID(id string) (*model.User, error) {
@@ -94,6 +98,7 @@ func (s *UserService) Create(input CreateUserInput) (*model.User, error) {
 	}
 
 	log.Printf("[auth][service][user] created: id=%s, email=%s, role=%s", user.ID, user.Email, user.Role)
+	s.publishUserEvent(user.ID, "created")
 	return user, nil
 }
 
@@ -165,6 +170,7 @@ func (s *UserService) Update(id string, input UpdateUserInput) (*model.User, err
 	}
 
 	log.Printf("[auth][service][user] updated: id=%s, email=%s", user.ID, user.Email)
+	s.publishUserEvent(user.ID, "updated")
 	return user, nil
 }
 
@@ -173,7 +179,23 @@ func (s *UserService) Delete(id string) error {
 		return err
 	}
 	log.Printf("[auth][service][user] deleted: id=%s", id)
+	s.publishUserEvent(id, "deleted")
 	return nil
+}
+
+func (s *UserService) publishUserEvent(userID, action string) {
+	if s.eventBus == nil {
+		return
+	}
+	subject := event.SubjectUserUpdated
+	if action == "deleted" {
+		subject = event.SubjectUserDeleted
+	}
+	s.eventBus.Publish(subject, event.UserEvent{
+		UserID:    userID,
+		Action:    action,
+		Timestamp: time.Now(),
+	})
 }
 
 func (s *UserService) List(params repository.UserListParams) (*repository.UserListResult, error) {

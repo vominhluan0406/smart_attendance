@@ -3,17 +3,20 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
+	gocache "github.com/patrickmn/go-cache"
 	"github.com/smart-attendance/shared/dto"
 	"github.com/smart-attendance/shared/response"
 )
 
-// OrgClient calls the Organization Service via HTTP.
+// OrgClient calls the Organization Service via HTTP with local cache.
 type OrgClient struct {
 	baseURL    string
 	httpClient *http.Client
+	cache      *gocache.Cache
 }
 
 func NewOrgClient(baseURL string) *OrgClient {
@@ -22,11 +25,40 @@ func NewOrgClient(baseURL string) *OrgClient {
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
+		cache: gocache.New(10*time.Minute, 15*time.Minute),
 	}
 }
 
-// GetBranch fetches branch details (including IP whitelist, locations) from the Org Service.
+// GetBranch fetches branch details — cache first (10 min TTL), then HTTP fallback.
 func (c *OrgClient) GetBranch(branchID string) (*dto.Branch, error) {
+	cacheKey := "branch:" + branchID
+
+	if cached, found := c.cache.Get(cacheKey); found {
+		return cached.(*dto.Branch), nil
+	}
+
+	branch, err := c.fetchBranch(branchID)
+	if err != nil {
+		return nil, err
+	}
+
+	c.cache.Set(cacheKey, branch, 10*time.Minute)
+	return branch, nil
+}
+
+// InvalidateBranch removes a branch from local cache (called by NATS subscriber).
+func (c *OrgClient) InvalidateBranch(branchID string) {
+	c.cache.Delete("branch:" + branchID)
+	log.Printf("[client][org] cache invalidated: branch=%s", branchID)
+}
+
+// InvalidateAllBranches flushes all cached branches.
+func (c *OrgClient) InvalidateAllBranches() {
+	c.cache.Flush()
+	log.Printf("[client][org] cache flushed: all branches")
+}
+
+func (c *OrgClient) fetchBranch(branchID string) (*dto.Branch, error) {
 	url := fmt.Sprintf("%s/api/internal/branches/%s", c.baseURL, branchID)
 
 	resp, err := c.httpClient.Get(url)

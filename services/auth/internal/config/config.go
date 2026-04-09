@@ -15,6 +15,7 @@ type Config struct {
 	JWTExpireMinutes  int
 	JWTRefreshHours   int
 	Env               string
+	NatsURL           string
 }
 
 func Load() *Config {
@@ -30,6 +31,7 @@ func Load() *Config {
 		JWTExpireMinutes: getEnvInt("JWT_EXPIRE_MINUTES", 60),
 		JWTRefreshHours:  getEnvInt("JWT_REFRESH_HOURS", 168),
 		Env:              getEnv("ENV", "development"),
+		NatsURL:          getEnv("NATS_URL", ""),
 	}
 
 	log.Printf("[auth][config] loaded: port=%s env=%s jwt_expire=%dm refresh=%dh",

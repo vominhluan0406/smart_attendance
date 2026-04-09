@@ -16,6 +16,19 @@ services:
       interval: 5s
       retries: 5
 
+  # ─── Message Broker ───
+  nats:
+    image: nats:2-alpine
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: ["--jetstream", "--http_port", "8222"]
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 5s
+      retries: 3
+    restart: unless-stopped
+
   # ─── API Gateway ───
   gateway:
     build:
@@ -62,6 +75,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       JWT_EXPIRE_MINUTES: "60"
       JWT_REFRESH_HOURS: "168"
+      NATS_URL: nats://nats:4222
       ENV: production
     restart: unless-stopped
 
@@ -79,6 +93,7 @@ services:
       DATABASE_URL: postgres://app:secret@postgres:5432/smart_attendance?sslmode=disable&search_path=attendance_service
       AUTH_SERVICE_URL: http://auth:8081
       ORG_SERVICE_URL: http://organization:8085
+      NATS_URL: nats://nats:4222
       ENV: production
     restart: unless-stopped
 
@@ -130,6 +145,7 @@ services:
     environment:
       PORT: "8085"
       DATABASE_URL: postgres://app:secret@postgres:5432/smart_attendance?sslmode=disable&search_path=org_service
+      NATS_URL: nats://nats:4222
       ENV: production
     restart: unless-stopped
 

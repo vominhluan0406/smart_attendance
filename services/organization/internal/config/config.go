@@ -11,6 +11,7 @@ type Config struct {
 	Port        string
 	DatabaseURL string
 	Env         string
+	NatsURL     string
 }
 
 func Load() *Config {
@@ -22,6 +23,7 @@ func Load() *Config {
 		Port:        getEnv("PORT", "8085"),
 		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/smart_attendance?sslmode=disable"),
 		Env:         getEnv("ENV", "development"),
+		NatsURL:     getEnv("NATS_URL", ""),
 	}
 
 	log.Printf("[org][config] loaded: port=%s env=%s", cfg.Port, cfg.Env)

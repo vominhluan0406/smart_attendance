@@ -11,6 +11,7 @@ import (
 	"github.com/smart-attendance/auth-service/internal/handler"
 	"github.com/smart-attendance/auth-service/internal/repository"
 	"github.com/smart-attendance/auth-service/internal/service"
+	"github.com/smart-attendance/shared/event"
 	"github.com/smart-attendance/shared/middleware"
 )
 
@@ -41,9 +42,15 @@ func main() {
 	sessRepo := repository.NewSessionRepository(db)
 	permRepo := repository.NewPermissionRepository(db)
 
+	// Connect to NATS event bus
+	eventBus := event.Connect(cfg.NatsURL)
+	if eventBus != nil {
+		defer eventBus.Close()
+	}
+
 	// Initialize services
 	authService := service.NewAuthService(cfg, userRepo, sessRepo)
-	userService := service.NewUserService(userRepo)
+	userService := service.NewUserService(userRepo, eventBus)
 	permService := service.NewPermissionService(permRepo)
 
 	// Initialize handlers
