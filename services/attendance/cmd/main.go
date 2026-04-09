@@ -14,6 +14,7 @@ import (
 	"github.com/smart-attendance/attendance-service/internal/handler"
 	"github.com/smart-attendance/attendance-service/internal/repository"
 	"github.com/smart-attendance/attendance-service/internal/service"
+	"github.com/smart-attendance/attendance-service/internal/wal"
 	"github.com/smart-attendance/shared/middleware"
 )
 
@@ -48,6 +49,12 @@ func main() {
 	deviceRepo := repository.NewUserDeviceRepository(db)
 	adjRepo := repository.NewAttendanceAdjustmentRepository(db)
 
+	// Initialize WAL (write-ahead log for DB failure resilience)
+	walWriter, err := wal.NewWriter("data/wal")
+	if err != nil {
+		log.Printf("[attendance] WARNING: WAL init failed: %v (continuing without WAL)", err)
+	}
+
 	// Initialize services
 	totpService := service.NewTOTPService()
 	ipValidator := service.NewIPValidator()
@@ -60,7 +67,15 @@ func main() {
 		authClient, orgClient,
 		totpService, ipValidator, locValidator,
 		antiFraudService,
+		walWriter,
 	)
+
+	// Start WAL processor cron job (retry pending entries every 30 seconds)
+	if walWriter != nil {
+		walProcessor := wal.NewProcessor(walWriter, attendanceRepo, logRepo, 30*time.Second)
+		walProcessor.Start()
+		defer walProcessor.Stop()
+	}
 
 	fraudAlertService := service.NewFraudAlertService(alertRepo, attendanceRepo)
 	adjService := service.NewAttendanceAdjustmentService(adjRepo, attendanceRepo, authClient)

@@ -1,15 +1,18 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/smart-attendance/attendance-service/internal/client"
 	"github.com/smart-attendance/attendance-service/internal/model"
 	"github.com/smart-attendance/attendance-service/internal/repository"
+	"github.com/smart-attendance/attendance-service/internal/wal"
 	"github.com/smart-attendance/shared/dto"
 	"gorm.io/gorm"
 )
@@ -46,6 +49,7 @@ type AttendanceService struct {
 	ipValidator    *IPValidator
 	locValidator   *LocationValidator
 	antiFraud      *AntiFraudService
+	walWriter      *wal.Writer // Write-ahead log for DB failure resilience
 }
 
 func NewAttendanceService(
@@ -57,6 +61,7 @@ func NewAttendanceService(
 	ipValidator *IPValidator,
 	locValidator *LocationValidator,
 	antiFraud *AntiFraudService,
+	walWriter *wal.Writer,
 ) *AttendanceService {
 	return &AttendanceService{
 		attendanceRepo: attendanceRepo,
@@ -67,6 +72,7 @@ func NewAttendanceService(
 		ipValidator:    ipValidator,
 		locValidator:   locValidator,
 		antiFraud:      antiFraud,
+		walWriter:      walWriter,
 	}
 }
 
@@ -151,21 +157,42 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 	result.AnomalyFlag = shiftData.anomalyFlag
 	result.AnomalyScore = shiftData.anomalyScore
 
-	// 7. Create AttendanceLog
+	// 7. Write to WAL first (survives DB failure)
 	method := buildMethodStr(result)
 	attLog := s.buildAttendanceLog(input, branch, result, shiftData, method, now)
-	if err := s.logRepo.Create(attLog); err != nil {
-		return nil, fmt.Errorf("failed to create attendance log: %w", err)
+
+	walEntry := s.buildWALEntry(input, branch, shiftData, method, now)
+	if s.walWriter != nil {
+		if err := s.walWriter.Append(walEntry); err != nil {
+			log.Printf("[service][attendance] WARNING: WAL write failed: %v", err)
+			// Continue anyway — WAL is best-effort backup
+		}
+	}
+
+	// 8. Create AttendanceLog in DB
+	dbErr := s.logRepo.Create(attLog)
+	if dbErr != nil {
+		// DB failed — but WAL has the data, cron will retry later
+		log.Printf("[service][attendance] ERROR: DB write failed, saved to WAL: user=%s err=%v", input.UserID, dbErr)
+		// Still return success to user — their check-in is recorded in WAL
+		result.Log = attLog
+		return result, nil
+	}
+
+	// Mark WAL entry as synced
+	if s.walWriter != nil {
+		s.walWriter.MarkSynced(walEntry.ID)
 	}
 	result.Log = attLog
 
-	// 8. Update daily Attendance summary
+	// 9. Update daily Attendance summary
 	att, err := s.updateDailyAttendance(input.UserID, branch, shiftData, method, now, input)
 	if err != nil {
-		return nil, err
+		log.Printf("[service][attendance] WARNING: daily summary update failed: %v (log saved)", err)
+		// Don't fail — the log is saved, summary will be corrected by cron
 	}
 
-	// 9. Count today's logs
+	// 10. Count today's logs
 	count, _ := s.logRepo.CountTodayLogs(input.UserID, shiftData.workDate)
 	result.Attendance = att
 	result.LogCount = int(count)
@@ -520,4 +547,34 @@ func safeFloat(f *float64) float64 {
 		return 0
 	}
 	return *f
+}
+
+// buildWALEntry creates a WAL entry from the current check-in data.
+func (s *AttendanceService) buildWALEntry(input LogTimeInput, branch *dto.Branch, data shiftData, method string, now time.Time) wal.Entry {
+	payload, _ := json.Marshal(map[string]interface{}{
+		"user_id":     input.UserID,
+		"branch_id":   branch.ID,
+		"shift_id":    data.shiftID,
+		"work_date":   data.workDate,
+		"method":      method,
+		"ip":          input.IP,
+		"lat":         input.Lat,
+		"lng":         input.Lng,
+		"check_in_at": now.Format(time.RFC3339),
+		"status":      string(calculateStatusWithGrace(now, data.workStartTime, data.gracePeriod)),
+	})
+
+	return wal.Entry{
+		ID:        uuid.New().String(),
+		Timestamp: now,
+		UserID:    input.UserID,
+		BranchID:  branch.ID,
+		WorkDate:  data.workDate,
+		Method:    method,
+		IP:        input.IP,
+		Lat:       input.Lat,
+		Lng:       input.Lng,
+		Synced:    false,
+		Payload:   string(payload),
+	}
 }

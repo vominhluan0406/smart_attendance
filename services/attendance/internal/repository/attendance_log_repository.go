@@ -19,6 +19,15 @@ func (r *AttendanceLogRepository) Create(log *model.AttendanceLog) error {
 	return r.db.Create(log).Error
 }
 
+// FindByID returns a single attendance log by ID (used for WAL idempotency check).
+func (r *AttendanceLogRepository) FindByID(id string) (*model.AttendanceLog, error) {
+	var log model.AttendanceLog
+	if err := r.db.First(&log, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &log, nil
+}
+
 // FindTodayLogs returns all time logs for a user on a given work date, ordered by logged_at ASC.
 func (r *AttendanceLogRepository) FindTodayLogs(userID, workDate string) ([]model.AttendanceLog, error) {
 	var logs []model.AttendanceLog
