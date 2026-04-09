@@ -18,7 +18,9 @@ services:
 
   # ─── API Gateway ───
   gateway:
-    build: ./services/gateway
+    build:
+      context: .
+      dockerfile: ./services/gateway/Dockerfile
     ports:
       - "8080:8080"
     depends_on:
@@ -46,7 +48,9 @@ services:
 
   # ─── Microservices ───
   auth:
-    build: ./services/auth
+    build:
+      context: .
+      dockerfile: ./services/auth/Dockerfile
     ports:
       - "8081:8081"
     depends_on:
@@ -62,7 +66,9 @@ services:
     restart: unless-stopped
 
   attendance:
-    build: ./services/attendance
+    build:
+      context: .
+      dockerfile: ./services/attendance/Dockerfile
     ports:
       - "8082:8082"
     depends_on:
@@ -77,7 +83,9 @@ services:
     restart: unless-stopped
 
   leave:
-    build: ./services/leave
+    build:
+      context: .
+      dockerfile: ./services/leave/Dockerfile
     ports:
       - "8083:8083"
     depends_on:
@@ -92,7 +100,9 @@ services:
     restart: unless-stopped
 
   analytics:
-    build: ./services/analytics
+    build:
+      context: .
+      dockerfile: ./services/analytics/Dockerfile
     ports:
       - "8084:8084"
     depends_on:
@@ -109,7 +119,9 @@ services:
     restart: unless-stopped
 
   organization:
-    build: ./services/organization
+    build:
+      context: .
+      dockerfile: ./services/organization/Dockerfile
     ports:
       - "8085:8085"
     depends_on:
