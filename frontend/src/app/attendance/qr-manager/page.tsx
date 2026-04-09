@@ -27,9 +27,9 @@ export default async function QRManagerPage() {
     console.error("[QRManagerPage] Failed to fetch branches:", error);
   }
 
-  // If user is manager/manager_device and has a branch_id, they can only manage their own branch
-  if (session.role !== "admin" && session.branch_id) {
-    branches = branches.filter(b => b.id === session.branch_id);
+  // If user is manager/manager_device and has a branchId, they can only manage their own branch
+  if (session.role !== "admin" && session.branchId) {
+    branches = branches.filter(b => b.id === session.branchId);
   }
 
   return (
@@ -42,7 +42,7 @@ export default async function QRManagerPage() {
         <div className="w-full max-w-5xl">
           <QRDisplay 
             branches={branches} 
-            defaultBranchId={session.role !== "admin" ? session.branch_id : undefined} 
+            defaultBranchId={session.role !== "admin" ? session.branchId : undefined} 
           />
         </div>
       </main>
