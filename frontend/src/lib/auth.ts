@@ -21,7 +21,7 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 
 /**
  * Read the session from the access_token cookie (server-side only).
- * Returns null if no valid token.
+ * Returns null if no valid token or if the token has expired.
  */
 export async function getSession(): Promise<Session | null> {
   const cookieStore = await cookies();
@@ -30,6 +30,14 @@ export async function getSession(): Promise<Session | null> {
 
   const payload = decodeJwtPayload(token);
   if (!payload) return null;
+
+  // Check expiration if present (exp is in seconds)
+  if (payload.exp && typeof payload.exp === "number") {
+    const now = Math.floor(Date.now() / 1000);
+    if (now >= payload.exp) {
+      return null;
+    }
+  }
 
   return {
     userId: (payload.user_id || payload.sub || "") as string,
@@ -40,6 +48,7 @@ export async function getSession(): Promise<Session | null> {
     branchName: (payload.branch_name || undefined) as string | undefined,
   };
 }
+
 
 /**
  * Get the raw cookie header string for forwarding to API in SSR.

@@ -3,6 +3,23 @@ import type { NextRequest } from "next/server";
 
 const PUBLIC_PATHS = ["/login", "/api", "/_next", "/favicon.ico"];
 
+/**
+ * Simple JWT decoder for Edge runtime (no Buffer).
+ */
+function isTokenExpired(token: string): boolean {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return true;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (payload.exp && typeof payload.exp === "number") {
+      return Math.floor(Date.now() / 1000) >= payload.exp;
+    }
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -11,7 +28,7 @@ export function middleware(request: NextRequest) {
     // If user is logged in and tries to access /login, redirect to home
     if (pathname === "/login") {
       const token = request.cookies.get("access_token")?.value;
-      if (token) {
+      if (token && !isTokenExpired(token)) {
         return NextResponse.redirect(new URL("/", request.url));
       }
     }
@@ -20,7 +37,7 @@ export function middleware(request: NextRequest) {
 
   // Check for access_token cookie
   const token = request.cookies.get("access_token")?.value;
-  if (!token) {
+  if (!token || isTokenExpired(token)) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
@@ -28,6 +45,7 @@ export function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
+
 
 export const config = {
   matcher: [
