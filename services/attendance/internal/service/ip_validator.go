@@ -21,6 +21,12 @@ func (v *IPValidator) Validate(ipStr string, whitelist []dto.IPWhitelist) bool {
 		return true
 	}
 
+	// Strip port if present
+	host, _, err := net.SplitHostPort(ipStr)
+	if err == nil {
+		ipStr = host
+	}
+
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
 		log.Printf("[service][ip-validator] invalid IP: %s", ipStr)

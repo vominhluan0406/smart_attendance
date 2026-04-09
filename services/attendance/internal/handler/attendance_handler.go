@@ -55,6 +55,26 @@ func (h *AttendanceHandler) APILogTime(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, result)
 }
 
+// APICheckProximity handles POST /api/attendance/check-proximity
+func (h *AttendanceHandler) APICheckProximity(w http.ResponseWriter, r *http.Request) {
+	var input service.LogTimeInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		response.Error(w, http.StatusBadRequest, "INVALID_INPUT", "invalid request body")
+		return
+	}
+	input.UserID = middleware.GetUserID(r)
+	input.IP = getClientIP(r)
+
+	result, err := h.attendanceService.CheckProximity(input)
+	if err != nil {
+		log.Printf("[handler][attendance] check-proximity failed for user %s: %v", input.UserID, err)
+		response.Error(w, http.StatusBadRequest, "CHECK_FAILED", err.Error())
+		return
+	}
+
+	response.JSON(w, http.StatusOK, result)
+}
+
 // APIStatus handles GET /api/attendance/status
 func (h *AttendanceHandler) APIStatus(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)

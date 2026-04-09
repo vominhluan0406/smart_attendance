@@ -110,6 +110,15 @@ type LogTimeResult struct {
 	AnomalyScore     float64              `json:"anomaly_score"`
 }
 
+// ProximityResult is returned for auto-validation checks.
+type ProximityResult struct {
+	IPVerified       bool     `json:"ip_verified"`
+	LocVerified      bool     `json:"loc_verified"`
+	WiFiGPSVerified  bool     `json:"wifi_gps_verified"`
+	ValidationErrors []string `json:"validation_errors"`
+	IsAnyPassed      bool     `json:"is_any_passed"`
+}
+
 // LogTime records a time scan (replaces separate CheckIn/CheckOut).
 // Each scan creates an AttendanceLog and updates the daily Attendance summary.
 func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) {
@@ -135,7 +144,7 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 		log.Printf("[service][attendance] log denied for user %s: branch_id=%s, errors=%v",
 			input.UserID, branch.ID, validationErrors)
 		if len(validationErrors) > 0 {
-			return nil, fmt.Errorf("%s", validationErrors[0])
+			return nil, fmt.Errorf("xác thực thất bại: %s", strings.Join(validationErrors, "; "))
 		}
 		return nil, ErrMethodRequired
 	}
@@ -199,6 +208,29 @@ func (s *AttendanceService) LogTime(input LogTimeInput) (*LogTimeResult, error) 
 
 	log.Printf("[service][attendance] log-time: user=%s branch=%s method=%s log#%d", input.UserID, branch.Name, method, count)
 	return result, nil
+}
+
+// CheckProximity runs validation without logging to the database.
+func (s *AttendanceService) CheckProximity(input LogTimeInput) (*ProximityResult, error) {
+	// 1. Get user and branch info
+	_, branch, err := s.validateUserAndBranch(input.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Validate proximity methods
+	result, validationErrors, err := s.validateVerificationMethods(branch, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ProximityResult{
+		IPVerified:       result.IPVerified,
+		LocVerified:      result.LocVerified,
+		WiFiGPSVerified:  result.WiFiGPSVerified,
+		ValidationErrors: validationErrors,
+		IsAnyPassed:      s.isAnyMethodPassed(branch, result, input),
+	}, nil
 }
 
 // --- Decomposition Helpers ---
@@ -268,12 +300,12 @@ func hasMethod(branch *dto.Branch, method CheckInMethod) bool {
 
 func (s *AttendanceService) validateVerificationMethods(branch *dto.Branch, input LogTimeInput) (*LogTimeResult, []string, error) {
 	result := &LogTimeResult{}
-	var validationErrors []string
+	validationErrors := []string{}
 
 	// QR/TOTP
 	if hasMethod(branch, MethodQRTOTP) {
 		if input.TOTPCode == "" {
-			validationErrors = append(validationErrors, "QR/TOTP code required")
+			validationErrors = append(validationErrors, "yeu cau ma QR/TOTP")
 		} else if input.ScannedBranchID != "" && input.ScannedBranchID != branch.ID {
 			validationErrors = append(validationErrors, "ma QR khong thuoc chi nhanh nay")
 		} else {

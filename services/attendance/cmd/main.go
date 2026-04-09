@@ -135,6 +135,7 @@ func main() {
 
 		// Attendance
 		r.Post("/api/attendance/log", attendanceHandler.APILogTime)
+		r.Post("/api/attendance/check-proximity", attendanceHandler.APICheckProximity)
 		r.Get("/api/attendance/status", attendanceHandler.APIStatus)
 		r.Get("/api/attendance", attendanceHandler.APIList)
 
