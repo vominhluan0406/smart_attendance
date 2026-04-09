@@ -4,77 +4,106 @@
 
 Hệ thống chấm công thông minh (Smart Attendance) cho doanh nghiệp quy mô **100 chi nhánh**, **5.000 nhân viên**. Xác định vị trí bằng WiFi và/hoặc GPS. Chống gian lận (fake GPS, VPN).
 
+**Kiến trúc: Microservices** — 5 Go backend services + 1 API Gateway + 1 Next.js frontend (7 containers).
+
 ## Tech Stack
 
-### Backend
+### Backend (5 Go Microservices + Gateway)
 - **Language**: Go (latest stable)
 - **Framework**: Chi router (lightweight, idiomatic Go)
-- **Database**: SQLite (file-based, zero config, embedded)
-- **Cache**: In-process cache (`github.com/patrickmn/go-cache` hoặc sync.Map)
-- **ORM**: GORM (với `glebarez/sqlite` — pure-Go driver, no CGO required)
+- **Database**: PostgreSQL (1 instance, schema-per-service isolation)
+- **Cache**: In-process cache (`github.com/patrickmn/go-cache`)
+- **ORM**: GORM (với `gorm.io/driver/postgres`)
 - **Auth**: JWT + Refresh Token (`golang-jwt/jwt`) + WebAuthn (Passkeys/Biometrics)
 - **WebAuthn**: `github.com/go-webauthn/webauthn` (FIDO2/U2F)
-- **API**: RESTful, pagination + filtering on all list endpoints
+- **API**: RESTful JSON, pagination + filtering on all list endpoints
+- **Inter-service**: Sync HTTP REST giữa các service (internal API)
 
-### Frontend
-- **HTMX**: Dynamic UI without JavaScript framework
-- **Template Engine**: Go `html/template` (server-side rendering)
-- **CSS**: Tailwind CSS (via CDN hoặc standalone CLI)
-- **Charts**: Chart.js (via CDN, triggered by HTMX)
+### Frontend (Next.js)
+- **Framework**: Next.js (App Router, SSR)
+- **Language**: TypeScript
+- **UI**: React components
+- **CSS**: Tailwind CSS
+- **Charts**: Chart.js (React wrapper)
+- **Auth**: httpOnly cookie (JWT từ Gateway)
 
 ### Infrastructure
-- **Container**: Docker + docker-compose (one command deploy)
-- **Dockerfile**: Multi-stage build (builder -> production)
+- **Container**: Docker + docker-compose (7 containers)
+- **Dockerfile**: Multi-stage build per service (~15MB mỗi container Go)
 - **Env**: `.env.example` provided, never commit `.env` or secrets
-- **Single binary**: Go compiles thành 1 binary, bao gồm cả templates + static files (embed)
+- **Gateway**: Go reverse proxy, JWT validation, rate limiting, CORS
 
-## Architecture
+## Architecture — Microservices
+
+```
+┌───────────────────┐
+│  Next.js (3000)   │  ← SSR + React + Tailwind + TypeScript
+└────────┬──────────┘
+         │ HTTP/JSON
+┌────────▼──────────┐
+│  Gateway (8080)   │  ← JWT validate, rate limit, route, CORS
+└──┬──┬──┬──┬──┬───┘
+   │  │  │  │  │
+   ▼  ▼  ▼  ▼  ▼
+ Auth Attend Leave Analytics Org
+ 8081  8082  8083   8084    8085
+```
+
+### 5 Microservices
+
+| Service | Port | Owns |
+|---|---|---|
+| **Auth** | 8081 | User, Session, Credential, Permission, RBAC |
+| **Attendance** | 8082 | Attendance, AttendanceLog, FraudAlert, Device, Adjustment |
+| **Leave** | 8083 | LeaveRequest, LeaveType, LeaveBalance |
+| **Analytics** | 8084 | Read-only aggregation (Dashboard, Report, Export) |
+| **Organization** | 8085 | Branch, IPWhitelist, Location, Shift, Department |
+
+### Directory Structure
 
 ```
 smart_attendance/
-├── cmd/
-│   └── server/
-│       └── main.go          # Entry point
-├── internal/
-│   ├── config/              # App configuration (env, defaults)
-│   ├── models/              # GORM models (User, Branch, Attendance...)
-│   ├── handler/             # HTTP handlers (grouped by feature)
-│   │   ├── auth.go
-│   │   ├── branch.go
-│   │   ├── attendance.go
-│   │   ├── report.go
-│   │   └── dashboard.go
-│   ├── service/             # Business logic layer
-│   │   ├── auth.go
-│   │   ├── branch.go
-│   │   ├── attendance.go
-│   │   ├── antifraud.go     # Anti-fraud detection (9 checks)
-│   │   ├── leave.go
-│   │   ├── report.go
-│   │   └── dashboard.go
-│   ├── repository/          # Data access layer (GORM queries)
-│   ├── middleware/           # JWT auth, RBAC, rate limiting, logging
-│   ├── cache/               # In-memory cache wrapper (go-cache)
-│   └── validator/           # Input validation helpers
-├── web/
-│   ├── templates/           # Go html/template files
-│   │   ├── layouts/         # Base layouts (admin, auth)
-│   │   ├── partials/        # HTMX partial fragments
-│   │   ├── pages/           # Full page templates
-│   │   └── components/      # Reusable template components
-│   └── static/              # CSS, JS, images
-│       ├── css/
-│       └── js/
-├── migrations/              # SQLite migration SQL files
-├── data/                    # SQLite database file (gitignored)
-├── docker-compose.yml       # Full stack orchestration
-├── Dockerfile               # Multi-stage build
-├── go.mod
-├── go.sum
-├── .env.example             # Environment template
-├── CLAUDE.md                # This file - AI context
-├── PROMPT_LOG.md            # AI prompt & result log
-└── README.md                # Setup guide & scaling strategy
+├── services/
+│   ├── gateway/              # API Gateway
+│   │   ├── cmd/main.go
+│   │   └── internal/         # proxy, middleware, config
+│   ├── auth/                 # Auth Service
+│   │   ├── cmd/main.go
+│   │   └── internal/         # handler, service, repository, model, database
+│   ├── attendance/           # Attendance Service
+│   │   ├── cmd/main.go
+│   │   └── internal/         # + client/ (HTTP clients → Auth, Org)
+│   ├── leave/                # Leave Service
+│   │   ├── cmd/main.go
+│   │   └── internal/         # + client/ (→ Auth, Attendance)
+│   ├── analytics/            # Analytics Service
+│   │   ├── cmd/main.go
+│   │   └── internal/         # + client/ (→ all services)
+│   └── organization/         # Organization Service
+│       ├── cmd/main.go
+│       └── internal/
+├── frontend/                 # Next.js
+│   ├── src/
+│   │   ├── app/              # App Router (SSR pages)
+│   │   ├── components/       # React components
+│   │   └── lib/              # API client, auth, types
+│   ├── tailwind.config.ts
+│   └── package.json
+├── shared/                   # Shared Go packages
+│   ├── dto/                  # Inter-service DTOs
+│   ├── middleware/            # Internal auth header parsing
+│   └── response/             # Standard JSON response format
+├── docker-compose.yml        # 7 containers
+├── CLAUDE.md
+└── README.md
+```
+
+### Monolith (legacy, still in repo root)
+
+```
+├── cmd/server/main.go        # Original monolith entry point
+├── internal/                  # Original monolith code
+├── web/templates/             # Original HTMX templates (reference)
 ```
 
 ## Core Features
@@ -135,7 +164,7 @@ smart_attendance/
 
 ## Database Design Conventions
 
-- **SQLite** single file database tại `data/smart_attendance.db`
+- **PostgreSQL** — 1 instance, mỗi service sở hữu schema riêng (schema-per-service pattern)
 - Schema hỗ trợ multi-branch: mọi bảng liên quan đều có `branch_id`
 - Sử dụng UUID (TEXT) cho primary key
 - Soft delete (`deleted_at` timestamp) cho dữ liệu quan trọng
@@ -146,7 +175,8 @@ smart_attendance/
 
 ## API Conventions
 
-- RESTful naming: `GET /api/v1/branches`, `POST /api/v1/attendance/check-in`
+- RESTful naming: `GET /api/branches`, `POST /api/attendance/log`
+- Tất cả endpoint trả về **JSON** (không còn HTML fragment — frontend là Next.js)
 - Response format thống nhất:
   ```json
   {
@@ -162,11 +192,9 @@ smart_attendance/
     "error": { "code": "INVALID_LOCATION", "message": "..." }
   }
   ```
-- Tất cả endpoint cần auth phải qua JWT middleware
-- Rate limiting trên check-in endpoint (chống spam)
-- HTMX endpoints trả về HTML fragments (partial), API endpoints trả về JSON
-- HTMX routes: `GET /branches` (page), `GET /branches/list` (partial fragment)
-- API routes: `GET /api/v1/branches` (JSON)
+- **Gateway** validate JWT, inject user context headers → proxy to service
+- **Internal API** (giữa services): prefix `/api/internal/`, không qua Gateway
+- Rate limiting tại Gateway (per IP) + tại Attendance Service (per User)
 
 ## Code Conventions
 
@@ -192,13 +220,21 @@ smart_attendance/
 - Middleware chain: Logger → Recovery → RateLimit → JWT Auth → RBAC
 - Input validation tại Handler layer trước khi gọi Service
 
-### Frontend (HTMX + Go Templates)
-- Server-side rendering với Go `html/template`
-- HTMX attributes cho dynamic behavior (hx-get, hx-post, hx-swap, hx-target)
-- Partial templates cho HTMX fragment responses (không reload full page)
-- Tailwind CSS cho styling (responsive, mobile-first)
-- Minimal JavaScript — chỉ dùng khi HTMX không đủ (e.g., Chart.js, geolocation API)
-- Template inheritance: `layouts/base.html` → `pages/*.html` → `partials/*.html`
+### Frontend (Next.js + React + TypeScript)
+- **Next.js App Router** với SSR (Server Components + Client Components)
+- **TypeScript** strict mode
+- **Tailwind CSS** cho styling (responsive, mobile-first)
+- **React components** thay thế HTMX templates — reusable, typed
+- **API client** (`lib/api.ts`) gọi Gateway, auto-attach JWT cookie
+- **Middleware** (`middleware.ts`) redirect unauthenticated users
+- **Chart.js** (React wrapper) cho dashboard charts
+- Page structure mirror HTMX templates: `app/dashboard/`, `app/attendance/`, `app/leave/`, etc.
+
+### Inter-Service Communication
+- **Sync HTTP REST** giữa các service (internal API prefix `/api/internal/`)
+- **Gateway** inject user context qua headers: `X-User-ID`, `X-User-Role`, `X-Branch-ID`
+- **Service clients** (`internal/client/`) — typed HTTP wrappers cho cross-service calls
+- **Async flow**: Leave approved → POST `/api/internal/attendance/sync-leave` (→ Attendance Service)
 
 ## Git Flow
 
@@ -215,19 +251,23 @@ smart_attendance/
 
 ## Scaling Strategy
 
-- **SQLite WAL mode**: concurrent reads không block nhau, write serialized
-- **In-memory cache** (go-cache): cache branch config, dashboard aggregation, giảm DB reads
-- **Single binary deployment**: Go compile thành 1 binary, embed templates + static files
-- API: stateless design, có thể horizontal scale bằng cách chuyển sang PostgreSQL khi cần
+- **Microservices**: mỗi service scale độc lập (Attendance cần scale 10x lúc peak, Analytics không)
+- **SQLite WAL mode** per service: concurrent reads không block nhau
+- **In-memory cache** (go-cache): cache branch config, permissions, dashboard aggregation
+- **Schema-per-service**: mỗi service sở hữu PostgreSQL schema riêng, không truy cập cross-schema
+- Scale tiếp: tách thành separate PostgreSQL instances khi cần
+- **Gateway** stateless → horizontal scale bằng load balancer
 - Database indexing strategy cho 100 branches x 5.000 employees
-- Goroutine-based concurrency cho xử lý peak-hour check-in
 
 ## Docker
 
-- `docker-compose up` chạy toàn bộ stack (single Go binary + SQLite volume mount)
-- Dockerfile sử dụng multi-stage build: `golang:alpine` build → `alpine` runtime (~15MB)
+- `docker-compose up` chạy **8 containers**: 1 PostgreSQL + 5 Go services + 1 gateway + 1 Next.js
+- Mỗi Go service: multi-stage build `golang:alpine` → `alpine` runtime (~15MB)
+- Next.js: `node:alpine` build → `node:alpine` runtime
+- PostgreSQL 16: 1 instance, 5 schemas (1 volume)
 - `.env.example` có sẵn, copy thành `.env` trước khi chạy
 - Không commit secrets vào repo
+- Xem chi tiết: **[docs/MICROSERVICES.md](docs/MICROSERVICES.md)**
 
 ## AI IDE Workflow
 

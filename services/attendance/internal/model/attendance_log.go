@@ -1,0 +1,30 @@
+package model
+
+import "time"
+
+// AttendanceLog represents a single time scan (like a fingerprint reader).
+// Multiple logs per user per day are allowed.
+// The earliest log = check-in, the latest = check-out.
+type AttendanceLog struct {
+	BaseModel
+	UserID            string    `gorm:"type:uuid;not null;index:idx_log_user_date" json:"user_id"`
+	BranchID          string    `gorm:"type:uuid;not null" json:"branch_id"`
+	ShiftID           *string   `gorm:"type:uuid" json:"shift_id,omitempty"`
+	WorkDate          string    `gorm:"type:text;not null;index:idx_log_user_date" json:"work_date"`
+	LoggedAt          time.Time `gorm:"not null" json:"logged_at"`
+	Method            string    `gorm:"type:text" json:"method"`
+	IPAddress         string    `gorm:"type:text" json:"ip_address"`
+	Lat               *float64  `gorm:"type:double precision" json:"lat,omitempty"`
+	Lng               *float64  `gorm:"type:double precision" json:"lng,omitempty"`
+	TOTPVerified      bool      `gorm:"default:false" json:"totp_verified"`
+	IPVerified        bool      `gorm:"default:false" json:"ip_verified"`
+	LocVerified       bool      `gorm:"default:false" json:"loc_verified"`
+	FaceVerified      bool      `gorm:"default:false" json:"face_verified"`
+	NFCVerified       bool      `gorm:"default:false" json:"nfc_verified"`
+	PasswordVerified  bool      `gorm:"default:false" json:"password_verified"`
+	BiometricVerified bool      `gorm:"default:false" json:"biometric_verified"`
+	AccuracyM         *float64  `gorm:"type:double precision" json:"accuracy_m,omitempty"`
+	DeviceFingerprint string    `gorm:"type:text" json:"device_fingerprint,omitempty"`
+	AnomalyFlag       bool      `gorm:"default:false" json:"anomaly_flag"`
+	AnomalyScore      float64   `gorm:"default:0" json:"anomaly_score"`
+}
