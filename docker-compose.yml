@@ -1,16 +1,149 @@
 services:
-  app:
-    build: .
+  # ─── Database ───
+  postgres:
+    image: postgres:16-alpine
     ports:
-      - "${PORT:-8080}:8080"
+      - "5432:5432"
     volumes:
-      - app-data:/app/data
-    env_file:
-      - .env
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init-schemas.sql:/docker-entrypoint-initdb.d/01-init-schemas.sql
     environment:
-      - ENV=production
-      - DB_PATH=data/smart_attendance.db
+      POSTGRES_DB: smart_attendance
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: secret
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d smart_attendance"]
+      interval: 5s
+      retries: 5
+
+  # ─── API Gateway ───
+  gateway:
+    build:
+      context: .
+      dockerfile: ./services/gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      auth:
+        condition: service_started
+      attendance:
+        condition: service_started
+      leave:
+        condition: service_started
+      analytics:
+        condition: service_started
+      organization:
+        condition: service_started
+    environment:
+      PORT: "8080"
+      AUTH_SERVICE_URL: http://auth:8081
+      ATTENDANCE_SERVICE_URL: http://attendance:8082
+      LEAVE_SERVICE_URL: http://leave:8083
+      ANALYTICS_SERVICE_URL: http://analytics:8084
+      ORG_SERVICE_URL: http://organization:8085
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      CORS_ORIGIN: http://localhost:3000
+      RATE_LIMIT_PER_MIN: "60"
+    restart: unless-stopped
+
+  # ─── Microservices ───
+  auth:
+    build:
+      context: .
+      dockerfile: ./services/auth/Dockerfile
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: "8081"
+      DATABASE_URL: postgres://app:secret@postgres:5432/smart_attendance?sslmode=disable&search_path=auth_service
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_EXPIRE_MINUTES: "60"
+      JWT_REFRESH_HOURS: "168"
+      ENV: production
+    restart: unless-stopped
+
+  attendance:
+    build:
+      context: .
+      dockerfile: ./services/attendance/Dockerfile
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: "8082"
+      DATABASE_URL: postgres://app:secret@postgres:5432/smart_attendance?sslmode=disable&search_path=attendance_service
+      AUTH_SERVICE_URL: http://auth:8081
+      ORG_SERVICE_URL: http://organization:8085
+      ENV: production
+    restart: unless-stopped
+
+  leave:
+    build:
+      context: .
+      dockerfile: ./services/leave/Dockerfile
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: "8083"
+      DATABASE_URL: postgres://app:secret@postgres:5432/smart_attendance?sslmode=disable&search_path=leave_service
+      AUTH_SERVICE_URL: http://auth:8081
+      ATTENDANCE_SERVICE_URL: http://attendance:8082
+      ENV: production
+    restart: unless-stopped
+
+  analytics:
+    build:
+      context: .
+      dockerfile: ./services/analytics/Dockerfile
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: "8084"
+      DATABASE_URL: postgres://app:secret@postgres:5432/smart_attendance?sslmode=disable&search_path=analytics_service
+      AUTH_SERVICE_URL: http://auth:8081
+      ATTENDANCE_SERVICE_URL: http://attendance:8082
+      LEAVE_SERVICE_URL: http://leave:8083
+      ORG_SERVICE_URL: http://organization:8085
+      ENV: production
+    restart: unless-stopped
+
+  organization:
+    build:
+      context: .
+      dockerfile: ./services/organization/Dockerfile
+    ports:
+      - "8085:8085"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: "8085"
+      DATABASE_URL: postgres://app:secret@postgres:5432/smart_attendance?sslmode=disable&search_path=org_service
+      ENV: production
+    restart: unless-stopped
+
+  # ─── Frontend ───
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      API_URL: http://gateway:8080
+    depends_on:
+      - gateway
     restart: unless-stopped
 
 volumes:
-  app-data:
+  pgdata:
