@@ -44,7 +44,7 @@ export default async function BranchesPage({
     if (res.data) branches = res.data;
     if (res.meta) meta = res.meta;
   } catch (e) {
-    error = e instanceof Error ? e.message : "Khong the tai du lieu";
+    error = e instanceof Error ? e.message : "Không thể tải dữ liệu";
   }
 
   const methodLabels: Record<string, string> = {
@@ -61,7 +61,7 @@ export default async function BranchesPage({
   const columns: Column<Branch>[] = [
     {
       key: "name",
-      header: "Ten chi nhanh",
+      header: "Tên chi nhánh",
       render: (item) => (
         <div>
           <div className="text-sm font-bold text-gray-900">{item.name}</div>
@@ -71,7 +71,7 @@ export default async function BranchesPage({
     },
     {
       key: "methods",
-      header: "Phuong thuc",
+      header: "Phương thức",
       render: (item) => (
         <div className="flex flex-wrap gap-1">
           {item.allowed_methods?.split(",").map((m) => (
@@ -87,7 +87,7 @@ export default async function BranchesPage({
     },
     {
       key: "status",
-      header: "Trang thai",
+      header: "Trạng thái",
       render: (item) => (
         <span
           className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${
@@ -96,7 +96,7 @@ export default async function BranchesPage({
               : "bg-gray-50 text-gray-500"
           }`}
         >
-          {item.is_active ? "Hoat dong" : "Tat"}
+          {item.is_active ? "Hoạt động" : "Tắt"}
         </span>
       ),
     },
@@ -111,7 +111,7 @@ export default async function BranchesPage({
           className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors"
         >
           <Pencil className="w-3 h-3" />
-          Sua
+          Sửa
         </Link>
       ),
     },
@@ -127,10 +127,10 @@ export default async function BranchesPage({
             <MapPin className="w-6 h-6 text-primary-600" />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Quan ly chi nhanh
+                Quản lý chi nhánh
               </h1>
               <p className="mt-1 text-sm text-gray-500">
-                Quan ly cac chi nhanh cong ty va cau hinh cham cong
+                Quản lý các chi nhánh công ty và cấu hình chấm công
               </p>
             </div>
           </div>
@@ -140,7 +140,7 @@ export default async function BranchesPage({
               className="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 inline-flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              Them chi nhanh
+              Thêm chi nhánh
             </Link>
           </div>
         </div>
@@ -150,13 +150,13 @@ export default async function BranchesPage({
           <form className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[200px]">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tim kiem
+                Tìm kiếm
               </label>
               <input
                 type="text"
                 name="search"
                 defaultValue={search}
-                placeholder="Ten chi nhanh hoac dia chi..."
+                placeholder="Tên chi nhánh hoặc địa chỉ..."
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300"
               />
             </div>
@@ -165,7 +165,7 @@ export default async function BranchesPage({
               className="flex items-center gap-2 rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
             >
               <Search className="w-4 h-4" />
-              Tim kiem
+              Tìm kiếm
             </button>
           </form>
         </div>
@@ -179,7 +179,7 @@ export default async function BranchesPage({
         <DataTable
           columns={columns}
           data={branches}
-          emptyMessage="Chua co chi nhanh nao."
+          emptyMessage="Chưa có chi nhánh nào."
           keyExtractor={(item) => item.id}
         />
 

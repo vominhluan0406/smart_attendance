@@ -20,7 +20,7 @@ interface DataTableProps<T> {
 export default function DataTable<T>({
   columns,
   data,
-  emptyMessage = "Khong co du lieu.",
+  emptyMessage = "Không có dữ liệu.",
   keyExtractor,
 }: DataTableProps<T>) {
   return (

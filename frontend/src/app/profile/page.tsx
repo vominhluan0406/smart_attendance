@@ -19,7 +19,7 @@ export default async function ProfilePage() {
     const res = await apiGet<User>("/api/profile", cookie);
     if (res.data) user = res.data;
   } catch (e) {
-    error = e instanceof Error ? e.message : "Khong the tai du lieu";
+    error = e instanceof Error ? e.message : "Không thể tải dữ liệu";
   }
 
   return (
@@ -52,31 +52,31 @@ export default async function ProfilePage() {
             {user && (
               <div className="space-y-4 mb-8">
                 <div className="flex justify-between py-3 border-b border-gray-50">
-                  <span className="text-sm text-gray-500">Ma nhan vien</span>
+                  <span className="text-sm text-gray-500">Mã nhân viên</span>
                   <span className="text-sm font-bold text-gray-900">
                     {user.employee_code || "---"}
                   </span>
                 </div>
                 <div className="flex justify-between py-3 border-b border-gray-50">
-                  <span className="text-sm text-gray-500">Vai tro</span>
+                  <span className="text-sm text-gray-500">Vai trò</span>
                   <span className="text-sm font-bold text-gray-900">
                     {user.role}
                   </span>
                 </div>
                 <div className="flex justify-between py-3 border-b border-gray-50">
-                  <span className="text-sm text-gray-500">So dien thoai</span>
+                  <span className="text-sm text-gray-500">Số điện thoại</span>
                   <span className="text-sm font-bold text-gray-900">
                     {user.phone || "---"}
                   </span>
                 </div>
                 <div className="flex justify-between py-3 border-b border-gray-50">
-                  <span className="text-sm text-gray-500">Phong ban</span>
+                  <span className="text-sm text-gray-500">Phòng ban</span>
                   <span className="text-sm font-bold text-gray-900">
                     {user.department?.name || "---"}
                   </span>
                 </div>
                 <div className="flex justify-between py-3 border-b border-gray-50">
-                  <span className="text-sm text-gray-500">Chuc vu</span>
+                  <span className="text-sm text-gray-500">Chức vụ</span>
                   <span className="text-sm font-bold text-gray-900">
                     {user.position || "---"}
                   </span>
@@ -88,11 +88,11 @@ export default async function ProfilePage() {
               <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
                 <h3 className="text-sm font-bold text-gray-700 uppercase mb-4 flex items-center gap-2">
                   <Fingerprint className="w-4 h-4 text-emerald-600" />
-                  Xac thuc Sinh trac hoc
+                  Xác thực Sinh trắc học
                 </h3>
                 <p className="text-sm text-gray-500 mb-6">
-                  Dang ky van tay hoac khuon mat tren thiet bi nay de cham
-                  cong nhanh hon va bao mat hon.
+                  Đăng ký vân tay hoặc khuôn mặt trên thiết bị này để chấm
+                  công nhanh hơn và bảo mật hơn.
                 </p>
 
                 <WebAuthnButton />
@@ -100,8 +100,8 @@ export default async function ProfilePage() {
 
               <div className="p-4 border border-primary-50 rounded-2xl bg-primary-50/20">
                 <p className="text-xs text-primary-400 leading-relaxed text-center">
-                  Luu y: Thiet bi cua ban can ho tro bao mat sinh trac hoc va
-                  ban phai thiet lap san khoa man hinh (PIN, Pattern, hoac
+                  Lưu ý: Thiết bị của bạn cần hỗ trợ bảo mật sinh trắc học và
+                  bạn phải thiết lập sẵn khóa màn hình (PIN, Pattern, hoặc
                   Biometric).
                 </p>
               </div>

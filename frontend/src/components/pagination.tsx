@@ -39,7 +39,7 @@ export default function Pagination({ page, total, limit }: PaginationProps) {
             href={buildUrl(page - 1)}
             className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all"
           >
-            Truoc
+            Trước
           </Link>
         )}
         {hasNext && (

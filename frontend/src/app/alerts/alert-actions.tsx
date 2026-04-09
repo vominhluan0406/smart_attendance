@@ -54,7 +54,7 @@ export default function AlertActions({ alertId, isReviewed }: Props) {
   if (reviewed) {
     return (
       <span className="text-xs font-bold text-green-600 uppercase tracking-wider">
-        Da xem xet
+        Đã xem xét
       </span>
     );
   }
@@ -65,7 +65,7 @@ export default function AlertActions({ alertId, isReviewed }: Props) {
         onClick={handleReview}
         disabled={loading}
         className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
-        title="Xem xet"
+        title="Xem xét"
       >
         <Eye className="w-4 h-4" />
       </button>
@@ -73,7 +73,7 @@ export default function AlertActions({ alertId, isReviewed }: Props) {
         onClick={handleInvalidate}
         disabled={loading}
         className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
-        title="Huy diem danh"
+        title="Hủy điểm danh"
       >
         <Ban className="w-4 h-4" />
       </button>

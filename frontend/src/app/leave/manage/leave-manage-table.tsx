@@ -42,19 +42,19 @@ export default function LeaveManageTable({ requests: initial, statusFilter }: Pr
           <thead className="bg-gray-50/50">
             <tr>
               <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Nhan vien
+                Nhân viên
               </th>
               <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Thoi gian
+                Thời gian
               </th>
               <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Loai & Ly do
+                Loại & Lý do
               </th>
               <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                So ngay
+                Số ngày
               </th>
               <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Thao tac
+                Thao tác
               </th>
             </tr>
           </thead>
@@ -66,7 +66,7 @@ export default function LeaveManageTable({ requests: initial, statusFilter }: Pr
                   className="px-6 py-20 text-center text-gray-400 italic"
                 >
                   <Inbox className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                  Khong co yeu cau nao can xu ly.
+                  Không có yêu cầu nào cần xử lý.
                 </td>
               </tr>
             ) : (
@@ -95,7 +95,7 @@ export default function LeaveManageTable({ requests: initial, statusFilter }: Pr
                       {req.start_date}
                     </div>
                     <div className="text-xs text-gray-400">
-                      den {req.end_date}
+                      đến {req.end_date}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -108,7 +108,7 @@ export default function LeaveManageTable({ requests: initial, statusFilter }: Pr
                         color: req.leave_type?.color || "#6b7280",
                       }}
                     >
-                      {req.leave_type?.name || "Nghi phep"}
+                      {req.leave_type?.name || "Nghỉ phép"}
                     </span>
                     <p
                       className="text-sm text-gray-600 line-clamp-1"
@@ -118,7 +118,7 @@ export default function LeaveManageTable({ requests: initial, statusFilter }: Pr
                     </p>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-700">
-                    {req.total_days} ngay
+                    {req.total_days} ngày
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
                     {statusFilter === "pending" ? (
@@ -148,11 +148,11 @@ export default function LeaveManageTable({ requests: initial, statusFilter }: Pr
                           }`}
                         >
                           {req.status === "approved"
-                            ? "Da duyet"
-                            : "Tu choi"}
+                            ? "Đã duyệt"
+                            : "Từ chối"}
                         </div>
                         <div className="text-[10px] text-gray-400 mt-1">
-                          boi{" "}
+                          bởi{" "}
                           {req.reviewer?.full_name || "Admin"}
                         </div>
                       </div>

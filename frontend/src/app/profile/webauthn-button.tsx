@@ -30,14 +30,14 @@ export default function WebAuthnButton() {
 
   async function handleRegister() {
     setLoading(true);
-    setStatus({ type: "info", message: "Dang khoi tao yeu cau..." });
+    setStatus({ type: "info", message: "Đang khởi tạo yêu cầu..." });
 
     try {
       // 1. Get options from server
       const beginResp = await fetch(`${baseUrl}/api/webauthn/register/begin`, {
         credentials: "include",
       });
-      if (!beginResp.ok) throw new Error("Khong the bat dau dang ky");
+      if (!beginResp.ok) throw new Error("Không thể bắt đầu đăng ký");
 
       const options = await beginResp.json();
 
@@ -59,7 +59,7 @@ export default function WebAuthnButton() {
         publicKey: options.publicKey,
       })) as PublicKeyCredential;
 
-      if (!credential) throw new Error("Khong the tao credential");
+      if (!credential) throw new Error("Không thể tạo credential");
 
       const attestationResponse =
         credential.response as AuthenticatorAttestationResponse;
@@ -92,17 +92,17 @@ export default function WebAuthnButton() {
 
       if (!finishResp.ok) {
         const err = await finishResp.json();
-        throw new Error(err.error || "Dang ky that bai");
+        throw new Error(err.error || "Đăng ký thất bại");
       }
 
       setStatus({
         type: "success",
-        message: "Dang ky thiet bi thanh cong!",
+        message: "Đăng ký thiết bị thành công!",
       });
     } catch (err) {
       setStatus({
         type: "error",
-        message: `Loi: ${err instanceof Error ? err.message : "Unknown error"}`,
+        message: `Lỗi: ${err instanceof Error ? err.message : "Unknown error"}`,
       });
     } finally {
       setLoading(false);
@@ -137,7 +137,7 @@ export default function WebAuthnButton() {
         ) : (
           <PlusCircle className="w-5 h-5" />
         )}
-        Dang ky thiet bi moi
+        Đăng ký thiết bị mới
       </button>
     </>
   );

@@ -8,7 +8,7 @@ export default function AttendancePage() {
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [accuracy, setAccuracy] = useState<number | null>(null);
-  const [gpsStatus, setGpsStatus] = useState("Dang xac dinh vi tri...");
+  const [gpsStatus, setGpsStatus] = useState("Đang xác định vị trí...");
   const [gpsOk, setGpsOk] = useState(false);
   const [deviceFingerprint, setDeviceFingerprint] = useState("");
   const [result, setResult] = useState<{
@@ -47,7 +47,7 @@ export default function AttendancePage() {
   // Watch GPS position
   useEffect(() => {
     if (!navigator.geolocation) {
-      setGpsStatus("Trinh duyet khong ho tro GPS");
+      setGpsStatus("Trình duyệt không hỗ trợ GPS");
       return;
     }
 
@@ -64,7 +64,7 @@ export default function AttendancePage() {
         );
       },
       (err) => {
-        setGpsStatus(`Loi GPS: ${err.message}`);
+        setGpsStatus(`Lỗi GPS: ${err.message}`);
         setGpsOk(false);
       },
       { enableHighAccuracy: true, timeout: 20000 }
@@ -80,7 +80,7 @@ export default function AttendancePage() {
 
       const submitCode = code || totpCode;
       if (!submitCode) {
-        setResult({ success: false, message: "Vui long nhap ma TOTP" });
+        setResult({ success: false, message: "Vui lòng nhập mã TOTP" });
         setLoading(false);
         return;
       }
@@ -103,18 +103,18 @@ export default function AttendancePage() {
 
         const body = await res.json();
         if (body.success) {
-          setResult({ success: true, message: "Cham cong thanh cong!" });
+          setResult({ success: true, message: "Chấm công thành công!" });
           setTotpCode("");
         } else {
           setResult({
             success: false,
-            message: body.error?.message || "Cham cong that bai",
+            message: body.error?.message || "Chấm công thất bại",
           });
         }
       } catch {
         setResult({
           success: false,
-          message: "Khong the ket noi den server",
+          message: "Không thể kết nối đến server",
         });
       } finally {
         setLoading(false);
@@ -130,7 +130,7 @@ export default function AttendancePage() {
           <div className="p-2 bg-primary-100 rounded-xl">
             <Camera className="w-6 h-6 text-primary-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Cham cong</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Chấm công</h1>
         </div>
 
         {/* Result */}
@@ -167,7 +167,7 @@ export default function AttendancePage() {
                   Camera QR scanner
                 </p>
                 <p className="text-xs text-gray-500 mt-2">
-                  Tich hop thu vien html5-qrcode de quet ma QR
+                  Tích hợp thư viện html5-qrcode để quét mã QR
                 </p>
               </div>
             </div>
@@ -200,14 +200,14 @@ export default function AttendancePage() {
         {/* Manual TOTP Input */}
         <div className="bg-white shadow-sm rounded-2xl border border-gray-100 p-6 mb-6">
           <h3 className="text-sm font-bold text-gray-500 uppercase mb-4">
-            Nhap ma TOTP thu cong
+            Nhập mã TOTP thủ công
           </h3>
           <div className="flex gap-3">
             <input
               type="text"
               value={totpCode}
               onChange={(e) => setTotpCode(e.target.value)}
-              placeholder="Nhap ma 6 so..."
+              placeholder="Nhập mã 6 số..."
               maxLength={6}
               className="flex-1 rounded-2xl border-gray-200 bg-gray-50 py-3 px-4 text-gray-900 focus:border-primary-500 focus:ring-primary-500 text-sm outline-none border focus:bg-white text-center font-mono text-lg tracking-widest"
             />
@@ -216,7 +216,7 @@ export default function AttendancePage() {
               disabled={loading || !totpCode}
               className="rounded-2xl bg-primary-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-primary-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? <span className="spinner" /> : "Gui"}
+              {loading ? <span className="spinner" /> : "Gửi"}
             </button>
           </div>
         </div>

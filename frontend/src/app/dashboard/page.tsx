@@ -72,12 +72,12 @@ export default async function DashboardPage({
       if (branchRes?.data) branches = branchRes.data;
     }
   } catch (e) {
-    error = e instanceof Error ? e.message : "Khong the tai du lieu";
+    error = e instanceof Error ? e.message : "Không thể tải dữ liệu";
   }
 
   const kpiCards = [
     {
-      label: "Tong nhan vien",
+      label: "Tổng nhân viên",
       value: stats?.total_employees ?? 0,
       icon: Users,
       accent: "card-accent-indigo",
@@ -85,7 +85,7 @@ export default async function DashboardPage({
       iconBg: "bg-primary-50",
     },
     {
-      label: "Check-in hom nay",
+      label: "Check-in hôm nay",
       value: stats?.today_checkins ?? 0,
       icon: CheckCircle,
       accent: "card-accent-emerald",
@@ -93,7 +93,7 @@ export default async function DashboardPage({
       iconBg: "bg-emerald-50",
     },
     {
-      label: "Di tre hom nay",
+      label: "Đi trễ hôm nay",
       value: stats?.late_count ?? 0,
       icon: Clock,
       accent: "card-accent-amber",
@@ -101,7 +101,7 @@ export default async function DashboardPage({
       iconBg: "bg-amber-50",
     },
     {
-      label: "Vang hom nay",
+      label: "Vắng hôm nay",
       value: stats?.absent_count ?? 0,
       icon: AlertTriangle,
       accent: "card-accent-rose",
@@ -109,7 +109,7 @@ export default async function DashboardPage({
       iconBg: "bg-rose-50",
     },
     {
-      label: "Cho duyet nghi phep",
+      label: "Chờ duyệt nghỉ phép",
       value: stats?.pending_leave ?? 0,
       icon: CalendarOff,
       accent: "",
@@ -117,7 +117,7 @@ export default async function DashboardPage({
       iconBg: "bg-purple-50",
     },
     {
-      label: "Canh bao gian lan",
+      label: "Cảnh báo gian lận",
       value: stats?.fraud_alerts_today ?? 0,
       icon: AlertTriangle,
       accent: "",
@@ -139,10 +139,10 @@ export default async function DashboardPage({
             </div>
             <div>
               <h1 className="text-3xl font-black text-gray-900 tracking-tight">
-                Tong quan
+                Tổng quan
               </h1>
               <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">
-                He thong quan ly cham cong
+                Hệ thống quản lý chấm công
               </p>
             </div>
           </div>
@@ -150,7 +150,7 @@ export default async function DashboardPage({
           {session.role === "admin" && branches.length > 0 && (
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                Loc theo chi nhanh
+                Lọc theo chi nhánh
               </label>
               <form>
                 <select
@@ -162,7 +162,7 @@ export default async function DashboardPage({
                   }}
                   className="appearance-none rounded-2xl border-gray-100 text-sm font-bold focus:ring-primary-500 focus:border-primary-500 py-3 pl-4 pr-10 bg-white shadow-sm hover:shadow transition-all min-w-[240px] ring-1 ring-inset ring-gray-200"
                 >
-                  <option value="">Tat ca chi nhanh</option>
+                  <option value="">Tất cả chi nhánh</option>
                   {branches.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name}
@@ -207,7 +207,7 @@ export default async function DashboardPage({
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 glass mb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-bold text-gray-700">
-                Ty le dung gio
+                Tỷ lệ đúng giờ
               </span>
               <span className="text-lg font-black text-primary-600">
                 {stats.on_time_rate?.toFixed(1) ?? 0}%
@@ -231,14 +231,14 @@ export default async function DashboardPage({
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-black text-gray-900 flex items-center gap-2 uppercase tracking-tight">
                 <Activity className="w-5 h-5 text-primary-600" />
-                Hoat dong gan day
+                Hoạt động gần đây
               </h2>
               <RefreshCw className="w-4 h-4 text-gray-400" />
             </div>
 
             {recent.length === 0 ? (
               <p className="text-center text-sm text-gray-400 py-8">
-                Chua co hoat dong nao hom nay.
+                Chưa có hoạt động nào hôm nay.
               </p>
             ) : (
               <div className="space-y-3">
@@ -271,14 +271,14 @@ export default async function DashboardPage({
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 glass">
             <h2 className="text-lg font-black text-gray-900 flex items-center gap-2 mb-6 uppercase tracking-tight">
               <Clock className="w-5 h-5 text-amber-500" />
-              Top di tre
+              Top đi trễ
             </h2>
 
             {topLate.length === 0 ? (
               <div className="text-center py-12 bg-emerald-50/30 rounded-3xl border border-dashed border-emerald-100">
                 <CheckCircle className="w-6 h-6 text-emerald-500 mx-auto mb-3" />
                 <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">
-                  Khong co ai di tre!
+                  Không có ai đi trễ!
                 </p>
               </div>
             ) : (
@@ -302,7 +302,7 @@ export default async function DashboardPage({
                       </div>
                     </div>
                     <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black bg-rose-50 text-rose-600 border border-rose-100 uppercase tracking-widest">
-                      {user.late_count} lan
+                      {user.late_count} lần
                     </span>
                   </div>
                 ))}

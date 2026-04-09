@@ -60,19 +60,19 @@ export default function AdjustmentManageTable({
           <thead className="bg-gray-50/50">
             <tr>
               <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Nhan vien
+                Nhân viên
               </th>
               <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Ngay
+                Ngày
               </th>
               <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Gio yeu cau
+                Giờ yêu cầu
               </th>
               <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Ly do
+                Lý do
               </th>
               <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Thao tac
+                Thao tác
               </th>
             </tr>
           </thead>
@@ -84,7 +84,7 @@ export default function AdjustmentManageTable({
                   className="px-6 py-20 text-center text-gray-400 italic"
                 >
                   <Inbox className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                  Khong co yeu cau nao can xu ly.
+                  Không có yêu cầu nào cần xử lý.
                 </td>
               </tr>
             ) : (
@@ -113,7 +113,7 @@ export default function AdjustmentManageTable({
                       {req.work_date}
                     </div>
                     <div className="text-xs text-gray-400">
-                      Gui luc{" "}
+                      Gửi lúc{" "}
                       {new Date(req.created_at).toLocaleDateString("vi-VN", {
                         day: "2-digit",
                         month: "2-digit",
@@ -139,7 +139,7 @@ export default function AdjustmentManageTable({
                     </div>
                     {req.attendance && (
                       <div className="mt-1 text-xs text-gray-400">
-                        Hien tai:{" "}
+                        Hiện tại:{" "}
                         {req.attendance.check_in_at
                           ? formatTime(req.attendance.check_in_at)
                           : "--:--"}{" "}
@@ -183,11 +183,11 @@ export default function AdjustmentManageTable({
                           }`}
                         >
                           {req.status === "approved"
-                            ? "Da duyet"
-                            : "Tu choi"}
+                            ? "Đã duyệt"
+                            : "Từ chối"}
                         </div>
                         <div className="text-[10px] text-gray-400 mt-1">
-                          boi {req.reviewer?.full_name || "Admin"}
+                          bởi {req.reviewer?.full_name || "Admin"}
                         </div>
                         {req.reviewer_note && (
                           <div className="text-[10px] text-gray-400 italic">

@@ -47,14 +47,14 @@ export default async function UsersPage({
     if (res.data) users = res.data;
     if (res.meta) meta = res.meta;
   } catch (e) {
-    error = e instanceof Error ? e.message : "Khong the tai du lieu";
+    error = e instanceof Error ? e.message : "Không thể tải dữ liệu";
   }
 
   const roleLabels: Record<string, string> = {
     admin: "Admin",
-    manager: "Quan ly",
-    manager_device: "Manager May",
-    employee: "Nhan vien",
+    manager: "Quản lý",
+    manager_device: "Manager Máy",
+    employee: "Nhân viên",
   };
 
   const roleStyles: Record<string, string> = {
@@ -67,7 +67,7 @@ export default async function UsersPage({
   const columns: Column<User>[] = [
     {
       key: "name",
-      header: "Ho ten",
+      header: "Họ tên",
       render: (item) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center text-primary-600 font-bold">
@@ -84,7 +84,7 @@ export default async function UsersPage({
     },
     {
       key: "role",
-      header: "Vai tro",
+      header: "Vai trò",
       render: (item) => (
         <span
           className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${
@@ -97,7 +97,7 @@ export default async function UsersPage({
     },
     {
       key: "department",
-      header: "Phong ban",
+      header: "Phòng ban",
       render: (item) => (
         <span className="text-sm text-gray-600">
           {item.department?.name || (
@@ -108,7 +108,7 @@ export default async function UsersPage({
     },
     {
       key: "status",
-      header: "Trang thai",
+      header: "Trạng thái",
       render: (item) => (
         <span
           className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${
@@ -117,7 +117,7 @@ export default async function UsersPage({
               : "bg-red-50 text-red-700"
           }`}
         >
-          {item.is_active ? "Hoat dong" : "Ngung"}
+          {item.is_active ? "Hoạt động" : "Ngừng"}
         </span>
       ),
     },
@@ -132,7 +132,7 @@ export default async function UsersPage({
           className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors"
         >
           <Pencil className="w-3 h-3" />
-          Sua
+          Sửa
         </Link>
       ),
     },
@@ -148,10 +148,10 @@ export default async function UsersPage({
             <UsersIcon className="w-6 h-6 text-primary-600" />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Quan ly nhan vien
+                Quản lý nhân viên
               </h1>
               <p className="mt-1 text-sm text-gray-500">
-                Quan ly nhan vien, quan ly va quan tri vien
+                Quản lý nhân viên, quản lý và quản trị viên
               </p>
             </div>
           </div>
@@ -161,7 +161,7 @@ export default async function UsersPage({
               className="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 inline-flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              Them nhan vien
+              Thêm nhân viên
             </Link>
           </div>
         </div>
@@ -171,30 +171,30 @@ export default async function UsersPage({
           <form className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[200px]">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tim kiem
+                Tìm kiếm
               </label>
               <input
                 type="text"
                 name="search"
                 defaultValue={search}
-                placeholder="Ten hoac email..."
+                placeholder="Tên hoặc email..."
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300"
               />
             </div>
             <div className="w-40">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Vai tro
+                Vai trò
               </label>
               <select
                 name="role"
                 defaultValue={role}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm py-1.5 px-3 ring-1 ring-inset ring-gray-300"
               >
-                <option value="">Tat ca vai tro</option>
+                <option value="">Tất cả vai trò</option>
                 <option value="admin">Admin</option>
-                <option value="manager">Quan ly</option>
-                <option value="manager_device">Manager May</option>
-                <option value="employee">Nhan vien</option>
+                <option value="manager">Quản lý</option>
+                <option value="manager_device">Manager Máy</option>
+                <option value="employee">Nhân viên</option>
               </select>
             </div>
             <button
@@ -202,7 +202,7 @@ export default async function UsersPage({
               className="flex items-center gap-2 rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
             >
               <Search className="w-4 h-4" />
-              Tim kiem
+              Tìm kiếm
             </button>
           </form>
         </div>
@@ -216,7 +216,7 @@ export default async function UsersPage({
         <DataTable
           columns={columns}
           data={users}
-          emptyMessage="Chua co nhan vien nao."
+          emptyMessage="Chưa có nhân viên nào."
           keyExtractor={(item) => item.id}
         />
 

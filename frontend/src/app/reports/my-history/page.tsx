@@ -49,7 +49,7 @@ export default async function MyHistoryPage({
     if (res.data) data = res.data;
     if (res.meta) meta = res.meta;
   } catch (e) {
-    error = e instanceof Error ? e.message : "Khong the tai du lieu";
+    error = e instanceof Error ? e.message : "Không thể tải dữ liệu";
   }
 
   function formatTime(isoString?: string): string {
@@ -67,7 +67,7 @@ export default async function MyHistoryPage({
   const columns: Column<Attendance>[] = [
     {
       key: "work_date",
-      header: "Ngay",
+      header: "Ngày",
       render: (item) => (
         <span className="text-sm font-bold text-gray-900">
           {item.work_date}
@@ -76,7 +76,7 @@ export default async function MyHistoryPage({
     },
     {
       key: "check_in",
-      header: "Gio vao",
+      header: "Giờ vào",
       render: (item) => (
         <span className="text-sm font-mono font-bold text-primary-600">
           {formatTime(item.check_in_at)}
@@ -85,7 +85,7 @@ export default async function MyHistoryPage({
     },
     {
       key: "check_out",
-      header: "Gio ra",
+      header: "Giờ ra",
       render: (item) => (
         <span className="text-sm font-mono font-bold text-gray-700">
           {formatTime(item.check_out_at)}
@@ -94,12 +94,12 @@ export default async function MyHistoryPage({
     },
     {
       key: "status",
-      header: "Trang thai",
+      header: "Trạng thái",
       render: (item) => <StatusBadge status={item.status} />,
     },
     {
       key: "method",
-      header: "Phuong thuc",
+      header: "Phương thức",
       render: (item) => {
         const badges = [];
         if (item.totp_verified)
@@ -162,10 +162,10 @@ export default async function MyHistoryPage({
             <History className="w-6 h-6 text-primary-600" />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Lich su cham cong
+                Lịch sử chấm công
               </h1>
               <p className="text-sm text-gray-500 mt-1">
-                Xem lich su check-in / check-out cua ban
+                Xem lịch sử check-in / check-out của bạn
               </p>
             </div>
           </div>
@@ -174,7 +174,7 @@ export default async function MyHistoryPage({
             className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 text-sm font-bold text-white shadow-sm hover:bg-primary-700 transition-all"
           >
             <Download className="w-4 h-4" />
-            Xuat Excel
+            Xuất Excel
           </a>
         </div>
 
@@ -183,7 +183,7 @@ export default async function MyHistoryPage({
           <form className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[140px]">
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Tu ngay
+                Từ ngày
               </label>
               <input
                 type="date"
@@ -194,7 +194,7 @@ export default async function MyHistoryPage({
             </div>
             <div className="flex-1 min-w-[140px]">
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Den ngay
+                Đến ngày
               </label>
               <input
                 type="date"
@@ -205,17 +205,17 @@ export default async function MyHistoryPage({
             </div>
             <div className="w-36">
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Trang thai
+                Trạng thái
               </label>
               <select
                 name="status"
                 defaultValue={status}
                 className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm py-2 px-3 ring-1 ring-inset ring-gray-300"
               >
-                <option value="">Tat ca</option>
-                <option value="on_time">Dung gio</option>
-                <option value="late">Tre</option>
-                <option value="absent">Vang</option>
+                <option value="">Tất cả</option>
+                <option value="on_time">Đúng giờ</option>
+                <option value="late">Trễ</option>
+                <option value="absent">Vắng</option>
               </select>
             </div>
             <div className="flex gap-2">
@@ -224,13 +224,13 @@ export default async function MyHistoryPage({
                 className="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
               >
                 <Search className="w-4 h-4" />
-                Loc
+                Lọc
               </button>
               <a
                 href="/reports/my-history"
                 className="rounded-lg bg-white border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
               >
-                Xoa loc
+                Xoá lọc
               </a>
             </div>
           </form>
@@ -245,7 +245,7 @@ export default async function MyHistoryPage({
         <DataTable
           columns={columns}
           data={data}
-          emptyMessage="Chua co lich su cham cong."
+          emptyMessage="Chưa có lịch sử chấm công."
           keyExtractor={(item) => item.id}
         />
 

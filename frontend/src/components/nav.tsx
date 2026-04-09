@@ -64,13 +64,13 @@ export default function Nav({ session }: NavProps) {
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                 {(role === "admin" || role === "manager") && (
                   <Link href="/dashboard" className={desktopLinkClass("/dashboard")}>
-                    <LayoutDashboard className="w-4 h-4" /> Tong quan
+                    <LayoutDashboard className="w-4 h-4" /> Tổng quan
                   </Link>
                 )}
 
                 {role === "employee" && (
                   <Link href="/attendance" className={desktopLinkClass("/attendance")}>
-                    <ScanFace className="w-4 h-4" /> Cham cong
+                    <ScanFace className="w-4 h-4" /> Chấm công
                   </Link>
                 )}
 
@@ -80,20 +80,20 @@ export default function Nav({ session }: NavProps) {
                       href="/attendance/qr-manager"
                       className={desktopLinkClass("/attendance/qr-manager")}
                     >
-                      <QrCode className="w-4 h-4" /> Ma QR
+                      <QrCode className="w-4 h-4" /> Mã QR
                     </Link>
                     <Link
                       href="/attendance/password"
                       className={desktopLinkClass("/attendance/password")}
                     >
-                      <KeyRound className="w-4 h-4" /> Cham cong mat khau
+                      <KeyRound className="w-4 h-4" /> Chấm công mật khẩu
                     </Link>
                   </>
                 )}
 
                 {role === "admin" && (
                   <Link href="/branches" className={desktopLinkClass("/branches")}>
-                    <MapPin className="w-4 h-4" /> Chi nhanh
+                    <MapPin className="w-4 h-4" /> Chi nhánh
                   </Link>
                 )}
 
@@ -103,19 +103,19 @@ export default function Nav({ session }: NavProps) {
                       href="/reports/my-history"
                       className={desktopLinkClass("/reports/my-history")}
                     >
-                      <History className="w-4 h-4" /> Lich su
+                      <History className="w-4 h-4" /> Lịch sử
                     </Link>
                     <Link
                       href="/adjustments/my"
                       className={desktopLinkClass("/adjustments/my")}
                     >
-                      <Clock className="w-4 h-4" /> Bo sung cong
+                      <Clock className="w-4 h-4" /> Bổ sung công
                     </Link>
                     <Link
                       href="/leave/my"
                       className={desktopLinkClass("/leave/my")}
                     >
-                      <CalendarOff className="w-4 h-4" /> Nghi phep
+                      <CalendarOff className="w-4 h-4" /> Nghỉ phép
                     </Link>
                   </>
                 )}
@@ -129,7 +129,7 @@ export default function Nav({ session }: NavProps) {
                     }
                     className={desktopLinkClass("/reports")}
                   >
-                    <FileText className="w-4 h-4" /> Bao cao
+                    <FileText className="w-4 h-4" /> Báo cáo
                   </Link>
                 )}
 
@@ -139,26 +139,26 @@ export default function Nav({ session }: NavProps) {
                       href="/leave/manage"
                       className={desktopLinkClass("/leave/manage")}
                     >
-                      <ClipboardCheck className="w-4 h-4" /> Duyet nghi
+                      <ClipboardCheck className="w-4 h-4" /> Duyệt nghỉ
                     </Link>
                     <Link
                       href="/adjustments/manage"
                       className={desktopLinkClass("/adjustments/manage")}
                     >
-                      <Clock className="w-4 h-4" /> Duyet cong
+                      <Clock className="w-4 h-4" /> Duyệt công
                     </Link>
                   </>
                 )}
 
                 {(role === "admin" || role === "manager") && (
                   <Link href="/alerts" className={desktopLinkClass("/alerts")}>
-                    <ShieldAlert className="w-4 h-4" /> Gian lan
+                    <ShieldAlert className="w-4 h-4" /> Gian lận
                   </Link>
                 )}
 
                 {role === "admin" && (
                   <Link href="/users" className={desktopLinkClass("/users")}>
-                    <Users className="w-4 h-4" /> Nhan vien
+                    <Users className="w-4 h-4" /> Nhân viên
                   </Link>
                 )}
               </div>
@@ -203,7 +203,7 @@ export default function Nav({ session }: NavProps) {
                 }}
               >
                 <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Dang xuat</span>
+                <span className="hidden sm:inline">Đăng xuất</span>
               </Link>
             </div>
           </div>
@@ -214,13 +214,13 @@ export default function Nav({ session }: NavProps) {
       <nav className="sm:hidden bottom-nav">
         <Link href="/" className={mobileLinkClass("/")}>
           <Home />
-          <span>Trang chu</span>
+          <span>Trang chủ</span>
         </Link>
 
         {(role === "admin" || role === "manager") && (
           <Link href="/dashboard" className={mobileLinkClass("/dashboard")}>
             <LayoutDashboard />
-            <span>Tong quan</span>
+            <span>Tổng quan</span>
           </Link>
         )}
 
@@ -228,11 +228,11 @@ export default function Nav({ session }: NavProps) {
           <>
             <Link href="/branches" className={mobileLinkClass("/branches")}>
               <MapPin />
-              <span>Chi nhanh</span>
+              <span>Chi nhánh</span>
             </Link>
             <Link href="/users" className={mobileLinkClass("/users")}>
               <Users />
-              <span>Nhan vien</span>
+              <span>Nhân viên</span>
             </Link>
           </>
         )}
@@ -241,29 +241,29 @@ export default function Nav({ session }: NavProps) {
           <>
             <Link href="/attendance" className={mobileLinkClass("/attendance")}>
               <ScanFace />
-              <span>Cham cong</span>
+              <span>Chấm công</span>
             </Link>
             <Link
               href="/reports/my-history"
               className={mobileLinkClass("/reports/my-history")}
             >
               <History />
-              <span>Lich su</span>
+              <span>Lịch sử</span>
             </Link>
             <Link
               href="/adjustments/my"
               className={mobileLinkClass("/adjustments/my")}
             >
               <Clock />
-              <span>Bo sung</span>
+              <span>Bổ sung</span>
             </Link>
             <Link href="/leave/my" className={mobileLinkClass("/leave/my")}>
               <CalendarOff />
-              <span>Nghi phep</span>
+              <span>Nghỉ phép</span>
             </Link>
             <Link href="/profile" className={mobileLinkClass("/profile")}>
               <User />
-              <span>Ho so</span>
+              <span>Hồ sơ</span>
             </Link>
           </>
         )}
@@ -275,25 +275,25 @@ export default function Nav({ session }: NavProps) {
               className={mobileLinkClass("/reports")}
             >
               <FileText />
-              <span>Bao cao</span>
+              <span>Báo cáo</span>
             </Link>
             <Link
               href="/leave/manage"
               className={mobileLinkClass("/leave/manage")}
             >
               <ClipboardCheck />
-              <span>Duyet nghi</span>
+              <span>Duyệt nghỉ</span>
             </Link>
             <Link
               href="/adjustments/manage"
               className={mobileLinkClass("/adjustments/manage")}
             >
               <Clock />
-              <span>Duyet cong</span>
+              <span>Duyệt công</span>
             </Link>
             <Link href="/alerts" className={mobileLinkClass("/alerts")}>
               <ShieldAlert />
-              <span>Gian lan</span>
+              <span>Gian lận</span>
             </Link>
           </>
         )}
@@ -312,7 +312,7 @@ export default function Nav({ session }: NavProps) {
               className={mobileLinkClass("/attendance/password")}
             >
               <KeyRound />
-              <span>Mat khau</span>
+              <span>Mật khẩu</span>
             </Link>
           </>
         )}

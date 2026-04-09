@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Smart Attendance",
-  description: "He thong cham cong thong minh cho doanh nghiep",
+  description: "Hệ thống chấm công thông minh cho doanh nghiệp",
 };
 
 export const viewport: Viewport = {

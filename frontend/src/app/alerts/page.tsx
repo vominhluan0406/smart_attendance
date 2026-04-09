@@ -56,18 +56,18 @@ export default async function AlertsPage({
     if (res.data) alerts = res.data;
     if (res.meta) meta = res.meta;
   } catch (e) {
-    error = e instanceof Error ? e.message : "Khong the tai du lieu";
+    error = e instanceof Error ? e.message : "Không thể tải dữ liệu";
   }
 
   const alertTypeLabels: Record<string, string> = {
-    gps_accuracy: "GPS gia mao",
-    totp_reuse: "QR tai su dung",
-    impossible_travel: "Di chuyen bat thuong",
-    new_device: "Thiet bi moi",
-    ip_location_mismatch: "IP/GPS lech",
+    gps_accuracy: "GPS giả mạo",
+    totp_reuse: "QR tái sử dụng",
+    impossible_travel: "Di chuyển bất thường",
+    new_device: "Thiết bị mới",
+    ip_location_mismatch: "IP/GPS lệch",
     cloned_authenticator: "Clone authenticator",
-    anomaly_time: "Thoi gian bat thuong",
-    concurrent_session: "Da phien",
+    anomaly_time: "Thời gian bất thường",
+    concurrent_session: "Đa phiên",
   };
 
   return (
@@ -78,10 +78,10 @@ export default async function AlertsPage({
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
             <ShieldAlert className="w-6 h-6 text-primary-600" />
-            Canh bao gian lan
+            Cảnh báo gian lận
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Phat hien hanh vi bat thuong khi cham cong
+            Phát hiện hành vi bất thường khi chấm công
           </p>
         </div>
 
@@ -90,7 +90,7 @@ export default async function AlertsPage({
           <form className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[140px]">
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Tu ngay
+                Từ ngày
               </label>
               <input
                 type="date"
@@ -101,7 +101,7 @@ export default async function AlertsPage({
             </div>
             <div className="flex-1 min-w-[140px]">
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Den ngay
+                Đến ngày
               </label>
               <input
                 type="date"
@@ -112,14 +112,14 @@ export default async function AlertsPage({
             </div>
             <div className="w-44">
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Loai canh bao
+                Loại cảnh báo
               </label>
               <select
                 name="alert_type"
                 defaultValue={alertType}
                 className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm py-2 px-3 ring-1 ring-inset ring-gray-300"
               >
-                <option value="">Tat ca</option>
+                <option value="">Tất cả</option>
                 {Object.entries(alertTypeLabels).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
@@ -129,30 +129,30 @@ export default async function AlertsPage({
             </div>
             <div className="w-32">
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Muc do
+                Mức độ
               </label>
               <select
                 name="severity"
                 defaultValue={severity}
                 className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm py-2 px-3 ring-1 ring-inset ring-gray-300"
               >
-                <option value="">Tat ca</option>
-                <option value="critical">Nghiem trong</option>
-                <option value="warning">Canh bao</option>
+                <option value="">Tất cả</option>
+                <option value="critical">Nghiêm trọng</option>
+                <option value="warning">Cảnh báo</option>
               </select>
             </div>
             <div className="w-36">
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Trang thai
+                Trạng thái
               </label>
               <select
                 name="reviewed"
                 defaultValue={reviewed}
                 className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm py-2 px-3 ring-1 ring-inset ring-gray-300"
               >
-                <option value="">Tat ca</option>
-                <option value="false">Chua xem xet</option>
-                <option value="true">Da xem xet</option>
+                <option value="">Tất cả</option>
+                <option value="false">Chưa xem xét</option>
+                <option value="true">Đã xem xét</option>
               </select>
             </div>
             <div className="flex gap-2">
@@ -161,13 +161,13 @@ export default async function AlertsPage({
                 className="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
               >
                 <Search className="w-4 h-4" />
-                Loc
+                Lọc
               </button>
               <a
                 href="/alerts"
                 className="rounded-lg bg-white border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
               >
-                Xoa loc
+                Xóa lọc
               </a>
             </div>
           </form>
@@ -186,25 +186,25 @@ export default async function AlertsPage({
               <thead className="bg-gray-50/50">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Nhan vien
+                    Nhân viên
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Loai
+                    Loại
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Muc do
+                    Mức độ
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Mo ta
+                    Mô tả
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
                     IP
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Thoi gian
+                    Thời gian
                   </th>
                   <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Thao tac
+                    Thao tác
                   </th>
                 </tr>
               </thead>
@@ -215,7 +215,7 @@ export default async function AlertsPage({
                       colSpan={7}
                       className="px-6 py-16 text-center text-gray-400 italic text-sm"
                     >
-                      Khong co canh bao nao.
+                      Không có cảnh báo nào.
                     </td>
                   </tr>
                 ) : (

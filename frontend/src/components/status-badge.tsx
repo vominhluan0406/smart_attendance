@@ -34,17 +34,17 @@ const variantStyles: Record<BadgeVariant, string> = {
 };
 
 const variantLabels: Record<BadgeVariant, string> = {
-  on_time: "Dung gio",
-  late: "Tre",
-  absent: "Vang",
-  leave: "Nghi phep",
-  invalidated: "Huy",
-  pending: "Dang cho",
-  approved: "Da duyet",
-  rejected: "Tu choi",
-  cancelled: "Da huy",
-  critical: "Nghiem trong",
-  warning: "Canh bao",
+  on_time: "Đúng giờ",
+  late: "Trễ",
+  absent: "Vắng",
+  leave: "Nghỉ phép",
+  invalidated: "Hủy",
+  pending: "Đang chờ",
+  approved: "Đã duyệt",
+  rejected: "Từ chối",
+  cancelled: "Đã hủy",
+  critical: "Nghiêm trọng",
+  warning: "Cảnh báo",
 };
 
 interface StatusBadgeProps {

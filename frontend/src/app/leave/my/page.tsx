@@ -64,7 +64,7 @@ export default function MyLeavePage() {
         if (reqsBody.meta) setTotal(reqsBody.meta.total);
       }
     } catch {
-      setError("Khong the tai du lieu");
+      setError("Không thể tải dữ liệu");
     } finally {
       setLoading(false);
     }
@@ -95,16 +95,16 @@ export default function MyLeavePage() {
 
       const body = await res.json();
       if (body.success) {
-        setSuccess("Yeu cau nghi phep da duoc gui thanh cong!");
+        setSuccess("Yêu cầu nghỉ phép đã được gửi thành công!");
         setStartDate("");
         setEndDate("");
         setReason("");
         fetchData();
       } else {
-        setError(body.error?.message || "Gui yeu cau that bai");
+        setError(body.error?.message || "Gửi yêu cầu thất bại");
       }
     } catch {
-      setError("Khong the ket noi den server");
+      setError("Không thể kết nối đến server");
     } finally {
       setSubmitLoading(false);
     }
@@ -116,10 +116,10 @@ export default function MyLeavePage() {
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
             <CalendarOff className="w-8 h-8 text-primary-600" />
-            Nghi phep
+            Nghỉ phép
           </h1>
           <p className="mt-2 text-lg text-gray-500">
-            Gui va theo doi cac yeu cau nghi phep cua ban
+            Gửi và theo dõi các yêu cầu nghỉ phép của bạn
           </p>
         </div>
 
@@ -143,13 +143,13 @@ export default function MyLeavePage() {
             <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden sticky top-24">
               <div className="p-6 sm:p-8">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">
-                  Dang ky nghi moi
+                  Đăng ký nghỉ mới
                 </h2>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">
-                      Loai nghi
+                      Loại nghỉ
                     </label>
                     <select
                       value={leaveTypeId}
@@ -160,7 +160,7 @@ export default function MyLeavePage() {
                       {leaveTypes.map((lt) => (
                         <option key={lt.id} value={lt.id}>
                           {lt.name}{" "}
-                          {!lt.is_paid ? "(Khong luong)" : ""}
+                          {!lt.is_paid ? "(Không lương)" : ""}
                         </option>
                       ))}
                     </select>
@@ -169,7 +169,7 @@ export default function MyLeavePage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">
-                        Tu ngay
+                        Từ ngày
                       </label>
                       <input
                         type="date"
@@ -181,7 +181,7 @@ export default function MyLeavePage() {
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">
-                        Den ngay
+                        Đến ngày
                       </label>
                       <input
                         type="date"
@@ -195,13 +195,13 @@ export default function MyLeavePage() {
 
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">
-                      Ly do
+                      Lý do
                     </label>
                     <textarea
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}
                       rows={3}
-                      placeholder="Ly do xin nghi..."
+                      placeholder="Lý do xin nghỉ..."
                       className="block w-full rounded-2xl border-gray-200 bg-gray-50 py-3 px-4 text-gray-900 focus:border-primary-500 focus:ring-primary-500 sm:text-sm outline-none border focus:bg-white"
                     />
                   </div>
@@ -212,7 +212,7 @@ export default function MyLeavePage() {
                     className="w-full flex items-center justify-center gap-3 rounded-2xl bg-primary-600 px-6 py-4 text-base font-bold text-white shadow-lg shadow-primary-200 hover:bg-primary-700 active:scale-95 transition-all disabled:opacity-50"
                   >
                     {submitLoading && <span className="spinner" />}
-                    Gui yeu cau
+                    Gửi yêu cầu
                   </button>
                 </form>
               </div>
@@ -224,10 +224,10 @@ export default function MyLeavePage() {
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="p-6 border-b border-gray-50 flex justify-between items-center">
                 <h2 className="text-xl font-bold text-gray-900">
-                  Lich su yeu cau
+                  Lịch sử yêu cầu
                 </h2>
                 <span className="px-3 py-1 bg-gray-100 text-xs font-bold text-gray-500 rounded-full">
-                  {total} yeu cau
+                  {total} yêu cầu
                 </span>
               </div>
 
@@ -241,19 +241,19 @@ export default function MyLeavePage() {
                     <thead className="bg-gray-50/50">
                       <tr>
                         <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                          Thoi gian
+                          Thời gian
                         </th>
                         <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                          Loai
+                          Loại
                         </th>
                         <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                          So ngay
+                          Số ngày
                         </th>
                         <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                          Trang thai
+                          Trạng thái
                         </th>
                         <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                          Nguoi duyet
+                          Người duyệt
                         </th>
                       </tr>
                     </thead>
@@ -264,7 +264,7 @@ export default function MyLeavePage() {
                             colSpan={5}
                             className="px-6 py-12 text-center text-gray-400 italic text-sm"
                           >
-                            Chua co yeu cau nghi phep nao.
+                            Chưa có yêu cầu nghỉ phép nào.
                           </td>
                         </tr>
                       ) : (
@@ -278,7 +278,7 @@ export default function MyLeavePage() {
                                 {req.start_date}
                               </div>
                               <div className="text-xs text-gray-400">
-                                den {req.end_date}
+                                đến {req.end_date}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -292,11 +292,11 @@ export default function MyLeavePage() {
                                     req.leave_type?.color || "#6b7280",
                                 }}
                               >
-                                {req.leave_type?.name || "Nghi phep"}
+                                {req.leave_type?.name || "Nghỉ phép"}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-700">
-                              {req.total_days} ngay
+                              {req.total_days} ngày
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <StatusBadge status={req.status} />
@@ -327,7 +327,7 @@ export default function MyLeavePage() {
                         onClick={() => setPage((p) => p - 1)}
                         className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all"
                       >
-                        Truoc
+                        Trước
                       </button>
                     )}
                     {page * 20 < total && (

@@ -33,7 +33,7 @@ export default async function ManageAdjustmentsPage({
     );
     if (res.data) requests = res.data;
   } catch (e) {
-    error = e instanceof Error ? e.message : "Khong the tai du lieu";
+    error = e instanceof Error ? e.message : "Không thể tải dữ liệu";
   }
 
   return (
@@ -45,10 +45,10 @@ export default async function ManageAdjustmentsPage({
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
               <Clock className="w-8 h-8 text-primary-600" />
-              Duyet bo sung cong
+              Duyệt bổ sung công
             </h1>
             <p className="mt-2 text-lg text-gray-500">
-              Xet duyet yeu cau chinh sua gio cham cong cua nhan vien
+              Xét duyệt yêu cầu chỉnh sửa giờ chấm công của nhân viên
             </p>
           </div>
 
@@ -64,10 +64,10 @@ export default async function ManageAdjustmentsPage({
                 }`}
               >
                 {s === "pending"
-                  ? "Cho duyet"
+                  ? "Chờ duyệt"
                   : s === "approved"
-                  ? "Da duyet"
-                  : "Tu choi"}
+                  ? "Đã duyệt"
+                  : "Từ chối"}
               </a>
             ))}
           </div>

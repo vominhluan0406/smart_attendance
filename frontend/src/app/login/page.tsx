@@ -32,7 +32,7 @@ function LoginForm() {
       const body = await res.json();
 
       if (!res.ok || !body.success) {
-        setError(body.error?.message || "Dang nhap that bai");
+        setError(body.error?.message || "Đăng nhập thất bại");
         return;
       }
 
@@ -52,7 +52,7 @@ function LoginForm() {
       router.push(redirect);
       router.refresh();
     } catch {
-      setError("Khong the ket noi den server");
+      setError("Không thể kết nối đến server");
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ function LoginForm() {
           Smart Attendance
         </h1>
         <h2 className="mt-4 text-center text-xl font-bold leading-9 tracking-tight text-gray-900">
-          Dang nhap vao tai khoan
+          Đăng nhập vào tài khoản
         </h2>
       </div>
 
@@ -106,7 +106,7 @@ function LoginForm() {
               htmlFor="password"
               className="block text-sm font-medium leading-6 text-gray-900"
             >
-              Mat khau
+              Mật khẩu
             </label>
             <div className="mt-2">
               <input
@@ -129,7 +129,7 @@ function LoginForm() {
               className="flex w-full justify-center rounded-md bg-primary-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading && <span className="spinner mr-2" />}
-              Dang nhap
+              Đăng nhập
             </button>
           </div>
         </form>
