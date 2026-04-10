@@ -41,6 +41,7 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	sessRepo := repository.NewSessionRepository(db)
 	permRepo := repository.NewPermissionRepository(db)
+	credRepo := repository.NewCredentialRepository(db)
 
 	// Connect to NATS event bus
 	eventBus := event.Connect(cfg.NatsURL)
@@ -52,11 +53,16 @@ func main() {
 	authService := service.NewAuthService(cfg, userRepo, sessRepo)
 	userService := service.NewUserService(userRepo, eventBus)
 	permService := service.NewPermissionService(permRepo)
+	webauthnService, err := service.NewWebAuthnService(cfg, userRepo, credRepo)
+	if err != nil {
+		log.Fatalf("[auth] failed to initialize webauthn: %v", err)
+	}
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
 	userHandler := handler.NewUserHandler(userService)
 	permHandler := handler.NewPermissionHandler(permService)
+	webauthnHandler := handler.NewWebAuthnHandler(webauthnService)
 
 	// Setup router
 	r := chi.NewRouter()
@@ -89,6 +95,10 @@ func main() {
 
 		// Auth
 		r.Post("/api/auth/logout", authHandler.Logout)
+
+		// WebAuthn
+		r.Get("/api/webauthn/register/begin", webauthnHandler.BeginRegistration)
+		r.Post("/api/webauthn/register/finish", webauthnHandler.FinishRegistration)
 
 		// Profile
 		r.Get("/api/profile", userHandler.Profile)

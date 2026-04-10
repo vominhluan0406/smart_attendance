@@ -39,7 +39,12 @@ export default function WebAuthnButton() {
       });
       if (!beginResp.ok) throw new Error("Không thể bắt đầu đăng ký");
 
-      const options = await beginResp.json();
+      const optionsData = await beginResp.json();
+      const options = optionsData.data;
+
+      if (!options || !options.publicKey) {
+        throw new Error("Dữ liệu phản hồi từ máy chủ không hợp lệ");
+      }
 
       // 2. Base64 decode fields as required by WebAuthn
       options.publicKey.challenge = base64urlToBuffer(
