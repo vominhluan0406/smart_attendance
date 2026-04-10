@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/smart-attendance/analytics-service/internal/config"
+	"github.com/smart-attendance/shared/migrate"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -48,9 +49,14 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
+func Migrations() []migrate.Migration {
+	return []migrate.Migration{
+		// Analytics is read-only — no local tables yet.
+		// Add materialized cache tables here if needed:
+		// {Version: 1, Name: "create_cache_tables", Up: func(db *gorm.DB) error { ... }},
+	}
+}
+
 func AutoMigrate(db *gorm.DB) error {
-	log.Printf("[analytics][database] running auto-migration (no local tables needed)")
-	// Analytics service is read-only; no local models to migrate.
-	// Add materialized cache tables here if needed in the future.
-	return nil
+	return migrate.Run(db, Migrations())
 }

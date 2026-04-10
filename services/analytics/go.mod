@@ -9,7 +9,7 @@ require (
 	github.com/smart-attendance/shared v0.0.0
 	github.com/xuri/excelize/v2 v2.9.0
 	gorm.io/driver/postgres v1.5.11
-	gorm.io/gorm v1.25.12
+	gorm.io/gorm v1.31.1
 )
 
 require (

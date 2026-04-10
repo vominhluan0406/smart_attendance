@@ -6,6 +6,7 @@ import (
 
 	"github.com/smart-attendance/leave-service/internal/config"
 	"github.com/smart-attendance/leave-service/internal/model"
+	"github.com/smart-attendance/shared/migrate"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -50,19 +51,23 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func AutoMigrate(db *gorm.DB) error {
-	log.Printf("[leave][database] running auto-migration")
-
-	err := db.AutoMigrate(
-		&model.LeaveType{},
-		&model.LeaveRequest{},
-		&model.LeaveBalance{},
-		&model.OvertimeRequest{},
-	)
-	if err != nil {
-		return fmt.Errorf("[leave][database] auto-migrate failed: %w", err)
+func Migrations() []migrate.Migration {
+	return []migrate.Migration{
+		{
+			Version: 1,
+			Name:    "create_initial_tables",
+			Up: func(db *gorm.DB) error {
+				return db.AutoMigrate(
+					&model.LeaveType{},
+					&model.LeaveRequest{},
+					&model.LeaveBalance{},
+					&model.OvertimeRequest{},
+				)
+			},
+		},
 	}
+}
 
-	log.Printf("[leave][database] auto-migration completed successfully")
-	return nil
+func AutoMigrate(db *gorm.DB) error {
+	return migrate.Run(db, Migrations())
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/smart-attendance/auth-service/internal/config"
 	"github.com/smart-attendance/auth-service/internal/model"
+	"github.com/smart-attendance/shared/migrate"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -42,7 +43,6 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 		return nil, fmt.Errorf("[auth][database] failed to set search_path: %w", err)
 	}
 
-	// Also set search_path on the GORM session so all queries use auth_service schema
 	db = db.Session(&gorm.Session{})
 	db.Exec("SET search_path TO auth_service, public")
 
@@ -50,20 +50,28 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func AutoMigrate(db *gorm.DB) error {
-	log.Printf("[auth][database] running auto-migration")
-
-	err := db.AutoMigrate(
-		&model.User{},
-		&model.UserSession{},
-		&model.Permission{},
-		&model.RolePermission{},
-		&model.UserCredential{},
-	)
-	if err != nil {
-		return fmt.Errorf("[auth][database] auto-migrate failed: %w", err)
+// Migrations returns the versioned migration list for the auth service.
+func Migrations() []migrate.Migration {
+	return []migrate.Migration{
+		{
+			Version: 1,
+			Name:    "create_initial_tables",
+			Up: func(db *gorm.DB) error {
+				return db.AutoMigrate(
+					&model.User{},
+					&model.UserSession{},
+					&model.Permission{},
+					&model.RolePermission{},
+					&model.UserCredential{},
+				)
+			},
+		},
+		// Future migrations:
+		// {Version: 2, Name: "add_department_id_index", Up: func(db *gorm.DB) error { ... }},
 	}
+}
 
-	log.Printf("[auth][database] auto-migration completed successfully")
-	return nil
+// AutoMigrate runs versioned migrations.
+func AutoMigrate(db *gorm.DB) error {
+	return migrate.Run(db, Migrations())
 }

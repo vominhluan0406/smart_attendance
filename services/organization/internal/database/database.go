@@ -6,6 +6,7 @@ import (
 
 	"github.com/smart-attendance/organization-service/internal/config"
 	"github.com/smart-attendance/organization-service/internal/model"
+	"github.com/smart-attendance/shared/migrate"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -50,22 +51,26 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func AutoMigrate(db *gorm.DB) error {
-	log.Printf("[org][database] running auto-migration")
-
-	err := db.AutoMigrate(
-		&model.Branch{},
-		&model.BranchIPWhitelist{},
-		&model.BranchLocation{},
-		&model.WorkShift{},
-		&model.UserShiftAssignment{},
-		&model.Department{},
-		&model.Holiday{},
-	)
-	if err != nil {
-		return fmt.Errorf("[org][database] auto-migrate failed: %w", err)
+func Migrations() []migrate.Migration {
+	return []migrate.Migration{
+		{
+			Version: 1,
+			Name:    "create_initial_tables",
+			Up: func(db *gorm.DB) error {
+				return db.AutoMigrate(
+					&model.Branch{},
+					&model.BranchIPWhitelist{},
+					&model.BranchLocation{},
+					&model.WorkShift{},
+					&model.UserShiftAssignment{},
+					&model.Department{},
+					&model.Holiday{},
+				)
+			},
+		},
 	}
+}
 
-	log.Printf("[org][database] auto-migration completed successfully")
-	return nil
+func AutoMigrate(db *gorm.DB) error {
+	return migrate.Run(db, Migrations())
 }

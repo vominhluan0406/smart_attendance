@@ -141,6 +141,17 @@ func (r *AttendanceRepository) InvalidateByUserAndDate(userID, workDate, note st
 	return result.RowsAffected, result.Error
 }
 
+// FindLatestByUser returns the most recent non-invalidated attendance record for a user.
+func (r *AttendanceRepository) FindLatestByUser(userID string) (*model.Attendance, error) {
+	var att model.Attendance
+	err := r.db.Where("user_id = ? AND status != ?", userID, model.StatusInvalidated).
+		Order("work_date DESC").First(&att).Error
+	if err != nil {
+		return nil, err
+	}
+	return &att, nil
+}
+
 // RecentCheckIn holds a recent check-in record for display.
 type RecentCheckIn struct {
 	UserID    string

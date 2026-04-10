@@ -84,11 +84,20 @@ func (s *FraudAlertService) InvalidateAttendance(alertID, reviewerID, branchID s
 	affected, err := s.attendanceRepo.InvalidateByUserAndDate(alert.UserID, workDate, note)
 	if err != nil {
 		log.Printf("[service][fraud_alert] InvalidateAttendance: DB error user=%s date=%s err=%v", alert.UserID, workDate, err)
-		return fmt.Errorf("cannot invalidate attendance")
+		return fmt.Errorf("không thể huỷ chấm công")
 	}
 
+	// If no record found on alert date, try the most recent attendance record
 	if affected == 0 {
-		return fmt.Errorf("no attendance record found for date %s to invalidate", workDate)
+		latest, findErr := s.attendanceRepo.FindLatestByUser(alert.UserID)
+		if findErr != nil || latest == nil {
+			return fmt.Errorf("không tìm thấy bản ghi chấm công để huỷ")
+		}
+		affected, err = s.attendanceRepo.InvalidateByUserAndDate(alert.UserID, latest.WorkDate, note)
+		if err != nil || affected == 0 {
+			return fmt.Errorf("không tìm thấy bản ghi chấm công ngày %s để huỷ", latest.WorkDate)
+		}
+		workDate = latest.WorkDate
 	}
 
 	// Auto-review the alert
