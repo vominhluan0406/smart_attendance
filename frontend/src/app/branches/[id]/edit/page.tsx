@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { getSession, getCookieHeader } from "@/lib/auth";
 import { apiGet } from "@/lib/api";
+import Nav from "@/components/nav";
 import type { Branch } from "@/lib/types";
 import BranchForm from "./branch-form";
 
@@ -27,8 +28,9 @@ export default async function EditBranchPage({ params }: EditBranchPageProps) {
     }
 
     return (
-      <div className="min-h-full py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-full">
+        <Nav session={session} />
+        <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Cài đặt chi nhánh</h1>
             <p className="mt-2 text-sm text-gray-500">
