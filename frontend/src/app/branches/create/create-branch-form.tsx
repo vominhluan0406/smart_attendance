@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save, X, MapPin, Clock, ShieldCheck, CheckSquare, Square, Plus, Trash2, Wifi, Navigation } from "lucide-react";
-import type { Branch } from "@/lib/types";
-import { apiPut } from "@/lib/api";
+import { apiPost } from "@/lib/api";
 
 interface IPEntry {
   ip_cidr: string;
@@ -23,45 +22,36 @@ const ALL_METHODS = [
   { id: "ip", label: "IP Whitelist" },
   { id: "location", label: "GPS Location" },
   { id: "face", label: "Face ID" },
-  { id: "password", label: "Password" },
+  { id: "password", label: "Mật khẩu" },
   { id: "wifi_gps", label: "WiFi/GPS" },
   { id: "nfc", label: "NFC" },
-  { id: "ble", label: "BLE" },
 ];
 
-interface BranchFormProps {
-  branch: Branch;
-}
-
-export default function BranchForm({ branch }: BranchFormProps) {
+export default function CreateBranchForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    name: branch.name,
-    address: branch.address,
-    lat: branch.lat || 10.762622,
-    lng: branch.lng || 106.660172,
-    radius_m: branch.radius_m,
-    allowed_methods: branch.allowed_methods ? branch.allowed_methods.split(",").map(m => m.trim()) : [],
-    work_start_time: branch.work_start_time,
-    work_end_time: branch.work_end_time,
-    is_active: branch.is_active,
-    require_biometric: branch.require_biometric,
+    name: "",
+    address: "",
+    lat: 10.762622,
+    lng: 106.660172,
+    radius_m: 200,
+    allowed_methods: ["qr_totp", "password"],
+    work_start_time: "08:00",
+    work_end_time: "17:00",
+    is_active: true,
+    require_biometric: false,
   });
 
-  const [ipWhitelist, setIpWhitelist] = useState<IPEntry[]>(
-    branch.ip_whitelist && branch.ip_whitelist.length > 0
-      ? branch.ip_whitelist.map(ip => ({ ip_cidr: ip.ip_cidr, label: ip.label }))
-      : [{ ip_cidr: "", label: "" }]
-  );
+  const [ipWhitelist, setIpWhitelist] = useState<IPEntry[]>([
+    { ip_cidr: "", label: "" },
+  ]);
 
-  const [locations, setLocations] = useState<LocationEntry[]>(
-    branch.locations && branch.locations.length > 0
-      ? branch.locations.map(loc => ({ label: loc.label, lat: loc.lat, lng: loc.lng, radius_m: loc.radius_m }))
-      : [{ label: "", lat: branch.lat || 0, lng: branch.lng || 0, radius_m: branch.radius_m || 200 }]
-  );
+  const [locations, setLocations] = useState<LocationEntry[]>([
+    { label: "", lat: 10.762622, lng: 106.660172, radius_m: 200 },
+  ]);
 
   const toggleMethod = (methodId: string) => {
     setFormData(prev => ({
@@ -81,7 +71,7 @@ export default function BranchForm({ branch }: BranchFormProps) {
       const validIPs = ipWhitelist.filter(ip => ip.ip_cidr.trim() !== "");
       const validLocations = locations.filter(loc => loc.label.trim() !== "" || loc.lat !== 0);
 
-      const res = await apiPut(`/api/branches/${branch.id}`, {
+      const res = await apiPost("/api/branches", {
         ...formData,
         allowed_methods: formData.allowed_methods.join(","),
         ip_whitelist: validIPs,
@@ -92,9 +82,9 @@ export default function BranchForm({ branch }: BranchFormProps) {
         router.push("/branches");
         router.refresh();
       } else {
-        setError(res.error?.message || "Lỗi cập nhật chi nhánh");
+        setError(res.error?.message || "Lỗi tạo chi nhánh");
       }
-    } catch (err) {
+    } catch {
       setError("Không thể kết nối đến server");
     } finally {
       setLoading(false);
@@ -110,7 +100,7 @@ export default function BranchForm({ branch }: BranchFormProps) {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Basic Info */}
+        {/* Thông tin cơ bản */}
         <section className="space-y-6">
           <div className="flex items-center gap-2 mb-4">
             <div className="p-2 bg-blue-100 rounded-xl">
@@ -144,7 +134,7 @@ export default function BranchForm({ branch }: BranchFormProps) {
           </div>
         </section>
 
-        {/* Location Settings */}
+        {/* Vị trí */}
         <section className="space-y-6">
           <div className="flex items-center gap-2 mb-4">
             <div className="p-2 bg-green-100 rounded-xl">
@@ -190,7 +180,7 @@ export default function BranchForm({ branch }: BranchFormProps) {
           </div>
         </section>
 
-        {/* Work Hours */}
+        {/* Giờ làm */}
         <section className="space-y-6">
           <div className="flex items-center gap-2 mb-4">
             <div className="p-2 bg-yellow-100 rounded-xl">
@@ -223,7 +213,7 @@ export default function BranchForm({ branch }: BranchFormProps) {
           </div>
         </section>
 
-        {/* Status Settings */}
+        {/* Trạng thái */}
         <section className="space-y-6">
           <div className="flex items-center gap-2 mb-4">
             <div className="p-2 bg-indigo-100 rounded-xl">
@@ -237,8 +227,8 @@ export default function BranchForm({ branch }: BranchFormProps) {
               type="button"
               onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
               className={`flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${
-                formData.is_active 
-                  ? "bg-green-50 border-green-500 text-green-700 font-bold" 
+                formData.is_active
+                  ? "bg-green-50 border-green-500 text-green-700 font-bold"
                   : "bg-gray-50 border-gray-200 text-gray-500"
               }`}
             >
@@ -249,8 +239,8 @@ export default function BranchForm({ branch }: BranchFormProps) {
               type="button"
               onClick={() => setFormData({ ...formData, require_biometric: !formData.require_biometric })}
               className={`flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${
-                formData.require_biometric 
-                  ? "bg-blue-50 border-blue-500 text-blue-700 font-bold" 
+                formData.require_biometric
+                  ? "bg-blue-50 border-blue-500 text-blue-700 font-bold"
                   : "bg-gray-50 border-gray-200 text-gray-500"
               }`}
             >
@@ -405,7 +395,7 @@ export default function BranchForm({ branch }: BranchFormProps) {
         </div>
       </section>
 
-      {/* Methods */}
+      {/* Phương thức */}
       <section className="space-y-4 pt-4">
         <label className="text-xs font-bold text-gray-500 uppercase px-1">Phương thức chấm công được phép</label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -446,7 +436,8 @@ export default function BranchForm({ branch }: BranchFormProps) {
           disabled={loading}
           className="px-10 py-3 rounded-2xl bg-blue-600 text-white text-sm font-bold shadow-xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50"
         >
-          {loading ? "Đang xử lý..." : "Lưu thay đổi"}
+          <Save className="w-4 h-4" />
+          {loading ? "Đang tạo..." : "Tạo chi nhánh"}
         </button>
       </div>
     </form>

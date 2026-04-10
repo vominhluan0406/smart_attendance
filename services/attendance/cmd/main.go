@@ -107,6 +107,7 @@ func main() {
 	attendanceHandler := handler.NewAttendanceHandler(attendanceService, totpService, orgClient)
 	fraudAlertHandler := handler.NewFraudAlertHandler(fraudAlertService)
 	adjustmentHandler := handler.NewAdjustmentHandler(adjService)
+	deviceHandler := handler.NewDeviceHandler(deviceRepo)
 	internalHandler := handler.NewInternalHandler(attendanceService)
 
 	// Setup router
@@ -160,6 +161,15 @@ func main() {
 			r.Use(middleware.RequireRole("admin", "manager"))
 			r.Get("/", adjustmentHandler.GetBranchRequests)
 			r.Post("/{id}/review", adjustmentHandler.ReviewRequest)
+		})
+
+		// Device management (admin — manage user's devices)
+		r.Route("/api/users/{id}/devices", func(r chi.Router) {
+			r.Use(middleware.RequireRole("admin"))
+			r.Get("/", deviceHandler.ListDevices)
+			r.Post("/{deviceId}/block", deviceHandler.BlockDevice)
+			r.Post("/{deviceId}/unblock", deviceHandler.UnblockDevice)
+			r.Delete("/{deviceId}", deviceHandler.DeleteDevice)
 		})
 	})
 

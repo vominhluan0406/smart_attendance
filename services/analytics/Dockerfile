@@ -1,7 +1,6 @@
 # Build stage
 FROM golang:1.22-alpine AS builder
 
-RUN apk add --no-cache git
 
 WORKDIR /app
 
@@ -13,16 +12,15 @@ COPY services/analytics/ ./services/analytics/
 
 WORKDIR /app/services/analytics
 
-# Download dependencies
-RUN go mod download
 
-# Build binary
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /analytics-service ./cmd/main.go
+# Build binary (using vendored dependencies)
+RUN CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags="-s -w" -o /analytics-service ./cmd/main.go
 
 # Runtime stage
-FROM alpine:3.21
+FROM alpine:3.20
 
-RUN apk add --no-cache ca-certificates tzdata
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+ENV TZ=Asia/Ho_Chi_Minh
 
 WORKDIR /app
 

@@ -160,6 +160,34 @@ export interface AttendanceLog {
   password_verified: boolean;
 }
 
+// ─── User Device ───────────────────────────────────────────────────
+export interface UserDevice {
+  id: string;
+  user_id: string;
+  fingerprint_hash: string;
+  user_agent: string;
+  device_name: string;
+  last_seen_at: string;
+  is_trusted: boolean;
+  is_blocked: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── User Credential (WebAuthn) ────────────────────────────────────
+export interface UserCredential {
+  id: string;
+  user_id: string;
+  attestation_type: string;
+  sign_count: number;
+  backup_eligible: boolean;
+  backup_state: boolean;
+  is_approved: boolean;
+  transport: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── Fraud Alert ────────────────────────────────────────────────────
 export type FraudAlertType =
   | "gps_accuracy"

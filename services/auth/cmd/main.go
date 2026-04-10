@@ -62,7 +62,7 @@ func main() {
 	authHandler := handler.NewAuthHandler(authService)
 	userHandler := handler.NewUserHandler(userService)
 	permHandler := handler.NewPermissionHandler(permService)
-	webauthnHandler := handler.NewWebAuthnHandler(webauthnService)
+	webauthnHandler := handler.NewWebAuthnHandler(webauthnService, credRepo)
 
 	// Setup router
 	r := chi.NewRouter()
@@ -109,6 +109,12 @@ func main() {
 		r.Get("/api/users/{id}", userHandler.GetByID)
 		r.Put("/api/users/{id}", userHandler.Update)
 		r.Delete("/api/users/{id}", userHandler.Delete)
+
+		// Credential management (admin — manage user's WebAuthn credentials)
+		r.Get("/api/users/{id}/credentials", webauthnHandler.ListCredentials)
+		r.Post("/api/users/{id}/credentials/{credId}/approve", webauthnHandler.ApproveCredential)
+		r.Post("/api/users/{id}/credentials/{credId}/revoke", webauthnHandler.RevokeCredential)
+		r.Delete("/api/users/{id}/credentials/{credId}", webauthnHandler.DeleteCredential)
 	})
 
 	addr := ":" + cfg.Port

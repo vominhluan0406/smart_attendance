@@ -29,3 +29,21 @@ func (r *UserDeviceRepository) FindByUserAndFingerprint(userID, hash string) (*m
 	}
 	return &d, nil
 }
+
+func (r *UserDeviceRepository) FindByID(id string) (*model.UserDevice, error) {
+	var d model.UserDevice
+	if err := r.db.First(&d, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &d, nil
+}
+
+func (r *UserDeviceRepository) ListByUserID(userID string) ([]model.UserDevice, error) {
+	var devices []model.UserDevice
+	err := r.db.Where("user_id = ?", userID).Order("last_seen_at DESC").Find(&devices).Error
+	return devices, err
+}
+
+func (r *UserDeviceRepository) Delete(id string) error {
+	return r.db.Delete(&model.UserDevice{}, "id = ?", id).Error
+}

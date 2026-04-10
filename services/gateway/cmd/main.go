@@ -63,9 +63,17 @@ func main() {
 		r.Post("/api/auth/logout", authProxy.ServeHTTP)
 		r.Get("/api/profile", authProxy.ServeHTTP)
 		r.Put("/api/profile", authProxy.ServeHTTP)
+		r.Handle("/api/webauthn/*", authProxy)
+
+		// Device management → attendance service (must be before /api/users/* catch-all)
+		r.Route("/api/users/{id}/devices", func(r chi.Router) {
+			r.Handle("/*", attendanceProxy)
+			r.Handle("/", attendanceProxy)
+		})
+
+		// Credential management + user CRUD → auth service
 		r.Handle("/api/users/*", authProxy)
 		r.Handle("/api/users", authProxy)
-		r.Handle("/api/webauthn/*", authProxy)
 
 		// Attendance service routes
 		r.Handle("/api/attendance/*", attendanceProxy)
