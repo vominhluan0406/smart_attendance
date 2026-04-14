@@ -171,29 +171,12 @@ export default function QRDisplay({ branches, defaultBranchId }: QRDisplayProps)
             </div>
           </div>
 
-          {/* Code & Timer UI */}
-          <div className={`max-w-xs mx-auto p-6 rounded-2xl ${isFullScreen ? 'bg-gray-900 border-gray-700' : 'bg-gray-50'} border`}>
-            <div className="flex items-center justify-between mb-4">
-              <span className={`text-xs font-bold uppercase tracking-wider ${isFullScreen ? 'text-gray-400' : 'text-gray-500'}`}>
-                Mã 6 Số Tạm Thời
-              </span>
-              <span className={`flex items-center gap-1 text-xs font-bold ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : (isFullScreen ? 'text-blue-400' : 'text-blue-600')}`}>
-                <Clock className="w-3.5 h-3.5" />
-                {timeLeft}s
-              </span>
-            </div>
-            
-            <div className={`text-4xl font-black tracking-[0.25em] font-mono tabular-nums ${isFullScreen ? 'text-white' : 'text-gray-900'}`}>
-              {totpCode ? (
-                <span className="flex justify-center">
-                  {totpCode.slice(0, 3)}
-                  <span className={isFullScreen ? 'text-gray-600' : 'text-gray-300'}>-</span>
-                  {totpCode.slice(3, 6)}
-                </span>
-              ) : (
-                <span className={isFullScreen ? 'text-gray-700' : 'text-gray-300'}>------</span>
-              )}
-            </div>
+          {/* Timer UI (Code removed as requested) */}
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <span className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold transition-all ${timeLeft <= 5 ? 'bg-red-100 text-red-600 animate-pulse' : (isFullScreen ? 'bg-gray-800 text-blue-400' : 'bg-blue-50 text-blue-600')}`}>
+              <Clock className="w-4 h-4" />
+              Tự động làm mới sau {timeLeft} giây
+            </span>
           </div>
           
           {/* Progress Bar Layer */}

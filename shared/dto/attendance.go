@@ -15,6 +15,7 @@ type Attendance struct {
 	IsAdjusted  bool       `json:"is_adjusted"`
 	UserName    string     `json:"user_name,omitempty"`
 	BranchName  string     `json:"branch_name,omitempty"`
+	User        *User      `json:"user,omitempty"`
 }
 
 type LogTimeRequest struct {

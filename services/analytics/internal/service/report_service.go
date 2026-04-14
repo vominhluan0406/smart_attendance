@@ -11,31 +11,67 @@ import (
 
 type ReportService struct {
 	attendanceClient *client.AttendanceClient
+	authClient       *client.AuthClient
 }
 
-func NewReportService(attendanceClient *client.AttendanceClient) *ReportService {
+func NewReportService(attendanceClient *client.AttendanceClient, authClient *client.AuthClient) *ReportService {
 	return &ReportService{
 		attendanceClient: attendanceClient,
+		authClient:       authClient,
 	}
 }
 
-// GetBranchReport returns paginated attendance records for a branch.
+// GetBranchReport returns paginated attendance records for a branch, enriched with user details.
 func (s *ReportService) GetBranchReport(branchID string, page, limit int, dateFrom, dateTo, status string) (*client.AttendanceListResult, error) {
 	result, err := s.attendanceClient.ListAttendance(branchID, "", page, limit, dateFrom, dateTo, status)
 	if err != nil {
 		log.Printf("[service][report] ERROR GetBranchReport branch=%s: %v", branchID, err)
 		return nil, err
 	}
+
+	// Enrich with user data
+	users, err := s.authClient.ListUsers(branchID)
+	if err == nil {
+		userMap := make(map[string]dto.User)
+		for _, u := range users {
+			userMap[u.ID] = u
+		}
+
+		for i := range result.Records {
+			if u, ok := userMap[result.Records[i].UserID]; ok {
+				result.Records[i].User = &u
+				result.Records[i].UserName = u.FullName
+			}
+		}
+	} else {
+		log.Printf("[service][report] WARNING: failed to fetch users for enrichment: %v", err)
+	}
+
 	return result, nil
 }
 
-// GetUserHistory returns paginated attendance records for a user.
+// GetUserHistory returns paginated attendance records for a user, enriched with user details.
 func (s *ReportService) GetUserHistory(userID string, page, limit int, dateFrom, dateTo, status string) (*client.AttendanceListResult, error) {
 	result, err := s.attendanceClient.ListAttendance("", userID, page, limit, dateFrom, dateTo, status)
 	if err != nil {
 		log.Printf("[service][report] ERROR GetUserHistory user=%s: %v", userID, err)
 		return nil, err
 	}
+
+	// Enrich with user data (just this one user)
+	users, err := s.authClient.ListUsers("") // Fetching all and filtering or we could add GetUser to client
+	if err == nil {
+		for i := range result.Records {
+			for _, u := range users {
+				if u.ID == result.Records[i].UserID {
+					result.Records[i].User = &u
+					result.Records[i].UserName = u.FullName
+					break
+				}
+			}
+		}
+	}
+
 	return result, nil
 }
 

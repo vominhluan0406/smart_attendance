@@ -147,7 +147,26 @@ services:
       DATABASE_URL: postgres://app:secret@postgres:5432/smart_attendance?sslmode=disable&search_path=org_service
       NATS_URL: nats://nats:4222
       ENV: production
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8085/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
     restart: unless-stopped
+
+  # ─── Data Seeding ───
+  seed:
+    build:
+      context: .
+      dockerfile: ./scripts/seed/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      organization:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://app:secret@postgres:5432/smart_attendance?sslmode=disable
+    restart: "no"
 
   # ─── Frontend ───
   frontend:

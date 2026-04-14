@@ -34,7 +34,7 @@ func main() {
 
 	// Initialize services
 	dashboardService := service.NewDashboardService(authClient, attendanceClient, leaveClient, orgClient)
-	reportService := service.NewReportService(attendanceClient)
+	reportService := service.NewReportService(attendanceClient, authClient)
 
 	// Initialize handlers
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
