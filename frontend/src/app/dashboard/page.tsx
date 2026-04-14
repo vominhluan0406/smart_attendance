@@ -6,6 +6,7 @@ import BranchFilter from "./branch-filter";
 import StatusBadge from "@/components/status-badge";
 import type {
   DashboardStats,
+  DashboardChartData,
   RecentActivity,
   TopLateUser,
   Branch,
@@ -39,6 +40,7 @@ export default async function DashboardPage({
   const branchFilter = params.branch_id || "";
 
   let stats: DashboardStats | null = null;
+  let chartData: DashboardChartData | null = null;
   let recent: RecentActivity[] = [];
   let topLate: TopLateUser[] = [];
   let branches: Branch[] = [];
@@ -47,10 +49,14 @@ export default async function DashboardPage({
   try {
     const query = branchFilter ? `?branch_id=${branchFilter}` : "";
 
-    const [statsRes, recentRes, topLateRes] = await Promise.all([
+    const [statsRes, chartRes, recentRes, topLateRes] = await Promise.all([
       apiGet<DashboardStats>(`/api/dashboard/stats${query}`, cookie).catch(
         () => null
       ),
+      apiGet<DashboardChartData>(
+        `/api/dashboard/charts${query}`,
+        cookie
+      ).catch(() => null),
       apiGet<RecentActivity[]>(
         `/api/dashboard/recent${query}`,
         cookie
@@ -62,6 +68,7 @@ export default async function DashboardPage({
     ]);
 
     if (statsRes?.data) stats = statsRes.data;
+    if (chartRes?.data) chartData = chartRes.data;
     if (recentRes?.data) recent = recentRes.data;
     if (topLateRes?.data) topLate = topLateRes.data;
 
@@ -197,6 +204,54 @@ export default async function DashboardPage({
                   width: `${Math.min(stats.on_time_rate ?? 0, 100)}%`,
                 }}
               />
+            </div>
+          </div>
+        )}
+
+        {/* Attendance Chart - 7 days */}
+        {chartData && chartData.labels.length > 0 && (
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 glass mb-6">
+            <h2 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-4">
+              Biểu đồ chấm công 7 ngày
+            </h2>
+            <div className="flex items-end gap-2 h-48">
+              {chartData.labels.map((label, i) => {
+                const onTime = chartData!.on_time[i] || 0;
+                const late = chartData!.late[i] || 0;
+                const absent = chartData!.absent[i] || 0;
+                const total = onTime + late + absent;
+                const maxVal = Math.max(...chartData!.on_time.map((v, j) => v + (chartData!.late[j] || 0) + (chartData!.absent[j] || 0)), 1);
+                const scale = 160 / maxVal;
+
+                return (
+                  <div key={label} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="flex flex-col-reverse w-full max-w-[40px] mx-auto" style={{ height: 160 }}>
+                      <div
+                        className="bg-emerald-400 rounded-t-sm transition-all duration-500"
+                        style={{ height: onTime * scale }}
+                        title={`Đúng giờ: ${onTime}`}
+                      />
+                      <div
+                        className="bg-amber-400 transition-all duration-500"
+                        style={{ height: late * scale }}
+                        title={`Trễ: ${late}`}
+                      />
+                      <div
+                        className="bg-rose-400 rounded-t-sm transition-all duration-500"
+                        style={{ height: absent * scale }}
+                        title={`Vắng: ${absent}`}
+                      />
+                    </div>
+                    <span className="text-[10px] font-bold text-gray-400">{label}</span>
+                    <span className="text-[9px] text-gray-300">{total}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex items-center justify-center gap-6 mt-4 text-xs text-gray-500">
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-emerald-400" /> Đúng giờ</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-amber-400" /> Trễ</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-rose-400" /> Vắng</div>
             </div>
           </div>
         )}

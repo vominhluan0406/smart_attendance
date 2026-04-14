@@ -5,7 +5,7 @@ import { ApiResponse } from "./types";
  * - Server-side (SSR): uses API_URL env (e.g. http://gateway:8080 in Docker)
  * - Client-side: uses NEXT_PUBLIC_API_URL env (e.g. http://localhost:8080)
  */
-function getBaseUrl(): string {
+export function getBaseUrl(): string {
   if (typeof window === "undefined") {
     // server-side
     return process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";

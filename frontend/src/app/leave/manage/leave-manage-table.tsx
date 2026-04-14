@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, Inbox } from "lucide-react";
+import { Check, X, Inbox, AlertCircle } from "lucide-react";
+import { apiPost } from "@/lib/api";
 import type { LeaveRequest } from "@/lib/types";
 
 interface Props {
@@ -12,24 +13,20 @@ interface Props {
 export default function LeaveManageTable({ requests: initial, statusFilter }: Props) {
   const [requests, setRequests] = useState(initial);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+  const [error, setError] = useState<string | null>(null);
 
   async function handleReview(id: string, status: "approved" | "rejected") {
     setActionLoading(id);
+    setError(null);
     try {
-      const res = await fetch(`${baseUrl}/api/leave/manage/${id}/review`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ status }),
-      });
-      const body = await res.json();
-      if (body.success) {
+      const res = await apiPost(`/api/leave/manage/${id}/review`, { status });
+      if (res.success) {
         setRequests((prev) => prev.filter((r) => r.id !== id));
+      } else {
+        setError(res.error?.message || "Thao tác thất bại");
       }
-    } catch {
-      // Silently fail - user can retry
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thể kết nối đến server");
     } finally {
       setActionLoading(null);
     }
@@ -37,6 +34,12 @@ export default function LeaveManageTable({ requests: initial, statusFilter }: Pr
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+      {error && (
+        <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-sm text-red-700">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-100">
           <thead className="bg-gray-50/50">

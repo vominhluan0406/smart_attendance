@@ -239,10 +239,6 @@ export default function Nav({ session }: NavProps) {
 
         {role === "employee" && (
           <>
-            <Link href="/attendance" className={mobileLinkClass("/attendance")}>
-              <ScanFace />
-              <span>Chấm công</span>
-            </Link>
             <Link
               href="/reports/my-history"
               className={mobileLinkClass("/reports/my-history")}

@@ -21,9 +21,9 @@ export default function QRDisplay({ branches, defaultBranchId }: QRDisplayProps)
   const [error, setError] = useState<string | null>(null);
   
   const [refreshKey, setRefreshKey] = useState(Date.now());
-  const [timeLeft, setTimeLeft] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(15);
 
-  // Sync with standard TOTP 30-second windows and refetch
+  // Sync with 15-second TOTP windows and refetch
   useEffect(() => {
     if (!selectedBranch) return;
 
@@ -52,11 +52,11 @@ export default function QRDisplay({ branches, defaultBranchId }: QRDisplayProps)
 
     const interval = setInterval(() => {
       const currentSeconds = new Date().getSeconds();
-      const remaining = 30 - (currentSeconds % 30);
+      const remaining = 15 - (currentSeconds % 15);
       setTimeLeft(remaining);
 
       // Refresh exactly at the window flip
-      if (remaining === 30) {
+      if (remaining === 15) {
         fetchCode();
       }
     }, 1000);
@@ -200,7 +200,7 @@ export default function QRDisplay({ branches, defaultBranchId }: QRDisplayProps)
           <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gray-100">
             <div 
               className={`h-full transition-all ease-linear ${timeLeft <= 5 ? 'bg-red-500' : 'bg-blue-500'}`} 
-              style={{ width: `${(timeLeft / 30) * 100}%`, transitionDuration: '1000ms' }}
+              style={{ width: `${(timeLeft / 15) * 100}%`, transitionDuration: '1000ms' }}
             />
           </div>
         </div>
