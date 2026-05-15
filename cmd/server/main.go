@@ -121,7 +121,7 @@ func main() {
 	adjService := service.NewAttendanceAdjustmentService(adjRepo, attendanceRepo, userRepo)
 	leaveService := service.NewLeaveService(leaveRepo, leaveTypeRepo, attendanceRepo, userRepo)
 	attendanceService := service.NewAttendanceService(attendanceRepo, attendanceLogRepo, shiftRepo, branchService, userService, totpService, ipValidator, locValidator, leaveRepo, antiFraudService)
-	reportService := service.NewReportService(attendanceRepo)
+	reportService := service.NewReportService(attendanceRepo, attendanceLogRepo)
 	dashboardService := service.NewDashboardService(attendanceRepo, branchRepo, userRepo, leaveRepo, appCache, db)
 
 	// Setup router

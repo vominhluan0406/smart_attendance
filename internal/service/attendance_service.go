@@ -443,6 +443,62 @@ func (s *AttendanceService) List(params repository.AttendanceListParams) (*repos
 	return s.attendanceRepo.List(params)
 }
 
+func (s *AttendanceService) InvalidateLog(logID string, reviewerID *string, note string) error {
+	logObj, err := s.logRepo.FindByID(logID)
+	if err != nil {
+		return fmt.Errorf("không tìm thấy log")
+	}
+	if err := s.logRepo.Invalidate(logID, reviewerID, note); err != nil {
+		return err
+	}
+	return s.RecalculateDailyAttendance(logObj.UserID, logObj.WorkDate)
+}
+
+func (s *AttendanceService) RecalculateDailyAttendance(userID string, workDate string) error {
+	logs, err := s.logRepo.FindTodayLogs(userID, workDate)
+	if err != nil {
+		return err
+	}
+
+	var validLogs []models.AttendanceLog
+	for _, l := range logs {
+		if !l.IsInvalidated {
+			validLogs = append(validLogs, l)
+		}
+	}
+
+	att, err := s.attendanceRepo.FindTodayByUserAndDate(userID, workDate)
+	if err != nil {
+		return err
+	}
+
+	if len(validLogs) == 0 {
+		att.Status = models.StatusInvalidated
+		att.CheckInAt = nil
+		att.CheckOutAt = nil
+	} else {
+		first := validLogs[0]
+		last := validLogs[len(validLogs)-1]
+
+		att.CheckInAt = &first.LoggedAt
+		att.CheckOutAt = &last.LoggedAt
+
+		// Re-evaluate status if it was invalidated
+		if att.Status == models.StatusInvalidated {
+			user, err := s.userService.GetByID(userID)
+			if err == nil && user.BranchID != nil {
+				branch, err := s.branchService.GetByIDCached(*user.BranchID)
+				if err == nil {
+					shiftData, _ := s.resolveShiftData(userID, branch, *att.CheckInAt)
+					att.Status = calculateStatusWithGrace(*att.CheckInAt, shiftData.workStartTime, shiftData.gracePeriod)
+				}
+			}
+		}
+	}
+
+	return s.attendanceRepo.Update(att)
+}
+
 // --- Helpers ---
 
 func calculateStatusWithGrace(checkInTime time.Time, workStartTime string, gracePeriodMinutes int) models.AttendanceStatus {

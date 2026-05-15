@@ -52,7 +52,7 @@ func New(deps Deps) http.Handler {
 	users := handler.NewUserHandler(deps.UserService, deps.AuthService, deps.BranchService, deps.WebAuthnService, deps.Render)
 	branches := handler.NewBranchHandler(deps.BranchService, deps.Render)
 	attendance := handler.NewAttendanceHandler(deps.AttendanceService, deps.BranchService, deps.TOTPService, deps.UserService, deps.AuthService, deps.WebAuthnService, deps.Render)
-	reports := handler.NewReportHandler(deps.ReportService, deps.BranchService, deps.Render)
+	reports := handler.NewReportHandler(deps.ReportService, deps.BranchService, deps.AttendanceService, deps.Render)
 	dashboard := handler.NewDashboardHandler(deps.DashboardService, deps.BranchService, deps.Render)
 	leave := handler.NewLeaveHandler(deps.LeaveService, deps.BranchService, deps.Render)
 	fraudAlerts := handler.NewFraudAlertHandler(deps.FraudAlertService, deps.BranchService, deps.Render)
@@ -99,6 +99,10 @@ func New(deps Deps) http.Handler {
 
 		// Reports
 		pr.Route("/reports", func(rr chi.Router) {
+			// Shared logs endpoint (for both own history and branch report)
+			rr.Get("/attendance/logs", reports.UserLogsPartial)
+			rr.Post("/attendance/logs/{id}/invalidate", reports.InvalidateLogAction)
+
 			// Admin report selection (requires report.view_all)
 			rr.Group(func(admRr chi.Router) {
 				admRr.Use(requirePerm(models.PermReportViewAll))

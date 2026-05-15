@@ -14,7 +14,17 @@
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
             {{ range .Result.Records }}
-            <tr>
+            <tr class="cursor-pointer hover:bg-gray-50 transition-colors"
+                hx-get="/reports/attendance/logs?user_id={{.UserID}}&date={{.WorkDate}}"
+                hx-target="this"
+                hx-swap="afterend"
+                hx-trigger="click[ !this.nextElementSibling || this.nextElementSibling.id !== 'logs-row-{{.WorkDate}}-{{.UserID}}' ]"
+                onclick="
+                    let next = this.nextElementSibling;
+                    if(next && next.id === 'logs-row-{{.WorkDate}}-{{.UserID}}') {
+                        next.classList.toggle('hidden');
+                    }
+                ">
                 <td data-label="Ngày" class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {{ if .WorkDate }}{{ .WorkDate }}{{ else if .CheckInAt }}{{ .CheckInAt.Format "02/01/2006" }}{{ end }}
                 </td>

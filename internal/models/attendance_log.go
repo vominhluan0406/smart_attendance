@@ -25,6 +25,9 @@ type AttendanceLog struct {
 	BiometricVerified bool     `gorm:"default:false" json:"biometric_verified"`
 	AccuracyM         *float64 `gorm:"type:real" json:"accuracy_m,omitempty"`
 	DeviceFingerprint string   `gorm:"type:text" json:"device_fingerprint,omitempty"`
+	IsInvalidated     bool     `gorm:"default:false" json:"is_invalidated"`
+	ReviewerID        *string  `gorm:"type:text" json:"reviewer_id,omitempty"`
+	ReviewNote        string   `gorm:"type:text" json:"review_note,omitempty"`
 	AnomalyFlag       bool     `gorm:"default:false" json:"anomaly_flag"`
 	AnomalyScore      float64  `gorm:"default:0" json:"anomaly_score"`
 }

@@ -12,12 +12,18 @@ import (
 
 type ReportService struct {
 	attendanceRepo *repository.AttendanceRepository
+	logRepo        *repository.AttendanceLogRepository
 }
 
-func NewReportService(attendanceRepo *repository.AttendanceRepository) *ReportService {
+func NewReportService(attendanceRepo *repository.AttendanceRepository, logRepo *repository.AttendanceLogRepository) *ReportService {
 	return &ReportService{
 		attendanceRepo: attendanceRepo,
+		logRepo:        logRepo,
 	}
+}
+
+func (s *ReportService) GetUserLogs(userID string, workDate string) ([]models.AttendanceLog, error) {
+	return s.logRepo.FindTodayLogs(userID, workDate)
 }
 
 // GetUserHistory returns the attendance history for a specific user.

@@ -66,3 +66,20 @@ func (r *AttendanceLogRepository) FindRecentFirstLogs(userID string, days int) (
 	return logs, err
 }
 
+func (r *AttendanceLogRepository) FindByID(logID string) (*models.AttendanceLog, error) {
+	var log models.AttendanceLog
+	if err := r.db.First(&log, "id = ?", logID).Error; err != nil {
+		return nil, err
+	}
+	return &log, nil
+}
+
+func (r *AttendanceLogRepository) Invalidate(logID string, reviewerID *string, note string) error {
+	return r.db.Model(&models.AttendanceLog{}).
+		Where("id = ?", logID).
+		Updates(map[string]interface{}{
+			"is_invalidated": true,
+			"reviewer_id":    reviewerID,
+			"review_note":    note,
+		}).Error
+}

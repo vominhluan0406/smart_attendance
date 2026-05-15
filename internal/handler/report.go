@@ -15,9 +15,10 @@ import (
 )
 
 type ReportHandler struct {
-	reportService *service.ReportService
-	branchService *service.BranchService
-	render        *renderer.Renderer
+	reportService     *service.ReportService
+	branchService     *service.BranchService
+	attendanceService *service.AttendanceService
+	render            *renderer.Renderer
 }
 
 func (h *ReportHandler) AdminReportPage(w http.ResponseWriter, r *http.Request) {
@@ -36,12 +37,14 @@ func (h *ReportHandler) AdminReportPage(w http.ResponseWriter, r *http.Request) 
 func NewReportHandler(
 	reportService *service.ReportService,
 	branchService *service.BranchService,
+	attendanceService *service.AttendanceService,
 	render *renderer.Renderer,
 ) *ReportHandler {
 	return &ReportHandler{
-		reportService: reportService,
-		branchService: branchService,
-		render:        render,
+		reportService:     reportService,
+		branchService:     branchService,
+		attendanceService: attendanceService,
+		render:            render,
 	}
 }
 
@@ -234,4 +237,60 @@ func (h *ReportHandler) parseFilters(r *http.Request) (int, int, *time.Time, *ti
 	}
 
 	return page, limit, dateFrom, dateTo, q.Get("status")
+}
+
+// UserLogsPartial renders a list of individual AttendanceLogs for a specific user and date
+func (h *ReportHandler) UserLogsPartial(w http.ResponseWriter, r *http.Request) {
+	userID := r.URL.Query().Get("user_id")
+	date := r.URL.Query().Get("date")
+
+	if userID == "" || date == "" {
+		http.Error(w, "Thiếu thông tin user_id hoặc date", http.StatusBadRequest)
+		return
+	}
+
+	logs, err := h.reportService.GetUserLogs(userID, date)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data := userContext(r)
+	data["Logs"] = logs
+	data["TargetUserID"] = userID
+	data["TargetWorkDate"] = date
+	
+	// Can invalidate if admin or manager
+	role := middleware.GetUserRole(r)
+	data["CanInvalidate"] = role == models.RoleAdmin || role == models.RoleManager
+	
+	h.render.RenderPartial(w, "attendance_logs.html", data)
+}
+
+// InvalidateLogAction allows an admin/manager to reject a specific AttendanceLog
+func (h *ReportHandler) InvalidateLogAction(w http.ResponseWriter, r *http.Request) {
+	logID := chi.URLParam(r, "id")
+	
+	// RBAC
+	role := middleware.GetUserRole(r)
+	if role != models.RoleAdmin && role != models.RoleManager {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	reviewerID := middleware.GetUserID(r)
+	note := r.FormValue("note")
+	if note == "" {
+		note = "Huỷ bởi quản lý"
+	}
+
+	err := h.attendanceService.InvalidateLog(logID, &reviewerID, note)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Trả về HTML hiển thị trạng thái đã huỷ (hoặc tải lại partial)
+	// Để đơn giản, ta trả về nút đã huỷ
+	w.Write([]byte(`<span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">Đã huỷ</span>`))
 }
