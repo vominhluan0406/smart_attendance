@@ -290,6 +290,12 @@ func (s *AttendanceService) validateVerificationMethods(branch *models.Branch, i
 }
 
 func (s *AttendanceService) isAnyMethodPassed(branch *models.Branch, result *LogTimeResult, input LogTimeInput) bool {
+	// Password check-in is performed on a supervised manager device.
+	// If successful, it bypasses biometric and other constraints.
+	if result.PasswordVerified {
+		return true
+	}
+
 	// Check biometric constraint first if required
 	if branch.RequireBiometric && !input.BiometricVerified {
 		return false
@@ -298,7 +304,6 @@ func (s *AttendanceService) isAnyMethodPassed(branch *models.Branch, result *Log
 		(result.IPVerified && s.branchService.HasMethod(branch, models.MethodIP)) ||
 		(result.LocVerified && s.branchService.HasMethod(branch, models.MethodLocation)) ||
 		(result.FaceVerified && s.branchService.HasMethod(branch, models.MethodFace)) ||
-		(result.PasswordVerified && s.branchService.HasMethod(branch, models.MethodPassword)) ||
 		(result.WiFiGPSVerified && s.branchService.HasMethod(branch, models.MethodWiFiGPS)) ||
 		(result.NFCVerified && s.branchService.HasMethod(branch, models.MethodNFC))
 }
