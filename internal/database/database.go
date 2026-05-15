@@ -147,6 +147,9 @@ func SafeMigrate(db *gorm.DB, targetModels ...interface{}) error {
 		{"device_fingerprint", "TEXT DEFAULT ''"},
 		{"anomaly_flag", "INTEGER DEFAULT 0"},
 		{"anomaly_score", "REAL DEFAULT 0"},
+		{"is_invalidated", "INTEGER DEFAULT 0"},
+		{"reviewer_id", "TEXT"},
+		{"review_note", "TEXT"},
 	}
 	for _, c := range antifraudLogCols {
 		res := db.Exec(fmt.Sprintf("ALTER TABLE attendance_logs ADD COLUMN %s %s", c.name, c.def))
@@ -194,6 +197,9 @@ func RawMigrateTurso(db *gorm.DB) error {
 		{"device_fingerprint", "TEXT DEFAULT ''"},
 		{"anomaly_flag", "INTEGER DEFAULT 0"},
 		{"anomaly_score", "REAL DEFAULT 0"},
+		{"is_invalidated", "INTEGER DEFAULT 0"},
+		{"reviewer_id", "TEXT"},
+		{"review_note", "TEXT"},
 	}
 	for _, c := range antifraudCols {
 		alterTable(db, "attendance_logs", c.name, c.def)
