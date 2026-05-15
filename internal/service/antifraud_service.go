@@ -24,7 +24,7 @@ var (
 )
 
 const (
-	minGPSAccuracyM       = 10.0   // Below this = likely spoofed (too precise)
+	minGPSAccuracyM       = 0.0    // Disabled per user request (originally 10.0)
 	maxGPSAccuracyM       = 150.0  // Above this = too imprecise
 	maxTravelSpeedKMH     = 150.0  // Max plausible travel speed
 	ipLocationMaxDistKM   = 500.0  // Max distance between IP geo and GPS
